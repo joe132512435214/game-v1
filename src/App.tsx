@@ -13,7 +13,7 @@ type GameState = {
   tier_miner:number; tier_smelter:number; tier_press:number; tier_assembler:number; tier_copperMiner:number; tier_copperSmelter:number; tier_wiremill:number; tier_circuitpress:number;
   level:number; experience:number; sold:number; xpMigrationVersion:number; salesXpProgress:number; autoSalesXpProgress:number; mechanics:number; salespeople:number; reputation:number; acceptedContracts:string[]; contractsCompleted:string[]; repeatContractRounds:number[];
   broken:Record<MachineId,number>; mechanicAssignments:Record<MachineId,number>; breakdownEvent:MachineId|null; powerCutEvent:boolean; powerCutSeen:boolean; cyberAttackEvent:boolean; cyberAttackSeen:boolean; cybersecuritySpecialists:number;
-  salesTarget:StockId; autoSell:boolean; missionsClaimed:number[]; researched:string[];
+  salesTarget:StockId; autoSell:boolean; salesAssignments:Record<StockId,number>; missionsClaimed:number[]; researched:string[];
 };
 const SAVE_KEY = 'ironworks-tycoon-save-v2';
 const fresh:GameState = {
@@ -23,7 +23,7 @@ const fresh:GameState = {
   level:1,experience:0,sold:0,xpMigrationVersion:1,salesXpProgress:0,autoSalesXpProgress:0,mechanics:0,salespeople:0,
   broken:{miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0},
   mechanicAssignments:{miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0},breakdownEvent:null,powerCutEvent:false,powerCutSeen:false,cyberAttackEvent:false,cyberAttackSeen:false,cybersecuritySpecialists:0,
-  salesTarget:'parts',autoSell:false,missionsClaimed:[],researched:[],reputation:0,acceptedContracts:[],contractsCompleted:[],repeatContractRounds:[0,0,0]
+  salesTarget:'parts',autoSell:false,salesAssignments:{ore:0,ingot:0,plate:0,parts:0,copperOre:0,copperIngot:0,wire:0,circuits:0},missionsClaimed:[],researched:[],reputation:0,acceptedContracts:[],contractsCompleted:[],repeatContractRounds:[0,0,0]
 };
 const machines:{id:MachineId;name:string;short:string;cost:number;desc:string;input:string;output:string;rate:number}[]=[
   {id:'miner',name:'Rockbreaker Mine',short:'EXTRACT',cost:50,desc:'Breaks rock into raw ore.',input:'Raw ore',output:'Raw ore',rate:.22},
@@ -80,13 +80,17 @@ function loadGame():GameState{
     const legacyXpFromMissions=(Array.isArray(saved.missionsClaimed)?saved.missionsClaimed:[]).reduce((total:number,id:number)=>total+(missionXp[id]||0),0);
     const migratedExperience=saved.experience!==undefined?Math.max(0,Number(saved.experience)||0):Math.max(legacyXpFromContracts+legacyXpFromMissions,Number(saved.assembler)>0?270:Number(saved.press)>0?165:Number(saved.smelter)>0?60:Number(saved.miner)>0?25:0);
     const legacyShipmentXp=saved.xpMigrationVersion===undefined?Math.floor(Math.max(0,Number(saved.sold)||0)/500):0;
-    return {...fresh,...saved,xpMigrationVersion:1,salesXpProgress:Math.max(0,Number(saved.salesXpProgress)||0)%25,autoSalesXpProgress:Math.max(0,Number(saved.autoSalesXpProgress)||0)%60,broken:{...fresh.broken,...saved.broken},mechanicAssignments:{...fresh.mechanicAssignments,...saved.mechanicAssignments},breakdownEvent:saved.breakdownEvent??null,powerCutEvent:shouldRecoverPowerCut?true:(saved.powerCutEvent??false),powerCutSeen:shouldRecoverPowerCut?true:(saved.powerCutSeen??false),cyberAttackEvent:shouldRecoverCyberAttack?true:(saved.cyberAttackEvent??false),cyberAttackSeen:shouldRecoverCyberAttack?true:(saved.cyberAttackSeen??false),cybersecuritySpecialists:Math.max(0,Number(saved.cybersecuritySpecialists)||0),researched:Array.isArray(saved.researched)?saved.researched:[],acceptedContracts:Array.isArray(saved.acceptedContracts)?saved.acceptedContracts:[],contractsCompleted:completed,repeatContractRounds:Array.from({length:3},(_,i)=>Math.max(0,Math.floor(Number(saved.repeatContractRounds?.[i])||0))),experience:migratedExperience+legacyShipmentXp,reputation:Math.max(0,Number(saved.reputation)||0)};
+    return {...fresh,...saved,xpMigrationVersion:1,salesXpProgress:Math.max(0,Number(saved.salesXpProgress)||0)%25,autoSalesXpProgress:Math.max(0,Number(saved.autoSalesXpProgress)||0)%60,broken:{...fresh.broken,...saved.broken},mechanicAssignments:{...fresh.mechanicAssignments,...saved.mechanicAssignments},breakdownEvent:saved.breakdownEvent??null,powerCutEvent:shouldRecoverPowerCut?true:(saved.powerCutEvent??false),powerCutSeen:shouldRecoverPowerCut?true:(saved.powerCutSeen??false),cyberAttackEvent:shouldRecoverCyberAttack?true:(saved.cyberAttackEvent??false),cyberAttackSeen:shouldRecoverCyberAttack?true:(saved.cyberAttackSeen??false),cybersecuritySpecialists:Math.max(0,Number(saved.cybersecuritySpecialists)||0),researched:Array.isArray(saved.researched)?saved.researched:[],acceptedContracts:Array.isArray(saved.acceptedContracts)?saved.acceptedContracts:[],contractsCompleted:completed,salesAssignments:goods.reduce((result,g)=>({...result,[g.id]:Math.max(0,Math.floor(Number(saved.salesAssignments?.[g.id]??(!saved.salesAssignments&&saved.salesTarget===g.id?saved.salespeople:0))||0))}),{...fresh.salesAssignments}),repeatContractRounds:Array.from({length:3},(_,i)=>Math.max(0,Math.floor(Number(saved.repeatContractRounds?.[i])||0))),experience:migratedExperience+legacyShipmentXp,reputation:Math.max(0,Number(saved.reputation)||0)};
   }catch{return fresh;}
 }
 const fmt=(n:number)=>Math.floor(n).toLocaleString();
 const machineCost=(m:typeof machines[number],s:GameState)=>Math.floor(m.cost*Math.pow(1.48,s[m.id]));
 const mechanicCost=(s:GameState)=>Math.floor(180*Math.pow(1.65,s.mechanics));
 const salesCost=(s:GameState)=>Math.floor(240*Math.pow(1.65,s.salespeople));
+const WAGES={mechanic:3,sales:5,cyber:8} as const;
+const payrollPerMinute=(v:GameState)=>v.mechanics*WAGES.mechanic+v.salespeople*WAGES.sales+v.cybersecuritySpecialists*WAGES.cyber;
+const REPAIR_COSTS:Record<MachineId,number>={miner:40,smelter:65,press:90,assembler:130,copperMiner:85,copperSmelter:155,wiremill:230,circuitpress:340};
+const repairCostFor=(id:MachineId,level:number)=>REPAIR_COSTS[id]+level*15;
 
 function MachineArt({id,active,broken,cycle}:{id:MachineId;active:boolean;broken:boolean;cycle:number}){
  const beat=cycle%2?'cycle-b':'cycle-a';
@@ -221,13 +225,16 @@ export default function App(){
     const timer=window.setInterval(()=>{setCycle(c=>c+1);setS(v=>{
       const n={...v,broken:{...v.broken}};
       if(n.breakdownEvent||n.powerCutEvent||n.cyberAttackEvent)return n;
+      const wages=payrollPerMinute(n)/60;
+      const payrollFunded=n.cash+1e-8>=wages;
+      if(payrollFunded)n.cash=Math.max(0,n.cash-wages);
       const multiplier=speed;
       const reliabilityBonus=n.researched.includes('reinforced-bearings')?.35:0;
       machines.forEach(m=>{if(n[m.id]>0&&n.broken[m.id]===0&&Math.random()<.00065*(1-reliabilityBonus)){n.broken[m.id]=24;if(!n.breakdownEvent)n.breakdownEvent=m.id;}});
       if(n.breakdownEvent)return n;
       machines.forEach(m=>{
         const assigned=n.mechanicAssignments[m.id]||0;
-        if(n.broken[m.id]>0&&assigned>0)n.broken[m.id]=Math.max(0,n.broken[m.id]-assigned*multiplier);
+        if(payrollFunded&&n.broken[m.id]>0&&assigned>0)n.broken[m.id]=Math.max(0,n.broken[m.id]-assigned*multiplier);
       });
       const researchOutput=(n.researched.includes('efficient-extraction')?1.15:1)*(n.researched.includes('precision-tooling')?1.3:1);
       const rate=(id:MachineId,base:number)=>n.broken[id]>0?0:n[id]*base*(1+n['tier_'+id]*.25)*researchOutput*multiplier;
@@ -247,22 +254,27 @@ export default function App(){
       n.copperIngot=Math.max(0,n.copperIngot+copperIngotsMade-wireMade);
       n.wire=Math.max(0,n.wire+wireMade-circuitsMade);
       n.circuits+=circuitsMade;
-      if(n.autoSell&&n.salespeople>0){
-        const id=n.salesTarget;
-        const amount=Math.min(n[id],n.salespeople*.12*multiplier);
-        const item=goods.find(g=>g.id===id)!;
+      if(payrollFunded&&n.autoSell&&n.salespeople>0){
+        let activeSellers=0;
         const saleBonus=n.researched.includes('market-intelligence')?1.2:1;
-        const revenue=amount*item.price*saleBonus;
-        const saleXpTotal=n.salesXpProgress+revenue;
-        const shipmentXp=Math.floor((saleXpTotal+1e-8)/25);
-        n.salesXpProgress=saleXpTotal-shipmentXp*25;
-        // Active sales staff earn 1 bonus XP per minute each, while selling stock.
-        const staffXpTotal=n.autoSalesXpProgress+(amount>0?n.salespeople:0);
-        const staffXp=Math.floor(staffXpTotal/60);
-        n.autoSalesXpProgress=staffXpTotal-staffXp*60;
-        n[id]-=amount;n.cash+=revenue;n.sold+=revenue;
-        n.experience+=shipmentXp+staffXp;
-        if(id==='parts'||id==='circuits')n.gears+=amount;
+        goods.forEach(item=>{
+          const count=Math.min(n.salespeople,Math.max(0,n.salesAssignments[item.id]||0));
+          if(count<=0)return;
+          const amount=Math.min(n[item.id],count*.12*multiplier);
+          if(amount<=0)return;
+          const revenue=amount*item.price*saleBonus;
+          const total=n.salesXpProgress+revenue;
+          const shipmentXp=Math.floor((total+1e-8)/25);
+          n.salesXpProgress=total-shipmentXp*25;
+          n[item.id]-=amount;n.cash+=revenue;n.sold+=revenue;
+          n.experience+=shipmentXp;
+          if(item.id==='parts'||item.id==='circuits')n.gears+=amount;
+          activeSellers+=count;
+        });
+        const totalStaffXp=n.autoSalesXpProgress+activeSellers;
+        const staffXp=Math.floor(totalStaffXp/60);
+        n.autoSalesXpProgress=totalStaffXp-staffXp*60;
+        n.experience+=staffXp;
       }
       return n;
     });},1000);
@@ -273,6 +285,10 @@ export default function App(){
   const brokenCount=machines.filter(m=>s.broken[m.id]>0).length;
   const assignedTotal=machines.reduce((sum,m)=>sum+s.mechanicAssignments[m.id],0);
   const unassigned=s.mechanics-assignedTotal;
+  const assignedSales=goods.reduce((sum,g)=>sum+(s.salesAssignments[g.id]||0),0);
+  const unassignedSales=Math.max(0,s.salespeople-assignedSales);
+  const payroll=payrollPerMinute(s);
+  const payrollFunded=s.cash+1e-8>=payroll/60;
   const progressionLevel=1+Math.floor(s.experience/100);
   const reputationUnlock:Record<MachineId,number>={miner:0,smelter:2,press:8,assembler:18,copperMiner:20,copperSmelter:35,wiremill:50,circuitpress:60};
   const companyRank=s.reputation>=90?'GLOBAL MANUFACTURER':s.reputation>=50?'INDUSTRIAL CORPORATION':s.reputation>=25?'REGIONAL SUPPLIER':s.reputation>=10?'LOCAL MANUFACTURER':'WORKSHOP';
@@ -358,8 +374,9 @@ export default function App(){
     const id=s.breakdownEvent;
     if(!id)return;
     if(useMechanic&&s.mechanicAssignments[id]>0){setS(v=>({...v,broken:{...v.broken,[id]:0},breakdownEvent:null}));setNotice(machines.find(m=>m.id===id)!.name+' repaired by your assigned mechanic. Production is back online.');return;}
-    if(s.cash>=40){setS(v=>({...v,cash:v.cash-40,broken:{...v.broken,[id]:0},breakdownEvent:null}));setNotice('Emergency repair complete · 40 RVT spent. Production is back online.');return;}
-    setS(v=>({...v,breakdownEvent:null}));setNotice('Emergency stop cleared. The machine remains broken until you assign a mechanic or save 40 RVT for repairs.');
+    const cost=repairCostFor(id,s['tier_'+id]);
+    if(s.cash>=cost){setS(v=>({...v,cash:v.cash-cost,broken:{...v.broken,[id]:0},breakdownEvent:null}));setNotice('Emergency repair complete · '+cost+' RVT spent. Production is back online.');return;}
+    setS(v=>({...v,breakdownEvent:null}));setNotice('Emergency stop cleared. The machine remains broken until you assign a mechanic or save '+cost+' RVT for repairs.');
   };
   const buyMachine=(m:typeof machines[number])=>{
     if(m.id==='miner'&&s.miner===0&&!s.acceptedContracts.includes('first-ore')){setNotice('Accept your First Ore Delivery contract to receive the machine advance.');return;}
@@ -405,6 +422,34 @@ export default function App(){
     if(s.cash<cost){setNotice('You need '+fmt(cost)+' Rivets to hire this person.');return;}
     setS(v=>({...v,cash:v.cash-cost,[role==='mechanic'?'mechanics':'salespeople']:v[role==='mechanic'?'mechanics':'salespeople']+1}));
     setNotice(role==='mechanic'?'Mechanic hired. Assign them to a machine below.':'Sales representative hired. Set their product target below.');
+  };
+  const fire=(role:'mechanic'|'sales'|'cyber')=>{
+    const key=role==='mechanic'?'mechanics':role==='sales'?'salespeople':'cybersecuritySpecialists';
+    if(s[key]<=0){setNotice('No staff in this role to dismiss.');return;}
+    setS(v=>{
+      if(v[key]<=0)return v;
+      const next={...v,[key]:v[key]-1};
+      if(role==='mechanic'){
+        const assignments={...v.mechanicAssignments};
+        let excess=Math.max(0,machines.reduce((sum,m)=>sum+assignments[m.id],0)-next.mechanics);
+        for(const m of [...machines].reverse()){if(excess<=0)break;const removed=Math.min(excess,assignments[m.id]);assignments[m.id]-=removed;excess-=removed;}
+        next.mechanicAssignments=assignments;
+      }
+      if(role==='sales'){
+        const assignments={...v.salesAssignments};
+        let excess=Math.max(0,goods.reduce((sum,g)=>sum+assignments[g.id],0)-next.salespeople);
+        for(const g of [...goods].reverse()){if(excess<=0)break;const removed=Math.min(excess,assignments[g.id]);assignments[g.id]-=removed;excess-=removed;}
+        next.salesAssignments=assignments;
+      }
+      return next;
+    });
+    setNotice('Employee dismissed. Payroll reduced by '+(role==='mechanic'?WAGES.mechanic:role==='sales'?WAGES.sales:WAGES.cyber)+' RVT per minute.');
+  };
+  const assignSales=(id:StockId,count:number)=>{
+    setS(v=>{
+      const used=goods.reduce((sum,g)=>sum+(g.id===id?0:v.salesAssignments[g.id]||0),0);
+      return {...v,salesAssignments:{...v.salesAssignments,[id]:Math.max(0,Math.min(count,v.salespeople-used))}};
+    });
   };
   const assignMechanic=(id:MachineId,count:number)=>{
     const used=machines.reduce((sum,m)=>sum+(m.id===id?0:s.mechanicAssignments[m.id]),0);
@@ -458,13 +503,13 @@ export default function App(){
         <section className="machines-heading"><div><span className="eyebrow">YOUR EQUIPMENT</span><h2>Machines</h2><p>Each machine has its own job. Build the next stage when you're ready.</p></div><span className="machine-count">{machineCount} BUILT</span></section>
         {s.miner===0&&<section className="starter-contract"><div><span className="eyebrow">YOUR FIRST COMMISSION</span><h2>First Ore Delivery</h2><p>A local foundry has placed a small order for five raw ore. Accept it to receive a 50 RVT equipment advance, buy your first Rockbreaker Mine, produce the ore and deliver it for the final payment.</p><div className="starter-contract-reward"><b>50 RVT ADVANCE</b><span>+85 RVT · +5 REP ON DELIVERY</span></div></div><button className="primary-button" disabled={s.acceptedContracts.includes('first-ore')} onClick={()=>{setS(v=>({...v,acceptedContracts:[...v.acceptedContracts,'first-ore'],cash:v.cash+50}));setNotice('Order accepted. The foundry has advanced 50 RVT. Now buy your first Rockbreaker Mine — try not to spend it all on snacks.')}}>{s.acceptedContracts.includes('first-ore')?'ORDER ACCEPTED · ADVANCE PAID':'ACCEPT ORDER · GET 50 RVT'}</button></section>}
         <section className="machine-grid">{visibleMachines.map(m=>{
-          const owned=s[m.id];const hasInput=m.id==='miner'||m.id==='copperMiner'||(m.id==='smelter'?s.ore>0:m.id==='press'?s.ingot>0:m.id==='assembler'?s.plate>0:m.id==='copperSmelter'?s.copperOre>0:m.id==='wiremill'?s.copperIngot>0:s.wire>0);const active=running&&owned>0&&s.broken[m.id]===0&&hasInput;const cost=machineCost(m,s);const tier=s['tier_'+m.id];const repairCost=40;
+          const owned=s[m.id];const hasInput=m.id==='miner'||m.id==='copperMiner'||(m.id==='smelter'?s.ore>0:m.id==='press'?s.ingot>0:m.id==='assembler'?s.plate>0:m.id==='copperSmelter'?s.copperOre>0:m.id==='wiremill'?s.copperIngot>0:s.wire>0);const active=running&&owned>0&&s.broken[m.id]===0&&hasInput;const cost=machineCost(m,s);const tier=s['tier_'+m.id];const repairCost=repairCostFor(m.id,tier);
           return <article className={'machine-card '+(owned?'owned':'locked')+(s.broken[m.id]>0?' is-broken':'')} key={m.id}>
             <div className="machine-card-head"><span className="machine-number">0{machines.indexOf(m)+1} · {m.short}</span><span className={'status '+(s.broken[m.id]>0?'bad':active?'good':'idle')}>{s.broken[m.id]>0?'BROKEN':active?'WORKING':owned?'IDLE':'NOT BUILT'}</span></div>
             <MachineArt id={m.id} active={active} broken={s.broken[m.id]>0} cycle={cycle}/>
             <div className="machine-info"><div><h3>{m.name}</h3><p>{m.desc}</p></div><span className="machine-level">LV {tier+1}</span></div>
             <div className="machine-details"><span>OUTPUT</span><b>{rateFor(m).toFixed(2)} / sec</b><span>OWNED</span><b>{owned}</b></div>
-            {s.broken[m.id]>0&&<div className="machine-repair"><span>{s.mechanicAssignments[m.id]>0?'Mechanic assigned · repairing':'No mechanic assigned'}</span><button onClick={()=>{if(s.cash<repairCost){setNotice('Emergency repair costs 40 Rivets.');return;}setS(v=>({...v,cash:v.cash-repairCost,broken:{...v.broken,[m.id]:0}}));setNotice(m.name+' repaired.')}}>REPAIR · 40 RVT</button></div>}
+            {s.broken[m.id]>0&&<div className="machine-repair"><span>{s.mechanicAssignments[m.id]>0?'Mechanic assigned · repairing':'No mechanic assigned'}</span><button onClick={()=>{if(s.cash<repairCost){setNotice('Emergency repair costs '+repairCost+' Rivets.');return;}setS(v=>({...v,cash:v.cash-repairCost,broken:{...v.broken,[m.id]:0}}));setNotice(m.name+' repaired.')}}>REPAIR · {fmt(repairCost)} RVT</button></div>}
             <div className="machine-buttons">{owned===0?(s.experience<unlockAt[m.id]||s.reputation<reputationUnlock[m.id]?<div className="machine-locked-note">🔒 {unlockAt[m.id]} XP + {reputationUnlock[m.id]} reputation required</div>:<button className="primary-button" disabled={s.cash<cost} onClick={()=>buyMachine(m)}>BUILD MACHINE · {fmt(cost)} RVT</button>):<button className="secondary-button" disabled={s.gears<(tier+1)*3} onClick={()=>upgradeMachine(m)}><ArrowUpRight size={15}/> UPGRADE · {(tier+1)*3} GEARS</button>}</div>
             {owned>0&&<small className="machine-footnote">+25% output per upgrade · {m.output}</small>}
           </article>;
@@ -474,17 +519,19 @@ export default function App(){
       </div>}
       {page==='staff'&&<div className="page-content">
         <section className="welcome-row"><div><span className="eyebrow">PEOPLE MAKE THE FACTORY</span><h1>Staff room</h1><p>Hire your crew, give them a clear job and keep every department covered.</p></div><div className="staff-summary"><b>{s.mechanics+s.salespeople+s.cybersecuritySpecialists}</b><span>TEAM MEMBERS</span><small>{unassigned} mechanic{unassigned===1?'':'s'} unassigned</small></div></section>
+        <section className="contract-summary"><span><b>{payroll.toFixed(1)} RVT</b> WAGES PER MINUTE</span><span><b>{(payroll/60).toFixed(2)} RVT</b> PER SECOND</span><span><b>{payrollFunded?'FUNDED':'UNPAID'}</b> PAYROLL</span></section>
+        <div className="sales-note"><CircleDollarSign size={18}/> Wages are charged each real-time second while the factory is running, independent of production speed. Pausing or active incident cutscenes pause payroll. If the balance cannot cover wages, automatic dispatch and staff repairs stop until cash is available.</div>
         <section className="staff-roles">
-          <article className="role-card mechanic-role"><div className="role-top"><span className="role-icon"><Wrench size={24}/></span><span className="role-tag">MAINTENANCE</span></div><h2>Mechanic</h2><p>Repairs breakdowns and gets machines running again. Assign each mechanic to the machine you want them to look after.</p><div className="role-bottom"><div><b>{s.mechanics}</b><small>HIRED</small></div><button className="primary-button" disabled={s.cash<mechanicCost(s)} onClick={()=>hire('mechanic')}>HIRE · {fmt(mechanicCost(s))} RVT</button></div></article>
-          <article className="role-card sales-role"><div className="role-top"><span className="role-icon"><Store size={24}/></span><span className="role-tag">DISPATCH & SALES</span></div><h2>Sales representative</h2><p>Sells warehouse stock automatically and earns 1 bonus XP per minute per active salesperson, plus XP based on shipment value. Choose a product and enable automatic sales.</p><div className="role-bottom"><div><b>{s.salespeople}</b><small>HIRED</small></div><button className="primary-button" disabled={s.cash<salesCost(s)} onClick={()=>hire('sales')}>HIRE · {fmt(salesCost(s))} RVT</button></div></article>
-          <article className="role-card cyber-role"><div className="role-top"><span className="role-icon"><ShieldCheck size={24}/></span><span className="role-tag">NETWORK SECURITY</span></div><h2>Cybersecurity specialist</h2><p>Monitors factory systems, contains digital intrusions and installs a permanent firewall against future cyber incidents.</p><div className="role-bottom"><div><b>{s.cybersecuritySpecialists}</b><small>HIRED</small></div><button className="primary-button" disabled={s.cash<cybersecurityCost(s)} onClick={hireCybersecuritySpecialist}>HIRE · {fmt(cybersecurityCost(s))} RVT</button></div></article>
+          <article className="role-card mechanic-role"><div className="role-top"><span className="role-icon"><Wrench size={24}/></span><span className="role-tag">MAINTENANCE</span></div><h2>Mechanic</h2><p>Repairs breakdowns and gets machines running again. Assign each mechanic to the machine you want them to look after.</p><div className="role-bottom"><div><b>{s.mechanics}</b><small>HIRED</small></div><button className="primary-button" disabled={s.cash<mechanicCost(s)} onClick={()=>hire('mechanic')}>HIRE · {fmt(mechanicCost(s))} RVT</button><button className="secondary-button" disabled={s.mechanics===0} onClick={()=>fire('mechanic')}>FIRE ONE</button><small>3 RVT/min per mechanic</small></div></article>
+          <article className="role-card sales-role"><div className="role-top"><span className="role-icon"><Store size={24}/></span><span className="role-tag">DISPATCH & SALES</span></div><h2>Sales representative</h2><p>Sells warehouse stock automatically and earns 1 bonus XP per minute per active salesperson, plus XP based on shipment value. Choose a product and enable automatic sales.</p><div className="role-bottom"><div><b>{s.salespeople}</b><small>HIRED</small></div><button className="primary-button" disabled={s.cash<salesCost(s)} onClick={()=>hire('sales')}>HIRE · {fmt(salesCost(s))} RVT</button><button className="secondary-button" disabled={s.salespeople===0} onClick={()=>fire('sales')}>FIRE ONE</button><small>5 RVT/min per salesperson</small></div></article>
+          <article className="role-card cyber-role"><div className="role-top"><span className="role-icon"><ShieldCheck size={24}/></span><span className="role-tag">NETWORK SECURITY</span></div><h2>Cybersecurity specialist</h2><p>Monitors factory systems, contains digital intrusions and installs a permanent firewall against future cyber incidents.</p><div className="role-bottom"><div><b>{s.cybersecuritySpecialists}</b><small>HIRED</small></div><button className="primary-button" disabled={s.cash<cybersecurityCost(s)} onClick={hireCybersecuritySpecialist}>HIRE · {fmt(cybersecurityCost(s))} RVT</button><button className="secondary-button" disabled={s.cybersecuritySpecialists===0} onClick={()=>fire('cyber')}>FIRE ONE</button><small>8 RVT/min per specialist</small></div></article>
         </section>
         <section className="staff-assignments">
           <div className="section-heading"><div><span className="eyebrow">TEAM SETUP</span><h2>Assign your staff</h2><p>Choose where each mechanic works. One mechanic repairs one machine at a time.</p></div><div className="available-staff"><b>{unassigned}</b><span>AVAILABLE MECHANICS</span></div></div>
           <div className="assignment-list">{machines.filter(m=>s[m.id]>0).map(m=><div className="assignment-row" key={m.id}><span className="assignment-machine"><Cog size={19}/></span><div className="assignment-copy"><b>{m.name}</b><small>{s.broken[m.id]>0?'Breakdown · '+(s.mechanicAssignments[m.id]>0?'being repaired':'awaiting mechanic'):s[m.id]>0?'Machine operational':'Not built yet'}</small></div><label><span>MECHANICS</span><select value={s.mechanicAssignments[m.id]} onChange={e=>assignMechanic(m.id,Number(e.target.value))} disabled={s.mechanics===0||s[m.id]===0}>{Array.from({length:s.mechanics+1},(_,i)=>i).map(i=><option key={i} value={i}>{i===0?'Unassigned':i+' assigned'}</option>)}</select></label></div>)}</div>
           {s.mechanics===0&&<div className="empty-hint"><Wrench size={17}/> Hire a mechanic above to unlock machine assignments.</div>}
         </section>
-        <section className="sales-setup"><div className="sales-setup-title"><span className="role-icon"><Truck size={22}/></span><div><span className="eyebrow">DISPATCH SETTINGS</span><h2>Sales team instructions</h2></div></div><div className="sales-controls"><label>PRODUCT TO SELL<select value={s.salesTarget} onChange={e=>setS(v=>({...v,salesTarget:e.target.value as StockId}))}>{visibleGoods.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></label><label className="toggle-row"><input type="checkbox" checked={s.autoSell} disabled={s.salespeople===0} onChange={e=>setS(v=>({...v,autoSell:e.target.checked}))}/><span><b>Automatic sales</b><small>{s.salespeople>0?'Your sales team ships '+(s.salespeople*.12).toFixed(2)+' units per second.':'Hire a sales representative to activate this.'}</small></span></label></div></section>
+        <section className="sales-setup"><div className="sales-setup-title"><span className="role-icon"><Truck size={22}/></span><div><span className="eyebrow">DISPATCH SETTINGS</span><h2>Sales team assignments</h2><p>Assign your sales representatives to different goods. Each sells their assigned product independently.</p></div></div><div className="contract-summary"><span><b>{assignedSales}</b> ASSIGNED</span><span><b>{unassignedSales}</b> AVAILABLE</span><span><b>{s.salespeople}</b> TOTAL SALESPEOPLE</span></div><div className="assignment-list">{goods.filter(g=>s[contractProducer[g.id]]>0).map(g=><div className="assignment-row" key={g.id}><span className="assignment-machine">{g.emoji}</span><div className="assignment-copy"><b>{g.name}</b><small>{((s.salesAssignments[g.id]||0)*.12).toFixed(2)} units/sec when automatic sales are on</small></div><label><span>SALES STAFF</span><select value={s.salesAssignments[g.id]||0} onChange={e=>assignSales(g.id,Number(e.target.value))} disabled={s.salespeople===0}>{Array.from({length:s.salespeople+1},(_,i)=>i).map(i=><option key={i} value={i}>{i===0?'None':i+' assigned'}</option>)}</select></label></div>)}</div><div className="sales-controls"><label className="toggle-row"><input type="checkbox" checked={s.autoSell} disabled={s.salespeople===0} onChange={e=>setS(v=>({...v,autoSell:e.target.checked}))}/><span><b>Automatic sales</b><small>Each active salesperson sells 0.12 units/sec and earns bonus XP while shipping stock.</small></span></label></div></section>
       </div>}
       {page==='research'&&<div className="page-content">
         <section className="welcome-row"><div><span className="eyebrow">THE NEXT INDUSTRIAL REVOLUTION</span><h1>Research &amp; Technology</h1><p>Invest Gears into permanent factory-wide improvements. Every discovery stays unlocked, even when you leave the game.</p></div><div className="staff-summary research-summary"><b>{s.researched.length}/4</b><span>TECHNOLOGIES</span><small>{fmt(s.gears)} Gears available</small></div></section>
@@ -500,12 +547,12 @@ export default function App(){
         <section className="warehouse-grid">{visibleGoods.map(g=><article className="stock-card" key={g.id}><span className="stock-emoji">{g.emoji}</span><div><h3>{g.name}</h3><p>{g.detail} · {g.price} RVT each</p><b>{fmt(s[g.id])} <small>IN STOCK</small></b></div><button disabled={s[g.id]<1} onClick={()=>sellStock(g.id)}>SHIP ALL · {fmt(Math.floor(s[g.id])*g.price)} RVT</button></article>)}</section>
         <section className="contracts-panel"><div className="section-heading"><div><span className="eyebrow">REPUTATION & REVENUE</span><h2>Customer orders</h2><p>Take an order, make the goods, then ship them for guaranteed Rivets and reputation. Delivery consumes the stock.</p></div><span className="machine-count">{s.contractsCompleted.length}/{contracts.length} DELIVERED</span></div><div className="contract-summary"><span><b>{readyOrders}</b> READY TO SHIP</span><span><b>{activeOrders}</b> BEING PREPARED</span><span><b>{completedOrders}</b> DELIVERED</span></div><div className="contract-filters" role="group" aria-label="Filter customer orders"><button className={contractFilter==='all'?'selected':''} onClick={()=>setContractFilter('all')}>ALL ({visibleContracts.length})</button><button className={contractFilter==='ready'?'selected':''} onClick={()=>setContractFilter('ready')}>READY ({readyOrders})</button><button className={contractFilter==='progress'?'selected':''} onClick={()=>setContractFilter('progress')}>IN PROGRESS ({activeOrders})</button><button className={contractFilter==='done'?'selected':''} onClick={()=>setContractFilter('done')}>DELIVERED ({completedOrders})</button></div><div className="contract-grid">{visibleContracts.filter(c=>{const done=s.contractsCompleted.includes(c.id);const unlocked=s.reputation>=c.minRep;const ready=unlocked&&s[c.good]>=c.qty&&!done;const progress=unlocked&&!done&&!ready;return contractFilter==='all'||(contractFilter==='ready'&&ready)||(contractFilter==='progress'&&progress)||(contractFilter==='done'&&done);}).map(c=>{const done=s.contractsCompleted.includes(c.id);const accepted=s.acceptedContracts.includes(c.id);const unlocked=s.reputation>=c.minRep;const stock=s[c.good];const ready=unlocked&&stock>=c.qty;const progress=Math.min(100,stock/c.qty*100);const status=done?'DELIVERED':!unlocked?'LOCKED · '+c.minRep+' REP':ready?'READY TO SHIP':c.id==='first-ore'&&!accepted?'WAITING FOR ACCEPTANCE':'IN PROGRESS';return <article className={'contract-card '+(done?'contract-done':ready?'contract-ready':'')} key={c.id}><div className="contract-card-top"><span className="contract-tag">{status}</span><span className="contract-number">ORDER #{String(contracts.indexOf(c)+1).padStart(2,'0')}</span></div><h3>{c.name}</h3><p>{c.detail}</p><div className="contract-requirement"><span>CUSTOMER REQUIREMENT</span><b>{c.qty} {goods.find(g=>g.id===c.good)?.name}</b><small>IN STOCK · {fmt(stock)} / {c.qty}</small><div className="order-progress"><i style={{width:progress+'%'}}/></div></div><div className="contract-reward"><b>+{fmt(c.reward)} RVT</b><span>+{c.rep} REP</span></div><button className="primary-button" disabled={done||!unlocked||stock<c.qty||(c.id==='first-ore'&&!accepted)} onClick={()=>completeContract(c)}>{done?'DELIVERED · PAID':!unlocked?'NEED '+c.minRep+' REP':stock<c.qty?'MAKE '+fmt(c.qty-stock)+' MORE':'SHIP ORDER · COLLECT REWARD'}</button></article>})}{visibleContracts.length>0&&contractFilter!=='all'&&!visibleContracts.some(c=>{const done=s.contractsCompleted.includes(c.id);const unlocked=s.reputation>=c.minRep;const ready=unlocked&&s[c.good]>=c.qty&&!done;const progress=unlocked&&!done&&!ready;return (contractFilter==='ready'&&ready)||(contractFilter==='progress'&&progress)||(contractFilter==='done'&&done);})&&<div className="contract-empty">Nothing in this pile yet. The paperwork is suspiciously under control.</div>}</div></section>
         <section className="contracts-panel"><div className="section-heading"><div><span className="eyebrow">INCOMING WORK</span><h2>Repeat customer contracts</h2><p>Three live orders at a time. Deliver any order to receive XP, reputation and Rivets — then a new one arrives automatically. Only products you can make are requested.</p></div><span className="machine-count">{repeatOrders.length} LIVE ORDERS</span></div><div className="contract-grid">{repeatOrders.map(order=>{const stock=s[order.good];const ready=stock>=order.qty;const item=goods.find(g=>g.id===order.good)!;return <article className={'contract-card '+(ready?'contract-ready':'')} key={order.slot}><div className="contract-card-top"><span className="contract-tag">{ready?'READY TO SHIP':'IN PROGRESS'}</span><span className="contract-number">REPEAT #{order.slot+1}</span></div><h3>{order.name}</h3><p>{order.detail}</p><div className="contract-requirement"><span>CUSTOMER REQUIREMENT</span><b>{order.qty} {item.name}</b><small>IN STOCK · {fmt(stock)} / {order.qty}</small><div className="order-progress"><i style={{width:Math.min(100,stock/order.qty*100)+'%'}}/></div></div><div className="contract-reward"><b>+{fmt(order.reward)} RVT</b><span>+{order.xp} XP · +{order.rep} REP</span></div><button className="primary-button" disabled={!ready} onClick={()=>completeRepeatOrder(order)}>{ready?'SHIP ORDER · NEW ORDER ARRIVES':'MAKE '+fmt(Math.ceil(order.qty-stock))+' MORE'}</button></article>})}{repeatOrders.length===0&&<div className="contract-empty">Your customer order desk opens as soon as you buy your first machine.</div>}</div></section>
-        <div className="sales-note"><CircleDollarSign size={18}/> {s.salespeople>0&&s.autoSell?'Your sales team is active and dispatching '+goods.find(g=>g.id===s.salesTarget)?.name+'.':'Hire sales staff and enable automatic sales from the Staff page to automate dispatch.'}</div>
+        <div className="sales-note"><CircleDollarSign size={18}/> {s.salespeople>0&&s.autoSell?'Your assigned sales team is automatically dispatching stock.':'Hire sales staff and enable automatic sales from the Staff page to automate dispatch.'}</div>
       </div>}
     </main>
     {s.cyberAttackEvent&&<div className="cyberattack-backdrop" role="dialog" aria-modal="true" aria-labelledby="cyberattack-title"><section className="cyberattack-panel"><div className="powercut-topline"><span>ORE &amp; ORDER · INCIDENT 002</span><span className="cyberattack-live"><i/> NETWORK BREACH</span></div><h2 id="cyberattack-title">Someone's in the system.</h2><p className="powercut-intro">The new Mech Assembly has just joined the line when every terminal flashes red. An unknown process has seized the factory network, locked the control systems and frozen production. This isn't a blown fuse — someone has got inside.</p><img className="powercut-storyboard" src="/resources/Factory Lockdown_ Cyberattack Alert.png" alt="Six-panel comic storyboard showing a factory network breach, warning terminal, frozen machinery and red emergency lighting"/><div className="powercut-choice-heading"><b>TAKE BACK CONTROL</b><span>Production stays paused until recovery</span></div><div className="powercut-actions"><button className="primary-button" disabled={s.cash<cybersecurityCost(s)} onClick={hireCybersecuritySpecialist}>HIRE CYBERSECURITY SPECIALIST · {fmt(cybersecurityCost(s))} RVT <small>Contains the breach and installs permanent protection</small></button><button className="secondary-button" disabled={s.cash<120} onClick={emergencyCyberRecovery}>EXTERNAL SYSTEM RESTORE · 120 RVT <small>Restores production without an in-house specialist</small></button></div><small className="powercut-footnote">The incident is one-time. A specialist stays on your team and protects the factory network.</small></section></div>}
     {s.powerCutEvent&&<div className="powercut-backdrop" role="dialog" aria-modal="true" aria-labelledby="powercut-title"><section className="powercut-panel"><div className="powercut-topline"><span>ORE &amp; ORDER · INCIDENT 001</span><span className="powercut-live"><i/> POWER FAILURE</span></div><h2 id="powercut-title">Well, that's put a stop to things.</h2><p className="powercut-intro">The lights flicker. The Rockbreaker Mine gives one last shudder, then everything goes quiet. Your first proper factory problem has arrived.</p><img className="powercut-storyboard" src="/resources/Factory Power Cut_ A Comic Storyboard.png" alt="Comic storyboard showing the factory lights flickering, a machine sparking, the factory going dark and emergency red lights coming on"/><div className="powercut-choice-heading"><b>GET THE MINE BACK ONLINE</b><span>Choose how to recover</span></div><div className="powercut-actions"><button className="primary-button" disabled={s.cash<60} onClick={()=>resolvePowerCut(true)}>HIRE A MECHANIC · 60 RVT <small>First-day discount · keeps them on your team</small></button><button className="secondary-button" disabled={s.cash<40} onClick={()=>resolvePowerCut(false)}>ONE-OFF REPAIR · 40 RVT <small>Fix the mine without hiring staff</small></button></div><small className="powercut-footnote">Your factory is paused until the mine is repaired. This incident only happens once.</small></section></div>}
-    {s.breakdownEvent&&<div className="incident-backdrop" role="dialog" aria-modal="true" aria-labelledby="incident-title"><section className="incident-panel"><div className="incident-siren"><AlertTriangle size={28}/><span>EMERGENCY STOP · 01</span></div><p className="incident-kicker">FACTORY INCIDENT REPORT</p><h2 id="incident-title">Critical machine failure</h2><p className="incident-copy"><b>{machines.find(m=>m.id===s.breakdownEvent)?.name}</b> has suffered a mechanical failure. The line has been stopped while the fault is isolated. Production and automatic dispatch are temporarily suspended.</p><div className="incident-readout"><span>FAULT DETECTED</span><b>DRIVE ASSEMBLY OVERHEATING</b><span>REQUIRED ACTION</span><b>REPAIR THE AFFECTED MACHINE</b></div><div className="incident-actions">{s.mechanicAssignments[s.breakdownEvent]>0&&<button className="primary-button" onClick={()=>resolveBreakdown(true)}>USE ASSIGNED MECHANIC · FREE</button>}<button className="primary-button" disabled={s.cash<40} onClick={()=>resolveBreakdown(false)}>EMERGENCY REPAIR · 40 RVT</button><button className="secondary-button" onClick={()=>{setS(v=>({...v,breakdownEvent:null}));setNotice('Emergency stop cleared. '+machines.find(m=>m.id===s.breakdownEvent)?.name+' still needs repair.')}}>CONTINUE · REPAIR LATER</button></div><small className="incident-footnote">Tip: assign a mechanic in Staff to handle future breakdowns. You can also repair the machine from its factory card.</small></section></div>}
+    {s.breakdownEvent&&<div className="incident-backdrop" role="dialog" aria-modal="true" aria-labelledby="incident-title"><section className="incident-panel"><div className="incident-siren"><AlertTriangle size={28}/><span>EMERGENCY STOP · 01</span></div><p className="incident-kicker">FACTORY INCIDENT REPORT</p><h2 id="incident-title">Critical machine failure</h2><p className="incident-copy"><b>{machines.find(m=>m.id===s.breakdownEvent)?.name}</b> has suffered a mechanical failure. The line has been stopped while the fault is isolated. Production and automatic dispatch are temporarily suspended.</p><div className="incident-readout"><span>FAULT DETECTED</span><b>DRIVE ASSEMBLY OVERHEATING</b><span>REQUIRED ACTION</span><b>REPAIR THE AFFECTED MACHINE</b></div><div className="incident-actions">{s.mechanicAssignments[s.breakdownEvent]>0&&<button className="primary-button" onClick={()=>resolveBreakdown(true)}>USE ASSIGNED MECHANIC · FREE</button>}<button className="primary-button" disabled={s.cash<repairCostFor(s.breakdownEvent,s['tier_'+s.breakdownEvent])} onClick={()=>resolveBreakdown(false)}>EMERGENCY REPAIR · {fmt(repairCostFor(s.breakdownEvent,s['tier_'+s.breakdownEvent]))} RVT</button><button className="secondary-button" onClick={()=>{setS(v=>({...v,breakdownEvent:null}));setNotice('Emergency stop cleared. '+machines.find(m=>m.id===s.breakdownEvent)?.name+' still needs repair.')}}>CONTINUE · REPAIR LATER</button></div><small className="incident-footnote">Tip: assign a mechanic in Staff to handle future breakdowns. You can also repair the machine from its factory card.</small></section></div>}
     {notice&&<div className="toast" role="status" aria-live="polite"><span className="toast-icon">{noticeKind==='ORDER DESK'?'📦':noticeKind==='QUICK HEADS-UP'?'🛠️':'🏭'}</span><div className="toast-copy"><small>{noticeKind}</small><b>{noticeTitle}</b><p>{notice}</p></div><button className="toast-close" aria-label="Dismiss notification" onClick={()=>setNotice('')}>×</button></div>
     }{showReset&&<div className="modal-backdrop"><div className="reset-modal"><h2>Reset your factory?</h2><p>This clears machines, Rivets, Gears and staff saved on this device.</p><div><button onClick={()=>setShowReset(false)}>CANCEL</button><button className="danger" onClick={reset}>RESET FACTORY</button></div></div></div>}
   </div>;
