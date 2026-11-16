@@ -145,7 +145,7 @@ const boostClock=(seconds:number)=>`${Math.floor(seconds/60)}:${String(seconds%6
 
 function MachineArt({id,active,broken,lights,cycleSeconds,progress}:{id:MachineId;active:boolean;broken:boolean;lights:('on'|'off'|'empty')[];cycleSeconds:number;progress:number}){
  const [spriteReady,setSpriteReady]=useState(false);
- const spritePath='/machines/'+id+'-sheet.webp';
+ const spritePath='/resources/machines/'+id+'-sheet.webp';
  const safeCycle=cycleSeconds>0?cycleSeconds:8;
  const electrical=['copperMiner','copperSmelter','wiremill','circuitpress','coilWinder'].includes(id);
  const copper=electrical?'#bd8054':'#bd985e';
