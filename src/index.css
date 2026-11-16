@@ -532,3 +532,29 @@ body{background:#171b19}.game{max-width:1240px}
 .machine-electricity b{font-weight:600;color:#ecd8a2;white-space:nowrap}
 @media(max-width:900px){.cashflow-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.cashflow-net{grid-column:auto}}
 @media(max-width:540px){.cashflow-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.cashflow-net{grid-column:auto}.machine-electricity{font-size:8px}}
+
+
+/* Artwork imported from Ore & Order's ten generated animated machine sheets.
+   Sheets contain six unique frames and a seventh loop-back frame.
+   Timing follows the same actual per-unit output rate as the SVG fallback. */
+.machine-art .machine-sprite-loader{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none;left:-10px;top:-10px}
+.machine-art.art-sprite-ready{background:linear-gradient(180deg,#39393b,#25282a)!important;border-color:#746453!important}
+.machine-art.art-sprite-ready.art-electrical{background:linear-gradient(180deg,#443632,#292b29)!important}
+.machine-art.art-sprite-ready svg,.machine-art.art-sprite-ready .art-backdrop,.machine-art.art-sprite-ready .machine-art-floor{display:none!important}
+.machine-art .machine-sprite-layer{
+  position:absolute;z-index:3;left:50%;top:0;transform:translateX(-50%);
+  height:100%;aspect-ratio:1/1;
+  background-size:700% 100%;background-repeat:no-repeat;background-position:0 0;
+  animation:machineSpriteFrames var(--machine-cycle,8s) steps(6,end) infinite;
+  animation-delay:var(--machine-offset,0s);
+  animation-play-state:paused;
+  image-rendering:auto;
+  pointer-events:none;
+}
+.machine-art.running .machine-sprite-layer{animation-play-state:running}
+.machine-art.art-sprite-ready .art-cycle-hud{z-index:7}
+.machine-art.art-sprite-ready .art-lamp{z-index:8}
+.machine-art.art-sprite-ready .broken-stamp,.machine-art.art-sprite-ready .art-status-dot{z-index:8}
+.machine-art.art-sprite-ready.broken .machine-sprite-layer{filter:saturate(.65) brightness(.8)}
+@keyframes machineSpriteFrames{from{background-position:0% 0}to{background-position:100% 0}}
+@media(prefers-reduced-motion:reduce){.machine-art .machine-sprite-layer{animation:none!important}}
