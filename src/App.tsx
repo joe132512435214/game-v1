@@ -208,9 +208,76 @@ const BOOSTS:{id:BoostId;name:string;subtitle:string;description:string;cost:num
 ];
 const boostClock=(seconds:number)=>`${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;
 
+// A consistent 16-bit palette gives every machine the same visual language.
+// Each of the seven animation frames is pixel-converted from its actual moving
+// machinery, preserving gameplay-synchronised animation without extra smoke overlays.
+type PixelMachineArt={sheet:string;icon:string};
+const PIXEL_FRAME=100;
+const pixelMachineCache=new Map<MachineId,Promise<PixelMachineArt>>();
+const pixelColours=[
+  '#171b1c','#222725','#303431','#444742','#60615b','#7f8075','#a4a497','#d0c9b7','#f0e9d5',
+  '#182b24','#294338','#405c49','#58735b','#839879','#b5c6a3',
+  '#382b29','#59372e','#7b4635','#a15b39','#cb7850','#ebad6a','#f6d19b',
+  '#3c3326','#685137','#957044','#c69a5b','#e6c887','#f6e4b8',
+  '#313341','#525160','#77727e','#aaa3aa','#ded2d5',
+  '#4b2a21','#842f24','#c2482b','#ea712e','#ffae3b','#ffdc72',
+  '#253d42','#42616a','#68939c','#9cb8b4'
+].map(hex=>[parseInt(hex.slice(1,3),16),parseInt(hex.slice(3,5),16),parseInt(hex.slice(5,7),16)]);
+function loadPixelMachine(id:MachineId):Promise<PixelMachineArt>{
+  const cached=pixelMachineCache.get(id);
+  if(cached)return cached;
+  const result=new Promise<PixelMachineArt>((resolve,reject)=>{
+    const source=new Image();
+    source.decoding='async';
+    source.onerror=()=>reject(new Error('Missing machine sprite: '+id));
+    source.onload=()=>{
+      try{
+        const frameCount=7;
+        const sheet=document.createElement('canvas');
+        sheet.width=PIXEL_FRAME*frameCount;
+        sheet.height=PIXEL_FRAME;
+        const ctx=sheet.getContext('2d',{willReadFrequently:true});
+        if(!ctx)throw new Error('Canvas unavailable');
+        const frameWidth=source.naturalWidth/frameCount;
+        ctx.imageSmoothingEnabled=true;
+        for(let i=0;i<frameCount;i++){
+          ctx.drawImage(source,i*frameWidth,0,frameWidth,source.naturalHeight,i*PIXEL_FRAME,0,PIXEL_FRAME,PIXEL_FRAME);
+        }
+        const image=ctx.getImageData(0,0,sheet.width,sheet.height);
+        const px=image.data;
+        for(let p=0;p<px.length;p+=4){
+          if(px[p+3]<8)continue;
+          const r=px[p],g=px[p+1],b=px[p+2];
+          let nearest=pixelColours[0],best=Infinity;
+          for(const colour of pixelColours){
+            const dr=r-colour[0],dg=g-colour[1],db=b-colour[2];
+            const dist=dr*dr*.30+dg*dg*.59+db*db*.11;
+            if(dist<best){best=dist;nearest=colour;}
+          }
+          px[p]=nearest[0];px[p+1]=nearest[1];px[p+2]=nearest[2];
+        }
+        ctx.putImageData(image,0,0);
+        const icon=document.createElement('canvas');
+        icon.width=PIXEL_FRAME;icon.height=PIXEL_FRAME;
+        icon.getContext('2d')?.drawImage(sheet,0,0,PIXEL_FRAME,PIXEL_FRAME,0,0,PIXEL_FRAME,PIXEL_FRAME);
+        resolve({sheet:sheet.toDataURL('image/png'),icon:icon.toDataURL('image/png')});
+      }catch(err){reject(err);}
+    };
+    source.src='/resources/machines/'+id+'-sheet.webp';
+  });
+  pixelMachineCache.set(id,result);
+  return result;
+}
+function MachineIcon({id,size=36}:{id:MachineId;size?:number}){
+  const [art,setArt]=useState<PixelMachineArt|null>(null);
+  useEffect(()=>{let mounted=true;loadPixelMachine(id).then(v=>{if(mounted)setArt(v)}).catch(()=>{});return()=>{mounted=false;};},[id]);
+  return art?<img className="pixel-machine-icon" src={art.icon} alt={machines.find(m=>m.id===id)?.name||'Machine'} width={size} height={size}/>:<span className="pixel-machine-placeholder" style={{width:size,height:size}} aria-hidden="true">⚙</span>;
+}
+
 function MachineArt({id,active,broken,lights,cycleSeconds,progress}:{id:MachineId;active:boolean;broken:boolean;lights:('on'|'off'|'empty')[];cycleSeconds:number;progress:number}){
- const [spriteReady,setSpriteReady]=useState(false);
- const spritePath='/resources/machines/'+id+'-sheet.webp';
+ const [sprite,setSprite]=useState<PixelMachineArt|null>(null);
+ useEffect(()=>{let mounted=true;loadPixelMachine(id).then(v=>{if(mounted)setSprite(v)}).catch(()=>{if(mounted)setSprite(null)});return()=>{mounted=false;};},[id]);
+ const spriteReady=!!sprite;
  const safeCycle=cycleSeconds>0?cycleSeconds:8;
  const electrical=['copperMiner','copperSmelter','wiremill','circuitpress','coilWinder'].includes(id);
  const copper=electrical?'#bd8054':'#bd985e';
@@ -219,8 +286,7 @@ function MachineArt({id,active,broken,lights,cycleSeconds,progress}:{id:MachineI
  const glass=electrical?'#d8a16d':'#d5c18b';
  const bolt=(x:number,y:number)=><circle cx={x} cy={y} r="2.3" fill="#d7c9a8" stroke="#39453b" strokeWidth="1"/>;
  return <div className={'machine-art art-'+id+(electrical?' art-electrical':'')+(active?' running':'')+(broken?' broken':'')+(spriteReady?' art-sprite-ready':'')} style={{'--machine-cycle':safeCycle+'s','--machine-offset':'-'+(Math.max(0,Math.min(1,progress))*safeCycle)+'s'} as CSSProperties}>
-  <img className="machine-sprite-loader" src={spritePath} alt="" aria-hidden="true" onLoad={()=>setSpriteReady(true)} onError={()=>setSpriteReady(false)}/>
-  {spriteReady&&<div className="machine-sprite-layer" role="img" aria-label={machines.find(m=>m.id===id)?.name+' animated machine producing goods'} style={{backgroundImage:'url('+spritePath+')'}}/>}
+  {spriteReady&&<div className="machine-sprite-layer" role="img" aria-label={machines.find(m=>m.id===id)?.name+' semi-pixel-art animated machine'} style={{backgroundImage:'url('+sprite.sheet+')'}}/>}
   <div className="art-backdrop"/>
   <svg viewBox="0 0 320 210" role="img" aria-label={machines.find(m=>m.id===id)?.name+' detailed industrial machine illustration'}>
    <defs>
@@ -338,9 +404,7 @@ function MachineArt({id,active,broken,lights,cycleSeconds,progress}:{id:MachineI
 </g>}
 <g fill="#d5c18b" stroke="#29372f" strokeWidth="1.5"><circle cx="48" cy="167" r="5"/><circle cx="272" cy="167" r="5"/></g>
    </g>
-   {(id==='smelter'||id==='copperSmelter'||id==='beamMill')&&<g className="steam-plume" fill="none" stroke="#e5d9bf" strokeWidth="5" strokeLinecap="round">
-  <path d="M108 38c-17-15 8-15-5-31"/><path d="M121 35c-12-15 12-15 0-30"/><path d="M207 37c-12-14 10-15-1-29"/>
- </g>}
+   
  {(id==='smelter'||id==='copperSmelter')&&<g className="molten-flow" fill="none" stroke="#ffb35b" strokeWidth="7" strokeLinecap="round"><path d="M241 113q18 2 22 20l12 12"/><path d="M272 146l9 8" stroke="#ffe0a3" strokeWidth="3"/></g>}
  {(id==='miner'||id==='copperMiner')&&<g className="crusher-dust" fill="#d4b28a"><circle cx="38" cy="131" r="7"/><circle cx="51" cy="137" r="5"/><circle cx="23" cy="141" r="4"/></g>}
  {id==='press'&&<g className="stamp-sparks" stroke="#f7bd62" strokeWidth="3" strokeLinecap="round"><path d="M105 137l-13-9m118 9 13-9m-66 15v11m-39-5-8 6"/></g>}
@@ -926,8 +990,8 @@ export default function App(){
         {factoryView==='equipment'&&<>
         <section className="line-panel"><div className="line-heading"><div><span className="eyebrow">LIVE PRODUCTION</span><h2>Assembly line</h2></div><span className="line-live"><i/> {running?'RUNNING':'PAUSED'}</span></div>
           <div className={'production-route '+(!running?'is-paused':'')}>
-            {visibleMachines.map((m,i)=>{const owned=s[m.id]>0;const stageGoods=goods.find(g=>g.id===({miner:'ore',smelter:'ingot',press:'plate',assembler:'parts',copperMiner:'copperOre',copperSmelter:'copperIngot',wiremill:'wire',circuitpress:'circuits',beamMill:'beams',coilWinder:'coils'} as Record<MachineId,StockId>)[m.id]);return <div className={'route-stage '+(owned?'stage-owned':'stage-next')} key={m.id}>
-              <span className="route-index">{String(i+1).padStart(2,'0')}</span><span className="route-symbol">{stageGoods?.emoji||'⚙'}</span><b>{m.name}</b><small>{owned?'INSTALLED':'NEXT STAGE'}</small>
+            {visibleMachines.map((m,i)=>{const owned=s[m.id]>0;return <div className={'route-stage '+(owned?'stage-owned':'stage-next')} key={m.id}>
+              <span className="route-index">{String(i+1).padStart(2,'0')}</span><span className="route-symbol"><MachineIcon id={m.id} size={35}/></span><b>{m.name}</b><small>{owned?'INSTALLED':'NEXT STAGE'}</small>
               {i<visibleMachines.length-1&&<span className="route-link"><i/></span>}
             </div>;})}
           </div>
@@ -953,7 +1017,7 @@ export default function App(){
           const tier=s['tier_'+m.id];
           const repairCost=repairCostFor(m.id,tier);
           return <article className={'machine-card '+(owned?'owned':'locked')+(failed>0?' is-broken':'')} key={m.id}>
-            <div className="machine-card-head"><span className="machine-number">0{machines.indexOf(m)+1} · {m.short}</span><span className={'status '+(unitsWorking===0&&owned>0?'bad':active?'good':'idle')}>{machineStatus}</span></div>
+            <div className="machine-card-head"><span className="machine-number"><MachineIcon id={m.id} size={26}/> 0{machines.indexOf(m)+1} · {m.short}</span><span className={'status '+(unitsWorking===0&&owned>0?'bad':active?'good':'idle')}>{machineStatus}</span></div>
             <MachineArt id={m.id} active={active} broken={failed>0} lights={lights} cycleSeconds={cycleSeconds} progress={s.visualProgress[m.id]}/>
             <div className="machine-info"><div><h3>{m.name}</h3><p>{m.desc}</p></div><span className="machine-level">LV {tier+1}</span></div>
             <div className="machine-details"><span>OUTPUT</span><b>{rateFor(m).toFixed(2)} / sec</b><span>RUNNING / OWNED</span><b>{active?unitsWorking:0} / {owned}</b></div>
@@ -1018,7 +1082,7 @@ export default function App(){
       {page==='warehouse'&&<div className="page-content">
         <section className="welcome-row"><div><span className="eyebrow">STORAGE & DISPATCH</span><h1>Warehouse</h1><p>Keep an eye on your stock and decide when to turn it into Rivets.</p></div><div className="warehouse-total"><small>TOTAL STOCK VALUE</small><b>{fmt(stockValue)} RVT</b><button className="primary-button" disabled={!goods.some(g=>s[g.id]>=1)} onClick={shipAllStock}>SHIP ALL PRODUCTS · {fmt(goods.reduce((total,g)=>total+Math.floor(s[g.id])*g.price*saleMultiplier,0))} RVT</button></div></section>
         <div className="gear-banner"><Cog size={21}/><span><b>{fmt(s.gears)} Gears</b><small>Earn 1 Gear per 12 total finished goods shipped (Precision Parts, Circuit Boards, Steel Beams or Copper Coils). Current progress: {s.gearShipmentProgress.toFixed(1)}/12. Mission rewards also grant Gears.</small></span></div>
-        <section className="warehouse-grid">{visibleGoods.map(g=><article className="stock-card" key={g.id}><span className="stock-emoji">{g.emoji}</span><div><h3>{g.name}</h3><p>{g.detail} · {g.price} RVT each</p><b>{fmt(s[g.id])} <small>IN STOCK</small></b>{(g.id==='ingot'||g.id==='wire')&&<div className="stock-flow-control"><div className="stock-flow-head"><span>WHERE SHOULD IT GO?</span><b>{s.flowMode[g.id]==='stockpile'?'STOCKPILE':s.flowMode[g.id]==='feed'?'PRODUCTION':'BALANCED'}</b></div><div className="stock-flow-switch" role="group" aria-label={g.name+' material routing'}>{([{id:'stockpile',label:'Store',hint:'Keep everything for orders'},{id:'balanced',label:'Split',hint:'Protect orders and feed machines'},{id:'feed',label:'Use',hint:'Send it to production'}] as const).map(option=><button key={option.id} type="button" aria-pressed={s.flowMode[g.id]===option.id} title={option.hint} className={s.flowMode[g.id]===option.id?'is-selected':''} onClick={()=>setS(v=>({...v,flowMode:{...v.flowMode,[g.id]:option.id}}))}>{option.label}</button>)}</div><small>{s.flowMode[g.id]==='stockpile'?'Save all new stock for shipping or contracts.':s.flowMode[g.id]==='feed'?'Other machines can use all available stock.':'Reserve contract quantities and keep production flowing.'}</small></div>}</div><button disabled={s[g.id]<1} onClick={()=>sellStock(g.id)}>SHIP ALL · {fmt(Math.floor(s[g.id])*g.price)} RVT</button></article>)}</section>
+        <section className="warehouse-grid">{visibleGoods.map(g=><article className="stock-card" key={g.id}><span className="stock-emoji"><MachineIcon id={contractProducer[g.id]} size={42}/></span><div><h3>{g.name}</h3><p>{g.detail} · {g.price} RVT each</p><b>{fmt(s[g.id])} <small>IN STOCK</small></b>{(g.id==='ingot'||g.id==='wire')&&<div className="stock-flow-control"><div className="stock-flow-head"><span>WHERE SHOULD IT GO?</span><b>{s.flowMode[g.id]==='stockpile'?'STOCKPILE':s.flowMode[g.id]==='feed'?'PRODUCTION':'BALANCED'}</b></div><div className="stock-flow-switch" role="group" aria-label={g.name+' material routing'}>{([{id:'stockpile',label:'Store',hint:'Keep everything for orders'},{id:'balanced',label:'Split',hint:'Protect orders and feed machines'},{id:'feed',label:'Use',hint:'Send it to production'}] as const).map(option=><button key={option.id} type="button" aria-pressed={s.flowMode[g.id]===option.id} title={option.hint} className={s.flowMode[g.id]===option.id?'is-selected':''} onClick={()=>setS(v=>({...v,flowMode:{...v.flowMode,[g.id]:option.id}}))}>{option.label}</button>)}</div><small>{s.flowMode[g.id]==='stockpile'?'Save all new stock for shipping or contracts.':s.flowMode[g.id]==='feed'?'Other machines can use all available stock.':'Reserve contract quantities and keep production flowing.'}</small></div>}</div><button disabled={s[g.id]<1} onClick={()=>sellStock(g.id)}>SHIP ALL · {fmt(Math.floor(s[g.id])*g.price)} RVT</button></article>)}</section>
         <section className="contracts-panel"><div className="section-heading"><div><span className="eyebrow">CUSTOMER EMAILS</span><h2>Order Desk</h2><p>Contracts now arrive in the Order Inbox at the top-right. Requests have varied sizes, deadlines and cooldowns before replacements.</p></div><button className="primary-button" onClick={()=>setInboxOpen(true)}>OPEN INBOX · {incomingMail.length}</button></div><div className="contract-summary"><span><b>{readyOrders}</b> READY</span><span><b>{activeOrders}</b> PREPARING</span><span><b>{completedOrders}</b> STORY DELIVERIES</span></div></section>
         <div className="sales-note"><CircleDollarSign size={18}/> {s.salespeople>0&&s.autoSell?'Your assigned sales team is automatically dispatching stock.':'Hire sales staff and enable automatic sales from the Staff page to automate dispatch.'}</div>
       </div>}
