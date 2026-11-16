@@ -526,7 +526,6 @@ export default function App(){
   },[running,speed]);
   const machineCount=machines.reduce((sum,m)=>sum+s[m.id],0);
   const stockValue=goods.reduce((sum,g)=>sum+s[g.id]*g.price,0);
-  const machinesWorking=economyActive&&!s.powerShortage?machines.reduce((sum,m)=>sum+(s.lastOutput[m.id]>0?workingUnits(s,m.id):0),0):0;
   const brokenCount=machines.reduce((sum,m)=>sum+faultCount(s,m.id),0);
   const assignedTotal=machines.reduce((sum,m)=>sum+s.mechanicAssignments[m.id],0);
   const unassigned=s.mechanics-assignedTotal;
@@ -535,6 +534,7 @@ export default function App(){
   const payroll=payrollPerMinute(s);
   const payrollFunded=s.cash+1e-8>=payroll/60;
   const economyActive=running&&!s.breakdownEvent&&!s.powerCutEvent&&!s.cyberAttackEvent&&!s.writeOffEvent;
+  const machinesWorking=economyActive&&!s.powerShortage?machines.reduce((sum,m)=>sum+(s.lastOutput[m.id]>0?workingUnits(s,m.id):0),0):0;
   const autoIncomePerMinute=economyActive&&payrollFunded&&s.autoSell?goods.reduce((sum,item)=>{
     const assigned=Math.min(s.salespeople,Math.max(0,s.salesAssignments[item.id]||0));
     // Estimate the next minute from the current one-second dispatch rate.
