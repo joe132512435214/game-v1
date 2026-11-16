@@ -1305,3 +1305,25 @@ button:focus-visible,select:focus-visible{outline:2px solid #f1c48d;outline-offs
 .freight-route-warning>span{flex:1;font-size:11px;line-height:1.55;min-width:185px}
 .freight-route-warning>button{background:#a47d50;color:#fff3e3;border:0;padding:9px 12px;border-radius:4px;cursor:pointer;font-weight:700;font-size:10px}
 @media(max-width:620px){.freight-inventory-note>.secondary-button{width:100%}}
+
+
+/* Autonomous freight drones */
+.freight-drone-hangar{margin-top:14px;border:1px solid #78846a;background:#28342e;border-radius:5px;padding:16px}
+.freight-drone-hangar.locked{opacity:.75;border-style:dashed}
+.freight-drone-hangar.active{border-color:#a7a46b;background:linear-gradient(125deg,#283b34,#33382d)}
+.freight-drone-heading{display:flex;gap:12px;align-items:center}
+.freight-drone-symbol{width:48px;height:48px;border:1px solid #b6a56b;border-radius:5px;display:grid;place-items:center;color:#f2d58b;background:#414631;flex-shrink:0}
+.freight-drone-heading h3{margin:5px 0;color:#eee3c8;font-size:18px}
+.freight-drone-heading p{font-size:11px;line-height:1.5;color:#c1cbb9;margin:0}
+.freight-drone-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:16px 0}
+.freight-drone-metrics>span{display:flex;flex-direction:column;gap:6px;border:1px solid #67745e;background:#1e3029;padding:10px;border-radius:4px}
+.freight-drone-metrics b{font:700 17px 'IBM Plex Mono',monospace;color:#eed399}
+.freight-drone-metrics small{font:9px 'IBM Plex Mono',monospace;color:#b8c9b8}
+.freight-drone-buy{display:flex;gap:12px;align-items:center;justify-content:space-between}
+.freight-drone-buy small{font-size:11px;color:#b7c6b5;line-height:1.5;flex:1}
+.freight-drone-buy button{white-space:nowrap}
+.freight-drone-requirement{margin-top:14px;display:flex;align-items:center;gap:8px;color:#e2c99c;font:700 11px 'IBM Plex Mono',monospace}
+.freight-allocations{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.freight-drone-stepper{display:flex;gap:6px;align-items:center}
+.freight-drone-stepper>span{font:700 9px 'IBM Plex Mono',monospace;color:#ddc995}
+@media(max-width:650px){.freight-drone-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.freight-drone-buy{flex-wrap:wrap}.freight-drone-buy button{width:100%}.freight-allocations{width:100%;justify-content:flex-start}}
