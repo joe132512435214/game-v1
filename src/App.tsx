@@ -230,7 +230,7 @@ export default function App(){
       if(payrollFunded)n.cash=Math.max(0,n.cash-wages);
       const multiplier=speed;
       const reliabilityBonus=n.researched.includes('reinforced-bearings')?.35:0;
-      machines.forEach(m=>{if(n[m.id]>0&&n.broken[m.id]===0&&Math.random()<.00065*(1-reliabilityBonus)){n.broken[m.id]=24;if(!n.breakdownEvent)n.breakdownEvent=m.id;}});
+      machines.forEach(m=>{if(n[m.id]>0&&n.broken[m.id]===0&&Math.random()<.00065*(speed===2?4:1)*(1-reliabilityBonus)){n.broken[m.id]=24;if(!n.breakdownEvent)n.breakdownEvent=m.id;}});
       if(n.breakdownEvent)return n;
       machines.forEach(m=>{
         const assigned=n.mechanicAssignments[m.id]||0;
@@ -531,7 +531,7 @@ export default function App(){
           </article>;
         })}</section>
         <section className="achievement-panel"><div className="achievement-heading"><div><span className="eyebrow">MILESTONES</span><h2>Factory achievements</h2></div><span>{achievements.filter(a=>a.done).length}/{achievements.length} UNLOCKED</span></div><div className="achievement-grid">{achievements.map(a=><div className={'achievement '+(a.done?'earned':'')} key={a.name}><span>{a.icon}</span><div><b>{a.name}</b><small>{a.detail}</small></div><strong>{a.done?'✓':'LOCKED'}</strong></div>)}</div></section>
-        <section className="factory-footer"><div><Zap size={16}/><span>Production speed</span>{[1,2,3].map(x=><button key={x} className={speed===x?'selected':''} onClick={()=>setSpeed(x)}>{x}×</button>)}</div><span className="saved"><CheckCircle2 size={14}/> Progress auto-saves</span></section>
+        <section className="factory-footer"><div><Zap size={16}/><span>Production speed</span>{[1,2].map(x=><button key={x} className={speed===x?'selected':''} onClick={()=>setSpeed(x)} title={x===2?'Double output, 4× breakdown risk':'Normal speed and breakdown risk'}>{x}×</button>)}<small className="speed-risk-note">{speed===2?'⚠ 2× output · 4× breakdown risk':'1× output · normal breakdown risk'}</small></div><span className="saved"><CheckCircle2 size={14}/> Progress auto-saves</span></section>
       </div>}
       {page==='staff'&&<div className="page-content">
         <section className="welcome-row"><div><span className="eyebrow">PEOPLE MAKE THE FACTORY</span><h1>Staff room</h1><p>Hire your crew, give them a clear job and keep every department covered.</p></div><div className="staff-summary"><b>{s.mechanics+s.salespeople+s.cybersecuritySpecialists}</b><span>TEAM MEMBERS</span><small>{unassigned} mechanic{unassigned===1?'':'s'} unassigned</small></div></section>
