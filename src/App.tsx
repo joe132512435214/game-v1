@@ -3,6 +3,7 @@ import {
   Factory, Cog, Pause, Play, RotateCcw, Wrench, Store, Truck, Users, AlertTriangle,
   CheckCircle2, ArrowUpRight, Zap, Boxes, CircleDollarSign, FlaskConical, ShieldCheck, TrendingUp, Cpu, HeartHandshake, GraduationCap, Sprout, LifeBuoy, Heart, Gem, Layers, Cable, CircuitBoard, Construction, Fan, Package
 } from 'lucide-react';
+import { Analytics } from '@vercel/analytics/react';
 
 type MachineId = 'miner' | 'smelter' | 'press' | 'assembler' | 'copperMiner' | 'copperSmelter' | 'wiremill' | 'circuitpress' | 'beamMill' | 'coilWinder' | 'motorworks';
 type StockId = 'ore' | 'ingot' | 'plate' | 'parts' | 'copperOre' | 'copperIngot' | 'wire' | 'circuits' | 'beams' | 'coils' | 'motors';
@@ -1406,5 +1407,6 @@ export default function App(){
     {rewardSplash&&<div className={'reward-splash reward-'+rewardSplash.kind} key={rewardSplash.id} role="status" aria-live="polite"><div className="reward-splash-mark">{rewardSplash.kind==='contract'?<CheckCircle2 size={26}/>:rewardSplash.kind==='upgrade'?<Cog size={26}/>:<Truck size={26}/>}</div><div className="reward-splash-content"><small>{rewardSplash.kind==='contract'?'CUSTOMER DELIGHTED':rewardSplash.kind==='upgrade'?'FACTORY IMPROVED':'DISPATCH COMPLETE'}</small><h3>{rewardSplash.title}</h3><p>{rewardSplash.detail}</p><div className="reward-splash-values">{rewardSplash.cash!==undefined&&<b>+{fmt(rewardSplash.cash)} RVT</b>}{rewardSplash.xp!==undefined&&rewardSplash.xp>0&&<b>+{fmt(rewardSplash.xp)} XP</b>}{rewardSplash.rep!==undefined&&rewardSplash.rep>0&&<b>+{fmt(rewardSplash.rep)} REP</b>}</div></div><button type="button" aria-label="Close celebration" onClick={()=>setRewardSplash(null)}>×</button></div>}
     {notice&&<div className="toast" role="status" aria-live="polite"><span className="toast-icon">{noticeKind==='ORDER DESK'?'📦':noticeKind==='QUICK HEADS-UP'?'🛠️':'🏭'}</span><div className="toast-copy"><small>{noticeKind}</small><b>{noticeTitle}</b><p>{notice}</p></div><button className="toast-close" aria-label="Dismiss notification" onClick={()=>setNotice('')}>×</button></div>
     }{showReset&&<div className="modal-backdrop"><div className="reset-modal"><h2>Reset your factory?</h2><p>This clears machines, Rivets, Gears and staff saved on this device.</p><div><button onClick={()=>setShowReset(false)}>CANCEL</button><button className="danger" onClick={reset}>RESET FACTORY</button></div></div></div>}
+    <Analytics />
   </div>;
 }
