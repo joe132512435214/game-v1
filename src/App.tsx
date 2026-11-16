@@ -872,9 +872,8 @@ export default function App(){
   const repeatOrders=generateRepeatOrders(s);
   const incomingMail=[...visibleContracts.map(c=>({key:'story-'+c.id,title:c.name,from:'Contract Office',detail:c.detail,good:c.good,qty:c.qty,items:[{good:c.good,qty:c.qty}],kind:'STORY ORDER',due:0})),...repeatOrders.map(o=>({key:'repeat-'+o.id,title:o.name,from:o.name,detail:o.detail,good:o.good,qty:o.qty,items:o.items,kind:o.kind,due:o.due}))];
   const nextMailWait=s.repeatNextAt.map((at,i)=>repeatOrders.some(o=>o.slot===i)?Infinity:Math.max(0,at-s.contractClock)).reduce((a,b)=>Math.min(a,b),Infinity);
-  const inboxSignature=repeatOrders.map(o=>o.id+':'+o.due).join('|');
-  const [lastInboxSignature,setLastInboxSignature]=useState('');
-  useEffect(()=>{if(inboxSignature&&inboxSignature!==lastInboxSignature){setLastInboxSignature(inboxSignature);setInboxOpen(true);}},[inboxSignature,lastInboxSignature]);
+  // Repeat orders update the inbox counter without forcing the dropdown open.
+  // Players choose when to review work instead of being interrupted by every new offer.
   const readyOrders=visibleContracts.filter(c=>!s.contractsCompleted.includes(c.id)&&s.reputation>=c.minRep&&s[c.good]>=c.qty).length+repeatOrders.filter(c=>orderReady(s,c)).length;
   const activeOrders=visibleContracts.filter(c=>!s.contractsCompleted.includes(c.id)&&s.reputation>=c.minRep&&s[c.good]<c.qty).length+repeatOrders.filter(c=>!orderReady(s,c)).length;
   const capacityOf=(id:MachineId)=>machineCapacity(s,id,speed,s.boostSeconds.production>0);
