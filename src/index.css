@@ -1403,3 +1403,12 @@ button:focus-visible,select:focus-visible{outline:2px solid #f1c48d;outline-offs
   .topbar .wallet-cash, .topbar .wallet-gears { min-width: 0; padding: 5px 8px; }
   .reward-splash { top: auto; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
 }
+
+/* The mine's six-frame visual loop runs independently of its output timer. */
+.machine-art.art-miner .machine-sprite-layer {
+  animation-duration: 1.08s;
+  animation-delay: 0s;
+}
+.machine-art.art-preview:not(.running) .machine-sprite-layer {
+  animation-play-state: running !important;
+}

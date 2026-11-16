@@ -337,7 +337,7 @@ function MachineIcon({id,size=36}:{id:MachineId;size?:number}){
   return <img className="pixel-machine-icon" src={pixelMachineArt(id).icon} alt={machines.find(m=>m.id===id)?.name||'Machine'} width={size} height={size}/>;
 }
 
-function MachineArt({id,active,broken,lights,cycleSeconds,progress}:{id:MachineId;active:boolean;broken:boolean;lights:('on'|'off'|'empty')[];cycleSeconds:number;progress:number}){
+function MachineArt({id,active,broken,lights,cycleSeconds,progress,preview=false}:{id:MachineId;active:boolean;broken:boolean;lights:('on'|'off'|'empty')[];cycleSeconds:number;progress:number;preview?:boolean}){
  const sprite=pixelMachineArt(id);
  const spriteReady=id!=='motorworks';
  const safeCycle=cycleSeconds>0?cycleSeconds:8;
@@ -347,7 +347,7 @@ function MachineArt({id,active,broken,lights,cycleSeconds,progress}:{id:MachineI
  
  
  const bolt=(x:number,y:number)=><circle cx={x} cy={y} r="2.3" fill="#d7c9a8" stroke="#39453b" strokeWidth="1"/>;
- return <div className={'machine-art art-'+id+(electrical?' art-electrical':'')+(active?' running':'')+(broken?' broken':'')+(spriteReady?' art-sprite-ready':'')} style={{'--machine-cycle':safeCycle+'s','--machine-offset':'-'+(Math.max(0,Math.min(1,progress))*safeCycle)+'s'} as CSSProperties}>
+ return <div className={'machine-art art-'+id+(electrical?' art-electrical':'')+(active?' running':'')+(preview?' art-preview':'')+(broken?' broken':'')+(spriteReady?' art-sprite-ready':'')} style={{'--machine-cycle':safeCycle+'s','--machine-offset':'-'+(Math.max(0,Math.min(1,progress))*safeCycle)+'s'} as CSSProperties}>
   {spriteReady&&<div className="machine-sprite-layer" role="img" aria-label={machines.find(m=>m.id===id)?.name+' semi-pixel-art animated machine'} style={{backgroundImage:'url('+sprite.sheet+')'}}/>}
   <div className="art-backdrop"/>
   <svg viewBox="0 0 320 210" role="img" aria-label={machines.find(m=>m.id===id)?.name+' detailed industrial machine illustration'}>
@@ -482,7 +482,7 @@ function MachineArt({id,active,broken,lights,cycleSeconds,progress}:{id:MachineI
  {active&&<g className="sparkles" fill="#f4d28f" stroke="#f4d28f"><path d="M42 39v-12m-6 6h12"/><path d="M279 83V71m-6 6h12"/><circle cx="291" cy="126" r="2.5"/></g>}
    {broken&&<path d="M151 27l-10 20h12l-7 18 22-26h-13l8-12z" fill="#d47b55" stroke="#ffe0aa" strokeWidth="2"/>}
   </svg>
-  <div className="machine-art-floor"/><div className="art-cycle-hud"><span>{active?'PRODUCING':broken?'REPAIR REQUIRED':'STANDBY'}</span><b>{active?'1 UNIT / '+cycleSeconds.toFixed(1)+'s':'MACHINE STOPPED'}</b><i className="art-cycle-track"><i style={{width:(progress*100)+'%'}}/></i></div><span className="art-lamp" role="group" aria-label="Individual machine status lights">{lights.map((light,i)=><i key={i} className={"unit-light "+light} title={"Unit "+(i+1)+": "+(light==="on"?"running":light==="off"?"stopped":"not purchased")}/>)}</span>
+  <div className="machine-art-floor"/><div className="art-cycle-hud"><span>{preview?'ANIMATION PREVIEW':active?'PRODUCING':broken?'REPAIR REQUIRED':'STANDBY'}</span><b>{preview?'BUILD TO PRODUCE':active?'1 UNIT / '+cycleSeconds.toFixed(1)+'s':'MACHINE STOPPED'}</b><i className="art-cycle-track"><i style={{width:(progress*100)+'%'}}/></i></div><span className="art-lamp" role="group" aria-label="Individual machine status lights">{lights.map((light,i)=><i key={i} className={"unit-light "+light} title={"Unit "+(i+1)+": "+(light==="on"?"running":light==="off"?"stopped":"not purchased")}/>)}</span>
   {broken&&<span className="broken-stamp"><AlertTriangle size={14}/> BROKEN</span>}{active&&<span className="art-status-dot"/>}
  </div>;
 }
@@ -1243,7 +1243,7 @@ export default function App(){
           const repairCost=repairCostFor(m.id,tier);
           return <article className={'machine-card '+(owned?'owned':'locked')+(failed>0?' is-broken':'')} key={m.id}>
             <div className="machine-card-head"><span className="machine-number"><MachineIcon id={m.id} size={26}/> 0{machines.indexOf(m)+1} · {m.short}</span><span className={'status '+(unitsWorking===0&&owned>0?'bad':active?'good':'idle')}>{machineStatus}</span></div>
-            <MachineArt id={m.id} active={active} broken={failed>0} lights={lights} cycleSeconds={cycleSeconds} progress={s.visualProgress[m.id]}/>
+            <MachineArt id={m.id} preview={m.id==='miner'&&owned===0&&running&&!interrupted} active={active} broken={failed>0} lights={lights} cycleSeconds={cycleSeconds} progress={s.visualProgress[m.id]}/>
             <div className="machine-info"><div><h3>{m.name}</h3><p>{m.desc}</p></div><span className="machine-level">LV {tier+1}</span></div>
             <div className="machine-details"><span>OUTPUT</span><b>{rateFor(m).toFixed(2)} / sec</b><span>RUNNING / OWNED</span><b>{active?unitsWorking:0} / {owned}</b></div>
             <div className="machine-electricity"><Zap size={14}/><span>POWER · {ELECTRICITY_PER_MINUTE[m.id]} RVT/min/unit {overclock?'· 3× OVERCLOCK':''}</span><b>{active?(unitsWorking*ELECTRICITY_PER_MINUTE[m.id]*electricitySpeedFactor(speed)*machinePowerFactor(s,m.id)*powerCostMultiplier(s)).toFixed(1):'0.0'} RVT/min</b></div>
