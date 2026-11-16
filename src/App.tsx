@@ -110,7 +110,7 @@ function issueRepeatOrder(s:GameState,slot:number):RepeatOrder|null{
   }
   const estimated=items.reduce((seconds,line)=>{
     const machine=machines.find(m=>m.id===contractProducer[line.good])!;
-    const capacity=Math.max(.03,machine.rate*Math.max(1,s[machine.id])*(1+s[`tier_${machine.id}`]*.25));
+    const capacity=Math.max(.03,machineCapacity(s,machine.id,1,false));
     return seconds+Math.max(0,line.qty-s[line.good])/capacity;
   },0);
   // Realistic deadline for a single-machine factory, with slack for power, repairs and material competition.
@@ -545,13 +545,14 @@ export default function App(){
       const n={...v,visualProgress:{...v.visualProgress},broken:{...v.broken},unitPenalties:{...v.unitPenalties},unitFaults:Object.fromEntries(machines.map(m=>[m.id,[...v.unitFaults[m.id]]])) as Record<MachineId,number[]>};
       if(n.breakdownEvent||n.powerCutEvent||n.cyberAttackEvent||n.writeOffEvent)return {...n,freightLastMined:{iron:0,copper:0},freightLastDelivered:{iron:0,copper:0}};
       n.contractClock++;
-      n.freightBoostSeconds={iron:Math.max(0,n.freightBoostSeconds.iron-1),copper:Math.max(0,n.freightBoostSeconds.copper-1)};
       n.repeatDeadline=[...n.repeatDeadline];
       n.repeatNextAt=[...n.repeatNextAt];
       n.repeatContractRounds=[...n.repeatContractRounds];
       n.repeatOffers=[...n.repeatOffers];
       n.contractHistory=[...n.contractHistory];
+      const unlockedRepeatSlots=n.experience>=500?3:n.experience>=150?2:1;
       for(let slot=0;slot<3;slot++){
+        if(slot>=unlockedRepeatSlots){n.repeatOffers[slot]=null;continue;}
         const active=n.repeatOffers[slot];
         if(active&&n.contractClock>active.due){
           n.repeatOffers[slot]=null;
@@ -710,6 +711,8 @@ export default function App(){
         n.autoSalesXpProgress=totalStaffXp-staffXp*60;
         n.experience+=staffXp;
       }
+      // Count a full 60 seconds of actual boosted transport before expiring it.
+      n.freightBoostSeconds={iron:Math.max(0,n.freightBoostSeconds.iron-1),copper:Math.max(0,n.freightBoostSeconds.copper-1)};
       return n;
     });},1000);
     return()=>window.clearInterval(timer);
@@ -871,7 +874,7 @@ export default function App(){
   const visibleContracts=contracts.filter(c=>!s.contractsCompleted.includes(c.id)&&s.contractClock>=(s.storyNextAt[c.id]||0)&&(s[contractProducer[c.good]]>0||contractProducer[c.good]===nextMachine?.id));
   const repeatOrders=generateRepeatOrders(s);
   const incomingMail=[...visibleContracts.map(c=>({key:'story-'+c.id,title:c.name,from:'Contract Office',detail:c.detail,good:c.good,qty:c.qty,items:[{good:c.good,qty:c.qty}],kind:'STORY ORDER',due:0})),...repeatOrders.map(o=>({key:'repeat-'+o.id,title:o.name,from:o.name,detail:o.detail,good:o.good,qty:o.qty,items:o.items,kind:o.kind,due:o.due}))];
-  const nextMailWait=s.repeatNextAt.map((at,i)=>repeatOrders.some(o=>o.slot===i)?Infinity:Math.max(0,at-s.contractClock)).reduce((a,b)=>Math.min(a,b),Infinity);
+  const nextMailWait=s.repeatNextAt.slice(0,s.experience>=500?3:s.experience>=150?2:1).map((at,i)=>repeatOrders.some(o=>o.slot===i)?Infinity:Math.max(0,at-s.contractClock)).reduce((a,b)=>Math.min(a,b),Infinity);
   // Repeat orders update the inbox counter without forcing the dropdown open.
   // Players choose when to review work instead of being interrupted by every new offer.
   const readyOrders=visibleContracts.filter(c=>!s.contractsCompleted.includes(c.id)&&s.reputation>=c.minRep&&s[c.good]>=c.qty).length+repeatOrders.filter(c=>orderReady(s,c)).length;
@@ -1153,7 +1156,7 @@ export default function App(){
       </nav>
       <aside className="mail-dock">
         <button className="mail-trigger" onClick={()=>setInboxOpen(v=>!v)} aria-expanded={inboxOpen}><span>✉</span><b>ORDER INBOX</b><em>{incomingMail.length}</em><small>{inboxOpen?'▲':'▼'}</small></button>
-        {inboxOpen&&<div className="mail-dropdown"><div className="mail-heading"><strong>INCOMING MAIL</strong><small>{incomingMail.length} open · max 3 repeat offers</small></div>
+        {inboxOpen&&<div className="mail-dropdown"><div className="mail-heading"><strong>INCOMING MAIL</strong><small>{incomingMail.length} open · {s.experience>=500?3:s.experience>=150?2:1} repeat slot(s) unlocked</small></div>
           {incomingMail.map(mail=>{const expanded=expandedMail===mail.key;const order=repeatOrders.find(o=>'repeat-'+o.id===mail.key);const story=contracts.find(c=>'story-'+c.id===mail.key);return <div className="mail-message" key={mail.key}>
             <button className="mail-subject" onClick={()=>setExpandedMail(expanded?null:mail.key)}><span>✉</span><span><b>{mail.from}</b><small>{mail.kind} · {goods.find(g=>g.id===mail.good)?.name}</small><small>{mail.detail}</small></span><span>{expanded?'−':'+'}</span></button>
             {expanded&&<div className="mail-body"><strong>RE: {mail.title}</strong><p>{mail.detail}</p><div className="mail-order-lines">{mail.items.map(line=><div className="mail-order-line" key={line.good}><ProductIcon id={line.good} size={25}/><b>{line.qty} × {goods.find(g=>g.id===line.good)?.name}</b><small>Available: {fmt(s[line.good])}/{line.qty}</small></div>)}</div>{order&&<small className={order.due-s.contractClock<60?'mail-urgent':''}>Deadline: {boostClock(Math.max(0,order.due-s.contractClock))} remaining</small>}<small>Reward: {fmt(order?.reward??story?.reward??0)} RVT · +{order?.xp??story?.xp??0} XP · +{order?.rep??story?.rep??0} REP</small>
