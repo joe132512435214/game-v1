@@ -99,9 +99,9 @@ function loadGame():GameState{
 }
 const fmt=(n:number)=>Math.floor(n).toLocaleString();
 const machineCost=(m:typeof machines[number],s:GameState)=>Math.floor(m.cost*Math.pow(1.48,s[m.id]));
-const mechanicCost=(s:GameState)=>Math.floor(300*Math.pow(1.85,s.mechanics));
-const salesCost=(s:GameState)=>Math.floor(420*Math.pow(1.85,s.salespeople));
-const WAGES={mechanic:5,sales:8,cyber:12} as const;
+const mechanicCost=(s:GameState)=>Math.floor(600*Math.pow(2,s.mechanics));
+const salesCost=(s:GameState)=>Math.floor(900*Math.pow(2,s.salespeople));
+const WAGES={mechanic:12,sales:18,cyber:30} as const;
 const payrollPerMinute=(v:GameState)=>v.mechanics*WAGES.mechanic+v.salespeople*WAGES.sales+v.cybersecuritySpecialists*WAGES.cyber;
 const REPAIR_COSTS:Record<MachineId,number>={miner:40,smelter:65,press:90,assembler:130,copperMiner:85,copperSmelter:155,wiremill:230,circuitpress:340,beamMill:185,coilWinder:285};
 const repairCostFor=(id:MachineId,level:number)=>REPAIR_COSTS[id]+level*15;
@@ -504,7 +504,7 @@ export default function App(){
     setS(v=>({...v,cash:v.cash-40,broken:{...v.broken,miner:0},powerCutEvent:false}));
     setNotice('One-off emergency repair complete. The Rockbreaker Mine is back online.');
   };
-  const cybersecurityCost=(state:GameState)=>Math.floor(600*Math.pow(1.9,state.cybersecuritySpecialists));
+  const cybersecurityCost=(state:GameState)=>Math.floor(1500*Math.pow(2.1,state.cybersecuritySpecialists));
   const hireCybersecuritySpecialist=()=>{
     const cost=cybersecurityCost(s);
     if(s.cash<cost){setNotice('Not enough Rivets. Ship existing stock from the Warehouse to fund the security hire.');return;}
