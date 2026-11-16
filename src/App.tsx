@@ -289,6 +289,16 @@ export default function App(){
   const unassignedSales=Math.max(0,s.salespeople-assignedSales);
   const payroll=payrollPerMinute(s);
   const payrollFunded=s.cash+1e-8>=payroll/60;
+  const economyActive=running&&!s.breakdownEvent&&!s.powerCutEvent&&!s.cyberAttackEvent;
+  const autoIncomePerMinute=economyActive&&payrollFunded&&s.autoSell?goods.reduce((sum,item)=>{
+    const assigned=Math.min(s.salespeople,Math.max(0,s.salesAssignments[item.id]||0));
+    // Estimate the next minute from the current one-second dispatch rate.
+    const amount=Math.min(Math.max(0,s[item.id]),assigned*.12*speed);
+    return sum+amount*item.price*(s.researched.includes('market-intelligence')?1.2:1)*60;
+  },0):0;
+  const wagesPerMinute=economyActive&&payrollFunded?payroll:0;
+  const netPerMinute=autoIncomePerMinute-wagesPerMinute;
+  const moneyPerMinute=(amount:number)=>Math.abs(amount).toFixed(1);
   const progressionLevel=1+Math.floor(s.experience/100);
   const reputationUnlock:Record<MachineId,number>={miner:0,smelter:2,press:8,assembler:18,copperMiner:20,copperSmelter:35,wiremill:50,circuitpress:60};
   const companyRank=s.reputation>=90?'GLOBAL MANUFACTURER':s.reputation>=50?'INDUSTRIAL CORPORATION':s.reputation>=25?'REGIONAL SUPPLIER':s.reputation>=10?'LOCAL MANUFACTURER':'WORKSHOP';
@@ -487,6 +497,12 @@ export default function App(){
         <button className={page==='warehouse'?'active':''} onClick={()=>setPage('warehouse')}><Boxes size={16}/> Warehouse</button>
         <button className={page==='research'?'active':''} onClick={()=>setPage('research')}><FlaskConical size={16}/> Research <span>{s.researched.length}/4</span></button>
       </nav>
+      <section className="cashflow-strip" aria-label="Estimated factory cash flow per minute">
+        <div className="cashflow-stat cashflow-income"><small>+ AUTOMATIC INCOME / MIN</small><b>+{moneyPerMinute(autoIncomePerMinute)} <i>RVT</i></b></div>
+        <div className="cashflow-stat cashflow-expense"><small>− STAFF WAGES / MIN</small><b>−{moneyPerMinute(wagesPerMinute)} <i>RVT</i></b></div>
+        <div className={'cashflow-stat cashflow-net '+(netPerMinute>=0?'positive':'negative')}><small>NET CASH FLOW / MIN</small><b>{netPerMinute>=0?'+':'−'}{moneyPerMinute(netPerMinute)} <i>RVT</i></b></div>
+        <small className="cashflow-note">{!running?'Paused · income and wages stopped':s.breakdownEvent||s.powerCutEvent||s.cyberAttackEvent?'Incident · income and wages paused':!payrollFunded?'Not enough cash for payroll · dispatch paused':'Live estimate from current automatic sales and payroll · excludes manual shipments and contracts'}</small>
+      </section>
       {page==='factory'&&<div className="page-content">
         <section className="welcome-row"><div><span className="eyebrow">{companyRank} · LEVEL {progressionLevel}</span><h1>Factory floor</h1><p>Build machines, keep production moving and ship what you make.</p><div className="level-progress"><span>COMPANY XP · {fmt(s.experience)} · LEVEL {progressionLevel}</span><div><i style={{width:goalProgress+'%'}}/></div><small>{fmt(Math.max(0,nextGoal-s.experience))} XP to level {progressionLevel+1}</small></div><div className="reputation-meter"><span>COMPANY REPUTATION · {s.reputation}</span><div><i style={{width:repProgress+'%'}}/></div><small>{companyRank} · {s.reputation>=90?'Top rank reached':(nextRep-s.reputation)+' reputation to next rank'}</small></div></div><div className="quick-stats"><div><small>MACHINES</small><b>{machineCount}/8</b></div><div><small>THROUGHPUT</small><b>{machines.reduce((sum,m)=>sum+rateFor(m),0).toFixed(2)}<i>/s</i></b></div><div><small>STAFF</small><b>{s.mechanics+s.salespeople}</b></div></div></section>
         <section className="mission-panel"><div className="mission-heading"><div><span className="eyebrow">YOUR NEXT OBJECTIVE</span><h2>{activeMission?activeMission.title:'All missions complete!'}</h2><p>{activeMission?activeMission.detail:'You have completed the starter mission line. Keep expanding your factory.'}</p></div><span className="mission-count">{s.missionsClaimed.length}/{missions.length} COMPLETE</span></div>{activeMission?<><div className="mission-progress"><i style={{width:(activeMission.progress/activeMission.target*100)+'%'}}/></div><div className="mission-footer"><span>{activeMission.target>1?fmt(activeMission.progress)+' / '+fmt(activeMission.target):activeMission.progress>=1?'Objective complete':'Not complete yet'}</span><b>REWARD · {fmt(activeMission.rivets)} RVT · {activeMission.xp} XP{activeMission.gears?' + '+activeMission.gears+' GEARS':''}</b></div></>:<div className="mission-finished">Starter campaign finished. Your next challenge is to grow the factory your way.</div>}</section>
