@@ -520,3 +520,15 @@ body{background:#171b19}.game{max-width:1240px}
 .machine-stop-reason svg{flex-shrink:0;margin-top:1px}
 .machine-stop-reason span{flex:1;min-width:0}
 @media(max-width:620px){.machine-stop-reason{font-size:9px;padding:7px}}
+
+
+/* Electric operating costs */
+.cashflow-strip{grid-template-columns:repeat(4,minmax(0,1fr))}
+.cashflow-electricity{border-left:2px solid #deb65d}
+.cashflow-electricity b{color:#e7c584}
+.machine-electricity{display:flex;align-items:center;gap:6px;margin:7px 0;padding:7px 8px;border:1px solid #595540;border-radius:3px;background:#282b22;color:#dfc388;font:9px 'IBM Plex Mono',monospace}
+.machine-electricity svg{flex-shrink:0}
+.machine-electricity span{flex:1}
+.machine-electricity b{font-weight:600;color:#ecd8a2;white-space:nowrap}
+@media(max-width:900px){.cashflow-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.cashflow-net{grid-column:auto}}
+@media(max-width:540px){.cashflow-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.cashflow-net{grid-column:auto}.machine-electricity{font-size:8px}}
