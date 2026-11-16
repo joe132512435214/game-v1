@@ -13,7 +13,7 @@ A satisfying industrial tycoon where every purchase visibly changes the factory,
 
 ### Observed source code and deployment status
 - Game is React/TypeScript/Vite. Source: GitHub joe132512435214/game-v1 (main). Current build checks are GitHub Actions, separate from Vercel.
-- Vercel's most recent deployment checks have failed because of build-rate limits; **no complete live-browser playtest has been performed**. GitHub Actions source type-check and production build passed after fixes.
+- Vercel previously failed due to build-rate limits, but the most recent app-code commit (2e938fc) has **a successful Vercel deployment check**. GitHub Actions type-check and production build also passed. **No complete live-browser playtest has been performed**.
 - Autosave uses browser localStorage. There is no confirmed offline production or cloud-save recovery. Players can lose saves if browser data is cleared or devices change.
 - Ten story orders, three repeat-order slots, fourteen sequential starter missions, eleven production machines, six stages, seven technologies, multiple staff types and two currencies are already implemented.
 - The first power-cut event's one-off repair previously cleared its modal without clearing the real unit fault. Fixed in code.
@@ -118,7 +118,7 @@ Before allowing paid boosts, show **“your mine is already fully covered; boost
 ## 7. Contract and reputation balancing
 
 - Show one recommended contract plus an Inbox count by default. The first stage should not have three competing repeat contracts and several open story orders at once. Unlock the second repeat slot after Stage 2 and the third after Stage 4.
-- Replace auto-opening Inbox on every new repeat order with a small unobtrusive badge, except the first onboarding order.
+- Repeat offers now update the Inbox counter **without auto-opening the dropdown**. Preserve this calmer approach; keep the opening order discoverable.
 - Make manual “Ship Surplus” the default action. Explain if stock is reserved for an existing customer contract; require an intentional override to sell reserved stock. Automatic sales already reserve many contracts, so manual sales should behave consistently.
 - For timed orders, calculate deadlines from **actual bottleneck throughput**, including whether upstream machines and other contract reservations have access to materials. The current estimate uses the older machines[].rate field and does not fully model upstream shared demand.
 - Reputation must not be an invisible wall. Show “need X REP — fulfil a customer order” by every locked purchase. Consider slowly earning reputation from lifetime sales milestones (e.g., 1 REP per 2,500 RVT shipped), but test the entire progression curve first so Rank 6 doesn't become trivial. Existing saves need migration if this is introduced.
@@ -165,7 +165,8 @@ After small-scale user tests, compare activation and return rates by onboarding 
 - [x] Add emergency incident fallback when repair cost is unaffordable.
 - [x] Reduce random interruption frequency.
 - [x] Add GitHub Actions production build and strict TypeScript checks.
-- [ ] Clear Vercel build-rate limit or migrate only with user approval.
+- [x] Obtain a successful Vercel deployment check (latest app-code commit).
+- [ ] Verify the actual browser experience and production URL; deployment success is not the same as gameplay QA.
 - [ ] Play through first 15 minutes in a real browser, including return from saved state.
 - [ ] Regression-check all scripted story cutscenes, timers, payroll, drone assignments and progress migration.
 
@@ -176,6 +177,7 @@ After small-scale user tests, compare activation and return rates by onboarding 
 - [ ] Add deterministic scenario simulator: optimal, normal and novice play; include random outage distribution.
 - [ ] Rebalance early driver/fleet economics **after** this test and publish why each purchase is useful.
 - [ ] Replace hidden REP gates with one clear recommended way to progress.
+- [x] Stop ordinary repeat contracts from interrupting play by automatically opening the Inbox.
 - [ ] Add safe “Ship Surplus” flow and actual contract-aware deadline estimates.
 
 ### P2 — Fill the midgame gap
@@ -215,7 +217,7 @@ After small-scale user tests, compare activation and return rates by onboarding 
 
 **Build next:** a repeatable gameplay simulator and contract-safe shipping; then implement the Sensor Workshop and Control Cabinet Works. **Don't** add another raw ore mine or six more staff screens. The remaining largest design problem is the long, relatively empty wait between electronics and the first Motor Works. Solve that with a believable combined-resource production chain and measurable economic upside.
 
-**Status:** source changes are committed; latest GitHub Action passed source checks on the emergency-recovery commit. Vercel build-rate restrictions continue to prevent a verified new live deployment. Financial figures and time windows are models, not player telemetry.
+**Status:** source changes are committed; latest GitHub Actions source checks and Vercel deployment check succeeded for app-code commit 2e938fc. The live browser could not be independently navigated, so gameplay verification remains open. Financial figures and time windows are models, not player telemetry.
 
 ---
 Useful reading:
