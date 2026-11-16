@@ -21,10 +21,10 @@ const fresh:GameState = {
   cash:0,gears:0,gearShipmentProgress:0,ore:0,beams:0,coils:0,ingot:0,plate:0,parts:0,copperOre:0,copperIngot:0,wire:0,circuits:0,
   miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0,beamMill:0,coilWinder:0,
   tier_miner:0,tier_smelter:0,tier_press:0,tier_assembler:0,tier_copperMiner:0,tier_copperSmelter:0,tier_wiremill:0,tier_circuitpress:0,tier_beamMill:0,tier_coilWinder:0,
-  level:1,experience:0,sold:0,xpMigrationVersion:1,gearShipmentProgress:Math.max(0,Number(saved.gearShipmentProgress)||0)%12,salesXpProgress:0,autoSalesXpProgress:0,mechanics:0,salespeople:0,
+  level:1,experience:0,sold:0,xpMigrationVersion:1,salesXpProgress:0,autoSalesXpProgress:0,mechanics:0,salespeople:0,
   broken:{miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0,beamMill:0,coilWinder:0},unitFaults:{miner:[],smelter:[],press:[],assembler:[],copperMiner:[],copperSmelter:[],wiremill:[],circuitpress:[],beamMill:[],coilWinder:[]},
   mechanicAssignments:{miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0,beamMill:0,coilWinder:0},breakdownEvent:null,powerCutEvent:false,powerCutSeen:false,cyberAttackEvent:false,cyberAttackSeen:false,cybersecuritySpecialists:0,
-  salesTarget:'parts',autoSell:false,salesAssignments:{ore:0,ingot:0,plate:0,parts:0,copperOre:0,copperIngot:0,wire:0,circuits:0},boostSeconds:{production:0,dispatch:0,protection:0},missionsClaimed:[],researched:[],reputation:0,acceptedContracts:[],contractsCompleted:[],repeatContractRounds:[0,0,0],contractClock:0,repeatNextAt:[0,60,120],repeatDeadline:[0,0,0]
+  salesTarget:'parts',autoSell:false,salesAssignments:{ore:0,ingot:0,plate:0,parts:0,copperOre:0,copperIngot:0,wire:0,circuits:0,beams:0,coils:0},boostSeconds:{production:0,dispatch:0,protection:0},missionsClaimed:[],researched:[],reputation:0,acceptedContracts:[],contractsCompleted:[],repeatContractRounds:[0,0,0],contractClock:0,repeatNextAt:[0,60,120],repeatDeadline:[0,0,0]
 };
 const machines:{id:MachineId;name:string;short:string;cost:number;desc:string;input:string;output:string;rate:number}[]=[
   {id:'miner',name:'Rockbreaker Mine',short:'EXTRACT',cost:50,desc:'Breaks rock into raw ore.',input:'Raw ore',output:'Raw ore',rate:.22},
@@ -90,7 +90,7 @@ function loadGame():GameState{
     const legacyXpFromMissions=(Array.isArray(saved.missionsClaimed)?saved.missionsClaimed:[]).reduce((total:number,id:number)=>total+(missionXp[id]||0),0);
     const migratedExperience=saved.experience!==undefined?Math.max(0,Number(saved.experience)||0):Math.max(legacyXpFromContracts+legacyXpFromMissions,Number(saved.assembler)>0?270:Number(saved.press)>0?165:Number(saved.smelter)>0?60:Number(saved.miner)>0?25:0);
     const legacyShipmentXp=saved.xpMigrationVersion===undefined?Math.floor(Math.max(0,Number(saved.sold)||0)/500):0;
-    return {...fresh,...saved,xpMigrationVersion:1,salesXpProgress:Math.max(0,Number(saved.salesXpProgress)||0)%25,autoSalesXpProgress:Math.max(0,Number(saved.autoSalesXpProgress)||0)%60,broken:{...fresh.broken,...saved.broken},unitFaults:Object.fromEntries(machines.map(m=>[m.id,Array.from({length:Math.max(0,Number(saved[m.id])||0)},(_,i)=>Math.max(0,Number(saved.unitFaults?.[m.id]?.[i]??(i===0?saved.broken?.[m.id]:0))||0))])) as Record<MachineId,number[]>,mechanicAssignments:{...fresh.mechanicAssignments,...saved.mechanicAssignments},breakdownEvent:saved.breakdownEvent??null,powerCutEvent:shouldRecoverPowerCut?true:(saved.powerCutEvent??false),powerCutSeen:shouldRecoverPowerCut?true:(saved.powerCutSeen??false),cyberAttackEvent:shouldRecoverCyberAttack?true:(saved.cyberAttackEvent??false),cyberAttackSeen:shouldRecoverCyberAttack?true:(saved.cyberAttackSeen??false),cybersecuritySpecialists:Math.max(0,Number(saved.cybersecuritySpecialists)||0),researched:Array.isArray(saved.researched)?saved.researched:[],acceptedContracts:Array.isArray(saved.acceptedContracts)?saved.acceptedContracts:[],contractsCompleted:completed,boostSeconds:{production:Math.max(0,Math.floor(Number(saved.boostSeconds?.production)||0)),dispatch:Math.max(0,Math.floor(Number(saved.boostSeconds?.dispatch)||0)),protection:Math.max(0,Math.floor(Number(saved.boostSeconds?.protection)||0))},salesAssignments:goods.reduce((result,g)=>({...result,[g.id]:Math.max(0,Math.floor(Number(saved.salesAssignments?.[g.id]??(!saved.salesAssignments&&saved.salesTarget===g.id?saved.salespeople:0))||0))}),{...fresh.salesAssignments}),repeatContractRounds:Array.from({length:3},(_,i)=>Math.max(0,Math.floor(Number(saved.repeatContractRounds?.[i])||0))),contractClock:Math.max(0,Math.floor(Number(saved.contractClock)||0)),repeatNextAt:Array.from({length:3},(_,i)=>Math.max(0,Math.floor(Number(saved.repeatNextAt?.[i]??i*60)||0))),repeatDeadline:Array.from({length:3},(_,i)=>Math.max(0,Math.floor(Number(saved.repeatDeadline?.[i])||0))),experience:migratedExperience+legacyShipmentXp,reputation:Math.max(0,Number(saved.reputation)||0)};
+    return {...fresh,...saved,xpMigrationVersion:1,gearShipmentProgress:Math.max(0,Number(saved.gearShipmentProgress)||0)%GEARS_PER_FINISHED_UNITS,salesXpProgress:Math.max(0,Number(saved.salesXpProgress)||0)%25,autoSalesXpProgress:Math.max(0,Number(saved.autoSalesXpProgress)||0)%60,broken:{...fresh.broken,...saved.broken},unitFaults:Object.fromEntries(machines.map(m=>[m.id,Array.from({length:Math.max(0,Number(saved[m.id])||0)},(_,i)=>Math.max(0,Number(saved.unitFaults?.[m.id]?.[i]??(i===0?saved.broken?.[m.id]:0))||0))])) as Record<MachineId,number[]>,mechanicAssignments:{...fresh.mechanicAssignments,...saved.mechanicAssignments},breakdownEvent:saved.breakdownEvent??null,powerCutEvent:shouldRecoverPowerCut?true:(saved.powerCutEvent??false),powerCutSeen:shouldRecoverPowerCut?true:(saved.powerCutSeen??false),cyberAttackEvent:shouldRecoverCyberAttack?true:(saved.cyberAttackEvent??false),cyberAttackSeen:shouldRecoverCyberAttack?true:(saved.cyberAttackSeen??false),cybersecuritySpecialists:Math.max(0,Number(saved.cybersecuritySpecialists)||0),researched:Array.isArray(saved.researched)?saved.researched:[],acceptedContracts:Array.isArray(saved.acceptedContracts)?saved.acceptedContracts:[],contractsCompleted:completed,boostSeconds:{production:Math.max(0,Math.floor(Number(saved.boostSeconds?.production)||0)),dispatch:Math.max(0,Math.floor(Number(saved.boostSeconds?.dispatch)||0)),protection:Math.max(0,Math.floor(Number(saved.boostSeconds?.protection)||0))},salesAssignments:goods.reduce((result,g)=>({...result,[g.id]:Math.max(0,Math.floor(Number(saved.salesAssignments?.[g.id]??(!saved.salesAssignments&&saved.salesTarget===g.id?saved.salespeople:0))||0))}),{...fresh.salesAssignments}),repeatContractRounds:Array.from({length:3},(_,i)=>Math.max(0,Math.floor(Number(saved.repeatContractRounds?.[i])||0))),contractClock:Math.max(0,Math.floor(Number(saved.contractClock)||0)),repeatNextAt:Array.from({length:3},(_,i)=>Math.max(0,Math.floor(Number(saved.repeatNextAt?.[i]??i*60)||0))),repeatDeadline:Array.from({length:3},(_,i)=>Math.max(0,Math.floor(Number(saved.repeatDeadline?.[i])||0))),experience:migratedExperience+legacyShipmentXp,reputation:Math.max(0,Number(saved.reputation)||0)};
   }catch{return fresh;}
 }
 const fmt=(n:number)=>Math.floor(n).toLocaleString();
@@ -130,7 +130,7 @@ const boostClock=(seconds:number)=>`${Math.floor(seconds/60)}:${String(seconds%6
 
 function MachineArt({id,active,broken,cycle,lights}:{id:MachineId;active:boolean;broken:boolean;cycle:number;lights:('on'|'off'|'empty')[]}){
  const beat=cycle%2?'cycle-b':'cycle-a';
- const electrical=['copperMiner','copperSmelter','wiremill','circuitpress'].includes(id);
+ const electrical=['copperMiner','copperSmelter','wiremill','circuitpress','coilWinder'].includes(id);
  const copper=electrical?'#bd8054':'#bd985e';
  const steel=electrical?'#78877e':'#819187';
  const dark=electrical?'#39453d':'#35453d';
@@ -304,19 +304,23 @@ export default function App(){
       const rate=(id:MachineId,base:number)=>workingUnits(n,id)*base*(1+n['tier_'+id]*.25)*researchOutput*multiplier*(boostActive.production?2:1);
       const oreMade=rate('miner',.35);
       const ingotsMade=Math.min(n.ore+oreMade,rate('smelter',.22));
-      const platesMade=Math.min(n.ingot+ingotsMade,rate('press',.12));
+      const beamsMade=Math.min((n.ingot+ingotsMade)*.45,rate('beamMill',.075));
+      const platesMade=Math.min(Math.max(0,n.ingot+ingotsMade-beamsMade),rate('press',.12));
       const partsMade=Math.min(n.plate+platesMade,rate('assembler',.07));
       const copperOreMade=rate('copperMiner',.26);
       const copperIngotsMade=Math.min(n.copperOre+copperOreMade,rate('copperSmelter',.18));
       const wireMade=Math.min(n.copperIngot+copperIngotsMade,rate('wiremill',.12));
-      const circuitsMade=Math.min(n.wire+wireMade,rate('circuitpress',.07));
+      const coilsMade=Math.min((n.wire+wireMade)*.45,rate('coilWinder',.065));
+      const circuitsMade=Math.min(Math.max(0,n.wire+wireMade-coilsMade),rate('circuitpress',.07));
       n.ore=Math.max(0,n.ore+oreMade-ingotsMade);
-      n.ingot=Math.max(0,n.ingot+ingotsMade-platesMade);
+      n.ingot=Math.max(0,n.ingot+ingotsMade-platesMade-beamsMade);
+      n.beams+=beamsMade;
       n.plate=Math.max(0,n.plate+platesMade-partsMade);
       n.parts+=partsMade;
       n.copperOre=Math.max(0,n.copperOre+copperOreMade-copperIngotsMade);
       n.copperIngot=Math.max(0,n.copperIngot+copperIngotsMade-wireMade);
-      n.wire=Math.max(0,n.wire+wireMade-circuitsMade);
+      n.wire=Math.max(0,n.wire+wireMade-circuitsMade-coilsMade);
+      n.coils+=coilsMade;
       n.circuits+=circuitsMade;
       if(payrollFunded&&n.autoSell&&n.salespeople>0){
         let activeSellers=0;
@@ -332,7 +336,8 @@ export default function App(){
           n.salesXpProgress=total-shipmentXp*25;
           n[item.id]-=amount;n.cash+=revenue;n.sold+=revenue;
           n.experience+=shipmentXp;
-          if(item.id==='parts'||item.id==='circuits')n.gears+=amount;
+          const reward=shipmentGearGain(n,finishedGearUnits(item.id,amount));
+          n.gears+=reward.earned;n.gearShipmentProgress=reward.remainder;
           activeSellers+=count;
         });
         const totalStaffXp=n.autoSalesXpProgress+activeSellers;
@@ -364,19 +369,19 @@ export default function App(){
   const netPerMinute=autoIncomePerMinute-wagesPerMinute;
   const moneyPerMinute=(amount:number)=>Math.abs(amount).toFixed(1);
   const progressionLevel=1+Math.floor(s.experience/100);
-  const reputationUnlock:Record<MachineId,number>={miner:0,smelter:2,press:8,assembler:18,copperMiner:20,copperSmelter:35,wiremill:50,circuitpress:60};
+  const reputationUnlock:Record<MachineId,number>={miner:0,smelter:2,press:8,assembler:18,copperMiner:20,copperSmelter:35,wiremill:50,circuitpress:60,beamMill:18,coilWinder:50};
   const companyRank=s.reputation>=90?'GLOBAL MANUFACTURER':s.reputation>=50?'INDUSTRIAL CORPORATION':s.reputation>=25?'REGIONAL SUPPLIER':s.reputation>=10?'LOCAL MANUFACTURER':'WORKSHOP';
   const nextRep=s.reputation<10?10:s.reputation<25?25:s.reputation<50?50:s.reputation<90?90:120;
   const repProgress=Math.min(100,s.reputation>=90?100:s.reputation/nextRep*100);
   const nextGoal=progressionLevel*100;
   const goalProgress=Math.min(100,(s.experience-(progressionLevel-1)*100)/100*100);
-  const unlockAt:Record<MachineId,number>={miner:0,smelter:25,press:150,assembler:200,copperMiner:200,copperSmelter:350,wiremill:500,circuitpress:700};
+  const unlockAt:Record<MachineId,number>={miner:0,smelter:25,press:150,assembler:200,copperMiner:200,copperSmelter:350,wiremill:500,circuitpress:700,beamMill:260,coilWinder:650};
   // Keep the floor focused: show every machine already owned and just the next milestone.
   const nextMachine=machines.filter(m=>s[m.id]===0).sort((a,b)=>unlockAt[a.id]-unlockAt[b.id])[0];
-  const visibleMachines=machines.filter(m=>s[m.id]>0||m.id===nextMachine?.id);
+  const visibleMachines=machines.filter(m=>s[m.id]>0||m.id===nextMachine?.id||(m.id==='beamMill'&&s.smelter>0)||(m.id==='coilWinder'&&s.wiremill>0));
   const visibleGoods=goods.filter((g)=>{
-    const producer:Record<StockId,MachineId>={ore:'miner',ingot:'smelter',plate:'press',parts:'assembler',copperOre:'copperMiner',copperIngot:'copperSmelter',wire:'wiremill',circuits:'circuitpress'};
-    return s[producer[g.id]]>0||producer[g.id]===nextMachine?.id;
+    const producer=contractProducer;
+    return s[producer[g.id]]>0||producer[g.id]===nextMachine?.id||(producer[g.id]==='beamMill'&&s.smelter>0)||(producer[g.id]==='coilWinder'&&s.wiremill>0);
   });
   const achievements=[
     {name:'First Foundations',detail:'Build your first machine',done:machineCount>=1,icon:'🏗️'},
@@ -476,7 +481,7 @@ export default function App(){
     const item=goods.find(g=>g.id===id)!;const amount=Math.floor(s[id]);
     if(amount<1){setNotice('There are no full units ready to ship.');return;}
     const revenue=amount*item.price*saleMultiplier;
-    setS(v=>{const total=v.salesXpProgress+revenue;const shipmentXp=Math.floor((total+1e-8)/25);return {...v,[id]:v[id]-amount,cash:v.cash+revenue,sold:v.sold+revenue,salesXpProgress:total-shipmentXp*25,experience:v.experience+shipmentXp,gears:v.gears+((id==='parts'||id==='circuits')?amount:0)};});
+    setS(v=>{const total=v.salesXpProgress+revenue;const shipmentXp=Math.floor((total+1e-8)/25);return {...v,[id]:v[id]-amount,cash:v.cash+revenue,sold:v.sold+revenue,salesXpProgress:total-shipmentXp*25,experience:v.experience+shipmentXp,gears:v.gears+shipmentGearGain(v,finishedGearUnits(id,amount)).earned,gearShipmentProgress:shipmentGearGain(v,finishedGearUnits(id,amount)).remainder};});
     const shipmentXp=Math.floor((s.salesXpProgress+revenue+1e-8)/25);
     setNotice('Shipped '+fmt(amount)+' '+item.name+' for '+fmt(revenue)+' Rivets.'+(shipmentXp>0?' · +'+shipmentXp+' XP from shipments.':''));
   };
@@ -492,7 +497,7 @@ export default function App(){
       if(actualRevenue<=0)return v;
       const progress=v.salesXpProgress+actualRevenue;
       const xp=Math.floor((progress+1e-8)/25);
-      const next={...v,cash:v.cash+actualRevenue,sold:v.sold+actualRevenue,salesXpProgress:progress-xp*25,experience:v.experience+xp,gears:v.gears+shipped.reduce((total,{item,amount})=>total+((item.id==='parts'||item.id==='circuits')?amount:0),0)};
+      const next={...v,cash:v.cash+actualRevenue,sold:v.sold+actualRevenue,salesXpProgress:progress-xp*25,experience:v.experience+xp,gears:v.gears+shipmentGearGain(v,shipped.reduce((total,{item,amount})=>total+finishedGearUnits(item.id,amount),0)).earned,gearShipmentProgress:shipmentGearGain(v,shipped.reduce((total,{item,amount})=>total+finishedGearUnits(item.id,amount),0)).remainder};
       shipped.forEach(({item,amount})=>{next[item.id]-=amount;});
       return next;
     });
@@ -626,7 +631,7 @@ export default function App(){
         {brokenCount>0&&<div className="alert-banner"><AlertTriangle size={18}/><span><b>{brokenCount} machine{brokenCount>1?'s':''} broken.</b> Visit Staff to assign a mechanic, or repair them here.</span><button onClick={()=>setPage('staff')}>MANAGE STAFF</button></div>}
         <section className="line-panel"><div className="line-heading"><div><span className="eyebrow">LIVE PRODUCTION</span><h2>Assembly line</h2></div><span className="line-live"><i/> {running?'RUNNING':'PAUSED'}</span></div>
           <div className={'production-route '+(!running?'is-paused':'')}>
-            {visibleMachines.map((m,i)=>{const owned=s[m.id]>0;const stageGoods=goods.find(g=>g.id===({miner:'ore',smelter:'ingot',press:'plate',assembler:'parts',copperMiner:'copperOre',copperSmelter:'copperIngot',wiremill:'wire',circuitpress:'circuits'} as Record<MachineId,StockId>)[m.id]);return <div className={'route-stage '+(owned?'stage-owned':'stage-next')} key={m.id}>
+            {visibleMachines.map((m,i)=>{const owned=s[m.id]>0;const stageGoods=goods.find(g=>g.id===({miner:'ore',smelter:'ingot',press:'plate',assembler:'parts',copperMiner:'copperOre',copperSmelter:'copperIngot',wiremill:'wire',circuitpress:'circuits',beamMill:'beams',coilWinder:'coils'} as Record<MachineId,StockId>)[m.id]);return <div className={'route-stage '+(owned?'stage-owned':'stage-next')} key={m.id}>
               <span className="route-index">{String(i+1).padStart(2,'0')}</span><span className="route-symbol">{stageGoods?.emoji||'⚙'}</span><b>{m.name}</b><small>{owned?'INSTALLED':'NEXT STAGE'}</small>
               {i<visibleMachines.length-1&&<span className="route-link"><i/></span>}
             </div>;})}
@@ -636,7 +641,7 @@ export default function App(){
         <section className="machines-heading"><div><span className="eyebrow">YOUR EQUIPMENT</span><h2>Machines</h2><p>Each machine has its own job. Build the next stage when you're ready.</p></div><span className="machine-count">{machineCount} BUILT</span></section>
         {s.miner===0&&<section className="starter-contract"><div><span className="eyebrow">YOUR FIRST COMMISSION</span><h2>First Ore Delivery</h2><p>A local foundry has placed a small order for five raw ore. Accept it to receive a 50 RVT equipment advance, buy your first Rockbreaker Mine, produce the ore and deliver it for the final payment.</p><div className="starter-contract-reward"><b>50 RVT ADVANCE</b><span>+85 RVT · +5 REP ON DELIVERY</span></div></div><button className="primary-button" disabled={s.acceptedContracts.includes('first-ore')} onClick={()=>{setS(v=>({...v,acceptedContracts:[...v.acceptedContracts,'first-ore'],cash:v.cash+50}));setNotice('Order accepted. The foundry has advanced 50 RVT. Now buy your first Rockbreaker Mine — try not to spend it all on snacks.')}}>{s.acceptedContracts.includes('first-ore')?'ORDER ACCEPTED · ADVANCE PAID':'ACCEPT ORDER · GET 50 RVT'}</button></section>}
         <section className="machine-grid">{visibleMachines.map(m=>{
-          const owned=s[m.id];const hasInput=m.id==='miner'||m.id==='copperMiner'||(m.id==='smelter'?s.ore>0:m.id==='press'?s.ingot>0:m.id==='assembler'?s.plate>0:m.id==='copperSmelter'?s.copperOre>0:m.id==='wiremill'?s.copperIngot>0:s.wire>0);const stopped=!running||!!s.breakdownEvent||s.powerCutEvent||s.cyberAttackEvent||!hasInput;const unitsWorking=workingUnits(s,m.id);const failed=faultCount(s,m.id);const active=!stopped&&unitsWorking>0;const lights:Array<'on'|'off'|'empty'>=Array.from({length:MAX_MACHINE_UNITS},(_,i)=>i>=owned?'empty':stopped||(s.unitFaults[m.id][i]||0)>0?'off':'on');const cost=machineCost(m,s);const tier=s['tier_'+m.id];const repairCost=repairCostFor(m.id,tier);
+          const owned=s[m.id];const hasInput=m.id==='miner'||m.id==='copperMiner'||(m.id==='smelter'?s.ore>0:m.id==='press'||m.id==='beamMill'?s.ingot>0:m.id==='assembler'?s.plate>0:m.id==='copperSmelter'?s.copperOre>0:m.id==='wiremill'?s.copperIngot>0:s.wire>0);const stopped=!running||!!s.breakdownEvent||s.powerCutEvent||s.cyberAttackEvent||!hasInput;const unitsWorking=workingUnits(s,m.id);const failed=faultCount(s,m.id);const active=!stopped&&unitsWorking>0;const lights:Array<'on'|'off'|'empty'>=Array.from({length:MAX_MACHINE_UNITS},(_,i)=>i>=owned?'empty':stopped||(s.unitFaults[m.id][i]||0)>0?'off':'on');const cost=machineCost(m,s);const tier=s['tier_'+m.id];const repairCost=repairCostFor(m.id,tier);
           return <article className={'machine-card '+(owned?'owned':'locked')+(failed>0?' is-broken':'')} key={m.id}>
             <div className="machine-card-head"><span className="machine-number">0{machines.indexOf(m)+1} · {m.short}</span><span className={'status '+(failed>0?'bad':active?'good':'idle')}>{owned===0?'NOT BUILT':failed===owned?'BROKEN':active?failed>0?'PARTIAL':'WORKING':'STOPPED'}</span></div>
             <MachineArt id={m.id} active={active} broken={failed>0} cycle={cycle} lights={lights}/>
