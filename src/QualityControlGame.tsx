@@ -7,7 +7,7 @@ type Feedback = { positive: boolean; timedOut: boolean; headline: string; detail
 type Props = { session: string; playing: boolean; onFinish: (session: string, correct: number) => void; onClose: () => void };
 
 const INSPECTION_MS = 4000;
-const FEEDBACK_MS = 470;
+const FEEDBACK_MS = 520;
 const tokenReward = (score: number) => score === 10 ? 2 : score >= 7 ? 1 : 0;
 
 function preparePlates(): Plate[] {
@@ -69,20 +69,23 @@ export function QualityControlGame({ session, playing, onFinish, onClose }: Prop
   const countdown = useRef<ReturnType<typeof setTimeout> | null>(null);
   const transition = useRef<ReturnType<typeof setTimeout> | null>(null);
   const rewardSent = useRef(false);
+  const decisionStarted = useRef(false);
   const plate = plates[Math.min(9, round.index)];
 
   const decide = (reject: boolean | null) => {
     if (!playing || round.done || feedback || locked.current) return;
     locked.current = true;
+    decisionStarted.current = true;
     if (countdown.current) clearTimeout(countdown.current);
     const correct = reject !== null && reject === Boolean(plate.defect);
     const headline = reject === null ? 'TIME UP' : correct ? (reject ? 'DEFECT CAUGHT' : 'GOOD PART') : 'WRONG CALL';
-    const detail = reject === null ? 'That plate left the station.' : correct ? '+' + (round.streak + 1) + ' streak' : 'One life lost';
+    const detail = reject === null ? 'Missed inspection · −1 life' : correct ? (round.streak + 1 >= 3 ? 'COMBO ×' + (round.streak + 1) : 'Streak ' + (round.streak + 1)) : '−1 life · check the next plate';
     setFeedback({ positive: correct, timedOut: reject === null, headline, detail });
     transition.current = setTimeout(() => {
       setRound(current => nextRound(current, plate, reject));
       setFeedback(null);
       locked.current = false;
+      decisionStarted.current = false;
     }, FEEDBACK_MS);
   };
 
@@ -95,7 +98,7 @@ export function QualityControlGame({ session, playing, onFinish, onClose }: Prop
     countdown.current = id;
     return () => {
       clearTimeout(id);
-      remaining.current = Math.max(0, remaining.current - (Date.now() - started));
+      if (!decisionStarted.current) remaining.current = Math.max(0, remaining.current - (Date.now() - started));
     };
   }, [round.index, round.done, playing, feedback]);
 
@@ -125,6 +128,8 @@ export function QualityControlGame({ session, playing, onFinish, onClose }: Prop
   }, []);
 
   const accuracy = round.index ? Math.round((round.correct / round.index) * 100) : 0;
+  const inspected = round.index;
+  const completion = round.done ? 100 : Math.round((round.index / 10) * 100);
   return <section className="qc-game qc-v2" aria-label="Quality Control mini-game">
     <div className="qc-game-heading">
       <div><span className="eyebrow">INSPECTION BAY · SHIFT 01</span><h2>{round.done ? 'Shift complete' : 'Quality Control'}</h2></div>
@@ -141,11 +146,13 @@ export function QualityControlGame({ session, playing, onFinish, onClose }: Prop
           {round.mistakes >= 3 && <p>Three mistakes ended the shift early. You'll get another chance after the cooldown.</p>}
         </div>
       : <>
-          <p className="qc-instructions">Spot the defects. <strong>REJECT</strong> damaged plates, <strong>KEEP</strong> clean ones. Three mistakes end the shift.</p>
+          <p className="qc-instructions">Inspect each plate. <strong>REJECT</strong> defects or <strong>KEEP</strong> clean parts. Three misses end your shift.</p>
           <div className="qc-score"><span>PLATE <b>{round.index + 1}/10</b></span><span>✓ <b>{round.correct}</b> CORRECT</span><span>⚡ <b>{round.streak}</b> STREAK</span><span>♥ <b>{3 - round.mistakes}</b> LIVES</span></div>
+          <div className="qc-shift-progress" aria-label={`Shift ${completion}% complete`}><span>SHIFT PROGRESS</span><div className="qc-shift-track"><div style={{ width: `${completion}%` }} /></div><b>{inspected}/10</b></div>
           <div className="qc-timer"><div className="qc-timer-track"><div key={round.index} className="qc-timer-fill" style={{ animationPlayState: playing && !feedback ? 'running' : 'paused' }} /></div><span>4 SEC / PLATE</span></div>
           <div className={`qc-conveyor ${feedback ? (feedback.positive ? 'is-success' : 'is-error') : ''} ${playing ? '' : 'is-paused'}`}>
             <div className="qc-station-marker">SCAN ZONE <span aria-hidden="true">◆</span> 01</div>
+            <span className="qc-station-side-label" aria-hidden="true">IN → INSPECT → OUT</span>
             <div className="qc-conveyor-rail qc-rail-top" aria-hidden="true" />
             <div className="qc-conveyor-rail qc-rail-bottom" aria-hidden="true" />
             <div key={round.index} className="qc-plate-carriage"><PlateIllustration defect={plate.defect} /></div>
@@ -156,7 +163,7 @@ export function QualityControlGame({ session, playing, onFinish, onClose }: Prop
             <button type="button" disabled={!playing || !!feedback} className="qc-reject" onClick={() => decide(true)}><span aria-hidden="true">✕</span><b>REJECT</b><small>Damaged · A / ←</small></button>
             <button type="button" disabled={!playing || !!feedback} className="qc-keep" onClick={() => decide(false)}><span aria-hidden="true">✓</span><b>KEEP</b><small>Good part · D / →</small></button>
           </div>
-          <p className="qc-help" role="status">{!playing ? 'Production is paused — resume to continue your shift.' : round.streak >= 3 ? `Nice rhythm! ${round.streak} correct in a row.` : 'Watch for cracks, missing bolts, dents and shifted panels.'}</p>
+          <p className="qc-help" role="status">{!playing ? 'Production paused · resume to continue.' : feedback ? feedback.headline : round.streak >= 3 ? `Great rhythm · ${round.streak} clean calls in a row.` : 'Look for cracks, missing bolts, dents and shifted panels.'}</p>
         </>}
   </section>;
 }
