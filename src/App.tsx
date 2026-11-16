@@ -4,8 +4,8 @@ import {
   CheckCircle2, ArrowUpRight, Zap, Boxes, CircleDollarSign, FlaskConical, ShieldCheck, TrendingUp, Cpu, HeartHandshake, GraduationCap, Sprout, LifeBuoy, Heart
 } from 'lucide-react';
 
-type MachineId = 'miner' | 'smelter' | 'press' | 'assembler' | 'copperMiner' | 'copperSmelter' | 'wiremill' | 'circuitpress' | 'beamMill' | 'coilWinder';
-type StockId = 'ore' | 'ingot' | 'plate' | 'parts' | 'copperOre' | 'copperIngot' | 'wire' | 'circuits' | 'beams' | 'coils';
+type MachineId = 'miner' | 'smelter' | 'press' | 'assembler' | 'copperMiner' | 'copperSmelter' | 'wiremill' | 'circuitpress' | 'beamMill' | 'coilWinder' | 'motorworks';
+type StockId = 'ore' | 'ingot' | 'plate' | 'parts' | 'copperOre' | 'copperIngot' | 'wire' | 'circuits' | 'beams' | 'coils' | 'motors';
 type Page = 'factory' | 'staff' | 'warehouse' | 'research' | 'store' | 'capital';
 type CapitalId = 'powerGrid' | 'miningNetwork' | 'freightNetwork' | 'safetySystems';
 type CharityId = 'apprenticeships' | 'community' | 'environment' | 'relief';
@@ -14,9 +14,9 @@ type BoostId = 'production' | 'dispatch' | 'protection';
 type StockFlowMode = 'balanced' | 'stockpile' | 'feed';
 type IntermediateStock = 'ingot' | 'wire';
 type GameState = {
-  flowMode:Record<IntermediateStock,StockFlowMode>; cash:number; gears:number; starterPowerCredit:number; powerShortage:boolean; gearShipmentProgress:number; ore:number; beams:number; coils:number; ingot:number; plate:number; parts:number; copperOre:number; copperIngot:number; wire:number; circuits:number;
-  miner:number; smelter:number; press:number; assembler:number; copperMiner:number; copperSmelter:number; wiremill:number; circuitpress:number; beamMill:number; coilWinder:number;
-  tier_miner:number; tier_smelter:number; tier_press:number; tier_assembler:number; tier_copperMiner:number; tier_copperSmelter:number; tier_wiremill:number; tier_circuitpress:number; tier_beamMill:number; tier_coilWinder:number;
+  flowMode:Record<IntermediateStock,StockFlowMode>; cash:number; gears:number; starterPowerCredit:number; powerShortage:boolean; gearShipmentProgress:number; ore:number; beams:number; coils:number; motors:number; ingot:number; plate:number; parts:number; copperOre:number; copperIngot:number; wire:number; circuits:number;
+  miner:number; smelter:number; press:number; assembler:number; copperMiner:number; copperSmelter:number; wiremill:number; circuitpress:number; beamMill:number; coilWinder:number; motorworks:number;
+  tier_miner:number; tier_smelter:number; tier_press:number; tier_assembler:number; tier_copperMiner:number; tier_copperSmelter:number; tier_wiremill:number; tier_circuitpress:number; tier_beamMill:number; tier_coilWinder:number; tier_motorworks:number;
   level:number; experience:number; sold:number; xpMigrationVersion:number; salesXpProgress:number; autoSalesXpProgress:number; mechanics:number; salespeople:number; reputation:number; acceptedContracts:string[]; contractsCompleted:string[]; repeatContractRounds:number[]; contractClock:number; repeatNextAt:number[]; repeatDeadline:number[]; repeatOffers:(RepeatOrder|null)[]; contractHistory:StockId[]; storyNextAt:Record<string,number>;
   lastOutput:Record<MachineId,number>; visualProgress:Record<MachineId,number>; unitPenalties:Record<MachineId,number[]>; pendingReplacement:Record<MachineId,number>; writeOffEvent:{id:MachineId;unit:number;oldLevel:number}|null; nextWriteOffAt:number;
   broken:Record<MachineId,number>; unitFaults:Record<MachineId,number[]>; mechanicAssignments:Record<MachineId,number>; breakdownEvent:MachineId|null; powerCutEvent:boolean; powerCutSeen:boolean; cyberAttackEvent:boolean; cyberAttackSeen:boolean; cybersecuritySpecialists:number;
@@ -24,15 +24,15 @@ type GameState = {
 };
 const SAVE_KEY = 'ironworks-tycoon-save-v2';
 const fresh:GameState = {
-  flowMode:{ingot:'balanced',wire:'balanced'},cash:0,gears:0,starterPowerCredit:15,powerShortage:false,gearShipmentProgress:0,ore:0,beams:0,coils:0,ingot:0,plate:0,parts:0,copperOre:0,copperIngot:0,wire:0,circuits:0,
-  miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0,beamMill:0,coilWinder:0,
-  tier_miner:0,tier_smelter:0,tier_press:0,tier_assembler:0,tier_copperMiner:0,tier_copperSmelter:0,tier_wiremill:0,tier_circuitpress:0,tier_beamMill:0,tier_coilWinder:0,
+  flowMode:{ingot:'balanced',wire:'balanced'},cash:0,gears:0,starterPowerCredit:15,powerShortage:false,gearShipmentProgress:0,ore:0,beams:0,coils:0,motors:0,ingot:0,plate:0,parts:0,copperOre:0,copperIngot:0,wire:0,circuits:0,
+  miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0,beamMill:0,coilWinder:0,motorworks:0,
+  tier_miner:0,tier_smelter:0,tier_press:0,tier_assembler:0,tier_copperMiner:0,tier_copperSmelter:0,tier_wiremill:0,tier_circuitpress:0,tier_beamMill:0,tier_coilWinder:0,tier_motorworks:0,
   level:1,experience:0,sold:0,xpMigrationVersion:1,salesXpProgress:0,autoSalesXpProgress:0,mechanics:0,salespeople:0,
-  lastOutput:{miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0,beamMill:0,coilWinder:0},visualProgress:{miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0,beamMill:0,coilWinder:0},
-  unitPenalties:{miner:[],smelter:[],press:[],assembler:[],copperMiner:[],copperSmelter:[],wiremill:[],circuitpress:[],beamMill:[],coilWinder:[]},pendingReplacement:{miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0,beamMill:0,coilWinder:0},writeOffEvent:null,nextWriteOffAt:900,
-  broken:{miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0,beamMill:0,coilWinder:0},unitFaults:{miner:[],smelter:[],press:[],assembler:[],copperMiner:[],copperSmelter:[],wiremill:[],circuitpress:[],beamMill:[],coilWinder:[]},
-  mechanicAssignments:{miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0,beamMill:0,coilWinder:0},breakdownEvent:null,powerCutEvent:false,powerCutSeen:false,cyberAttackEvent:false,cyberAttackSeen:false,cybersecuritySpecialists:0,
-  salesTarget:'parts',autoSell:false,salesAssignments:{ore:0,ingot:0,plate:0,parts:0,copperOre:0,copperIngot:0,wire:0,circuits:0,beams:0,coils:0},boostSeconds:{production:0,dispatch:0,protection:0},capitalLevels:{powerGrid:0,miningNetwork:0,freightNetwork:0,safetySystems:0},capitalSpent:0,charityTotal:0,charityCount:0,charityMilestonesClaimed:0,charityHistory:[],missionsClaimed:[],researched:[],reputation:0,acceptedContracts:[],contractsCompleted:[],repeatContractRounds:[0,0,0],contractClock:0,repeatNextAt:[0,60,120],repeatDeadline:[0,0,0],repeatOffers:[null,null,null],contractHistory:[],storyNextAt:{}
+  lastOutput:{miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0,beamMill:0,coilWinder:0,motorworks:0},visualProgress:{miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0,beamMill:0,coilWinder:0,motorworks:0},
+  unitPenalties:{miner:[],smelter:[],press:[],assembler:[],copperMiner:[],copperSmelter:[],wiremill:[],circuitpress:[],beamMill:[],coilWinder:[],motorworks:[]},pendingReplacement:{miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0,beamMill:0,coilWinder:0,motorworks:0},writeOffEvent:null,nextWriteOffAt:900,
+  broken:{miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0,beamMill:0,coilWinder:0,motorworks:0},unitFaults:{miner:[],smelter:[],press:[],assembler:[],copperMiner:[],copperSmelter:[],wiremill:[],circuitpress:[],beamMill:[],coilWinder:[],motorworks:[]},
+  mechanicAssignments:{miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0,beamMill:0,coilWinder:0,motorworks:0},breakdownEvent:null,powerCutEvent:false,powerCutSeen:false,cyberAttackEvent:false,cyberAttackSeen:false,cybersecuritySpecialists:0,
+  salesTarget:'parts',autoSell:false,salesAssignments:{ore:0,ingot:0,plate:0,parts:0,copperOre:0,copperIngot:0,wire:0,circuits:0,beams:0,coils:0,motors:0},boostSeconds:{production:0,dispatch:0,protection:0},capitalLevels:{powerGrid:0,miningNetwork:0,freightNetwork:0,safetySystems:0},capitalSpent:0,charityTotal:0,charityCount:0,charityMilestonesClaimed:0,charityHistory:[],missionsClaimed:[],researched:[],reputation:0,acceptedContracts:[],contractsCompleted:[],repeatContractRounds:[0,0,0],contractClock:0,repeatNextAt:[0,60,120],repeatDeadline:[0,0,0],repeatOffers:[null,null,null],contractHistory:[],storyNextAt:{}
 };
 const machines:{id:MachineId;name:string;short:string;cost:number;desc:string;input:string;output:string;rate:number}[]=[
   {id:'miner',name:'Rockbreaker Mine',short:'EXTRACT',cost:50,desc:'Breaks rock into raw ore.',input:'Raw ore',output:'Raw ore',rate:.22},
@@ -44,7 +44,8 @@ const machines:{id:MachineId;name:string;short:string;cost:number;desc:string;in
   {id:'wiremill',name:'Wire Drawing Mill',short:'WIRE DRAW',cost:14000,desc:'Draws copper ingots into fine electrical wire.',input:'Copper ingots',output:'Copper wire',rate:.12},
   {id:'circuitpress',name:'Circuit Board Line',short:'CIRCUITS',cost:30000,desc:'Builds circuit boards from precision electrical wire.',input:'Copper wire',output:'Circuit boards',rate:.07},
   {id:'beamMill',name:'Beam Rolling Mill',short:'STEEL BEAMS',cost:2500,desc:'Rolls iron ingots into structural steel beams.',input:'Iron ingots',output:'Steel beams',rate:.075},
-  {id:'coilWinder',name:'Coil Winding Machine',short:'COPPER COILS',cost:21000,desc:'Winds copper wire into precision electrical coils.',input:'Copper wire',output:'Copper coils',rate:.065}
+  {id:'coilWinder',name:'Coil Winding Machine',short:'COPPER COILS',cost:21000,desc:'Winds copper wire into precision electrical coils.',input:'Copper wire',output:'Copper coils',rate:.065},
+  {id:'motorworks',name:'Electric Motor Works',short:'MOTOR WORKS',cost:1000000,desc:'Heavy-duty assembly line. Each motor uses 2 Copper Coils and 1 Circuit Board. Uses substantial electricity.',input:'2 Copper Coils + 1 Circuit Board',output:'Electric Motors',rate:.04}
 ];
 const goods:{id:StockId;name:string;emoji:string;price:number;detail:string}[]=[
   {id:'ore',name:'Raw Ore',emoji:'🪨',price:5,detail:'Fresh from the mine'},
@@ -56,7 +57,8 @@ const goods:{id:StockId;name:string;emoji:string;price:number;detail:string}[]=[
   {id:'wire',name:'Copper Wire',emoji:'🧵',price:48,detail:'Drawn wire for electrical manufacturing'},
   {id:'circuits',name:'Circuit Boards',emoji:'🟩',price:140,detail:'High-value electrical components'},
   {id:'beams',name:'Steel Beams',emoji:'🏗️',price:85,detail:'Structural steel for major construction projects'},
-  {id:'coils',name:'Copper Coils',emoji:'🌀',price:110,detail:'Wound electrical coils for motors and generators'}
+  {id:'coils',name:'Copper Coils',emoji:'🌀',price:110,detail:'Wound electrical coils for motors and generators'},
+  {id:'motors',name:'Electric Motors',emoji:'⚙️',price:4200,detail:'Flagship high-power industrial electric motors'}
 ];
 const contracts:{id:string;name:string;detail:string;good:StockId;qty:number;reward:number;rep:number;xp:number;minRep:number}[]=[
   {id:'first-ore',name:'First Ore Delivery',detail:'A nearby foundry advances your first machine purchase, then pays the balance when you deliver five raw ore.',good:'ore',qty:5,reward:85,rep:5,xp:25,minRep:0},
@@ -67,9 +69,10 @@ const contracts:{id:string;name:string;detail:string;good:StockId;qty:number;rew
   {id:'wire-contract',name:'Electrical Wire Contract',detail:'Wire for a regional infrastructure project.',good:'wire',qty:6,reward:1100,rep:20,xp:65,minRep:40},
   {id:'circuit-contract',name:'Circuit Board Supply',detail:'A technology manufacturer needs circuits.',good:'circuits',qty:4,reward:1800,rep:30,xp:80,minRep:60},
   {id:'structural-steel',name:'Construction Steel Order',detail:'A building contractor needs a shipment of Steel Beams for a major project.',good:'beams',qty:10,reward:1120,rep:12,xp:55,minRep:18},
-  {id:'generator-coils',name:'Generator Coil Order',detail:'An energy equipment firm needs Copper Coils for electric motors.',good:'coils',qty:8,reward:1440,rep:18,xp:75,minRep:50}
+  {id:'generator-coils',name:'Generator Coil Order',detail:'An energy equipment firm needs Copper Coils for electric motors.',good:'coils',qty:8,reward:1440,rep:18,xp:75,minRep:50},
+  {id:'motor-fleet',name:'Industrial Motor Fleet',detail:'An electrification programme needs six industrial electric motors for heavy machinery.',good:'motors',qty:6,reward:32000,rep:55,xp:220,minRep:220}
 ];
-const contractProducer:Record<StockId,MachineId>={ore:'miner',ingot:'smelter',plate:'press',parts:'assembler',copperOre:'copperMiner',copperIngot:'copperSmelter',wire:'wiremill',circuits:'circuitpress',beams:'beamMill',coils:'coilWinder'};
+const contractProducer:Record<StockId,MachineId>={ore:'miner',ingot:'smelter',plate:'press',parts:'assembler',copperOre:'copperMiner',copperIngot:'copperSmelter',wire:'wiremill',circuits:'circuitpress',beams:'beamMill',coils:'coilWinder',motors:'motorworks'};
 type OrderLine={good:StockId;qty:number};
 type RepeatOrder={id:string;slot:number;round:number;name:string;detail:string;good:StockId;qty:number;items:OrderLine[];reward:number;rep:number;xp:number;kind:string;due:number};
 const repeatClients=['Local Fabricators','Midtown Engineering','Northern Supply Co.','Pennyworth Industrial','Regional Repairs','Docks & Freight','Municipal Works','Emergency Supply'];
@@ -189,17 +192,17 @@ const payrollPerMinute=(v:GameState)=>v.mechanics*WAGES.mechanic+v.salespeople*W
 const ELECTRICITY_PER_MINUTE:Record<MachineId,number>={
   miner:3,smelter:6,press:8,assembler:11,
   copperMiner:4,copperSmelter:7,wiremill:9,circuitpress:14,
-  beamMill:10,coilWinder:12
+  beamMill:10,coilWinder:12,motorworks:300
 };
 const electricitySpeedFactor=(speed:number)=>speed===2?1.5:1;
 const electricityCostPerMinute=(s:GameState,speed:number)=>machines.reduce((sum,m)=>
   sum+(s.lastOutput[m.id]>0?workingUnits(s,m.id)*ELECTRICITY_PER_MINUTE[m.id]*electricitySpeedFactor(speed)*powerCostMultiplier(s):0),0);
 
-const REPAIR_COSTS:Record<MachineId,number>={miner:40,smelter:65,press:90,assembler:130,copperMiner:85,copperSmelter:155,wiremill:230,circuitpress:340,beamMill:185,coilWinder:285};
+const REPAIR_COSTS:Record<MachineId,number>={miner:40,smelter:65,press:90,assembler:130,copperMiner:85,copperSmelter:155,wiremill:230,circuitpress:340,beamMill:185,coilWinder:285,motorworks:2200};
 const repairCostFor=(id:MachineId,level:number)=>REPAIR_COSTS[id]+level*15;
 const MAX_MACHINE_UNITS=5;
 const GEARS_PER_FINISHED_UNITS=12;
-const finishedGearUnits=(id:StockId,amount:number)=>(id==='parts'||id==='circuits'||id==='beams'||id==='coils')?amount:0;
+const finishedGearUnits=(id:StockId,amount:number)=>(id==='parts'||id==='circuits'||id==='beams'||id==='coils'||id==='motors')?amount:0;
 const shipmentGearGain=(state:GameState,amount:number)=>{
   const whole=Math.floor((state.gearShipmentProgress+amount+1e-8)/GEARS_PER_FINISHED_UNITS);
   return {earned:whole,remainder:state.gearShipmentProgress+amount-whole*GEARS_PER_FINISHED_UNITS};
@@ -209,10 +212,10 @@ const FACTORY_STAGES=[
   {number:2,name:'Steel Manufacturing',xp:150,rep:8,detail:'Build precision parts and branch out into structural steel.'},
   {number:3,name:'Copper Expansion',xp:200,rep:20,detail:'Launch the electrical line and supply conductive metals.'},
   {number:4,name:'Industrial Electronics',xp:500,rep:50,detail:'Turn copper wire into circuit boards and wound coils.'},
-  {number:5,name:'National Manufacturer',xp:1600,rep:125,detail:'Establish a national supplier network and expand several production lines.'},
+  {number:5,name:'National Manufacturer',xp:1600,rep:125,detail:'Establish a national supplier network and build industrial electric motors.'},
   {number:6,name:'Multinational Manufacturer',xp:6500,rep:350,detail:'Operate a diversified industrial group supplying customers worldwide.'}
 ] as const;
-const machineStage:Record<MachineId,number>={miner:1,smelter:1,press:2,assembler:2,beamMill:2,copperMiner:3,copperSmelter:3,wiremill:3,circuitpress:4,coilWinder:4};
+const machineStage:Record<MachineId,number>={miner:1,smelter:1,press:2,assembler:2,beamMill:2,copperMiner:3,copperSmelter:3,wiremill:3,circuitpress:4,coilWinder:4,motorworks:5};
 
 const faultCount=(v:GameState,id:MachineId)=>v.unitFaults[id].slice(0,v[id]).filter(f=>f>0).length;
 const workingUnits=(v:GameState,id:MachineId)=>Math.max(0,v[id]-faultCount(v,id));
@@ -291,15 +294,16 @@ function loadPixelMachine(id:MachineId):Promise<PixelMachineArt>{
 function MachineIcon({id,size=36}:{id:MachineId;size?:number}){
   const [art,setArt]=useState<PixelMachineArt|null>(null);
   useEffect(()=>{let mounted=true;loadPixelMachine(id).then(v=>{if(mounted)setArt(v)}).catch(()=>{});return()=>{mounted=false;};},[id]);
+  if(id==='motorworks')return <span className="motor-icon" role="img" aria-label="Electric Motor Works" style={{width:size,height:size}}><Cog size={Math.max(17,Math.round(size*.7))}/></span>;
   return art?<img className="pixel-machine-icon" src={art.icon} alt={machines.find(m=>m.id===id)?.name||'Machine'} width={size} height={size}/>:<span className="pixel-machine-fallback" role="img" aria-label={machines.find(m=>m.id===id)?.name||'Machine'} style={{width:size,height:size,backgroundImage:'url('+machineSheetUrl(id)+')'}}/>;
 }
 
 function MachineArt({id,active,broken,lights,cycleSeconds,progress}:{id:MachineId;active:boolean;broken:boolean;lights:('on'|'off'|'empty')[];cycleSeconds:number;progress:number}){
- const [sprite,setSprite]=useState<PixelMachineArt>({sheet:machineSheetUrl(id),icon:''});
- useEffect(()=>{let mounted=true;loadPixelMachine(id).then(v=>{if(mounted)setSprite(v)}).catch(()=>{if(mounted)setSprite({sheet:machineSheetUrl(id),icon:''})});return()=>{mounted=false;};},[id]);
+ const [sprite,setSprite]=useState<PixelMachineArt>({sheet:id==='motorworks'?'':machineSheetUrl(id),icon:''});
+ useEffect(()=>{if(id==='motorworks'){setSprite({sheet:'',icon:''});return;}let mounted=true;loadPixelMachine(id).then(v=>{if(mounted)setSprite(v)}).catch(()=>{if(mounted)setSprite({sheet:machineSheetUrl(id),icon:''})});return()=>{mounted=false;};},[id]);
  const spriteReady=!!sprite.sheet;
  const safeCycle=cycleSeconds>0?cycleSeconds:8;
- const electrical=['copperMiner','copperSmelter','wiremill','circuitpress','coilWinder'].includes(id);
+ const electrical=['copperMiner','copperSmelter','wiremill','circuitpress','coilWinder','motorworks'].includes(id);
  const copper=electrical?'#bd8054':'#bd985e';
  const steel=electrical?'#78877e':'#819187';
  const dark=electrical?'#39453d':'#35453d';
@@ -322,6 +326,12 @@ function MachineArt({id,active,broken,lights,cycleSeconds,progress}:{id:MachineI
    <path d="M48 161h224v13H48z" fill="#59685a" stroke="#26372e" strokeWidth="3"/>
    <path d="M57 174h206" stroke="#b4a17a" strokeWidth="2" strokeDasharray="10 8" opacity=".7"/>
    <g filter={'url(#shadow-'+id+')'} stroke="#26372e" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round">
+    {id==='motorworks'&&<g className="motor-works-asset">
+     <path d="M65 85L95 61h133l24 24v81H65z" fill="#566d61"/><path d="M89 72h142v19H89z" fill="#cfab74"/><path d="M87 102h147v50H87z" fill="#273c33" stroke="#acbfa7" strokeWidth="4"/>
+     <g className="motor-rotor"><circle cx="160" cy="126" r="34" fill="#a8734d" stroke="#edc08c" strokeWidth="8"/><circle cx="160" cy="126" r="21" fill="#435749" stroke="#c48a5a" strokeWidth="7"/><circle cx="160" cy="126" r="10" fill="#e5cba0"/><path d="M160 100v52M134 126h52M142 108l36 36M178 108l-36 36" stroke="#ebba79" strokeWidth="5"/></g>
+     <path d="M58 155h205v17H58z" fill="#bea06a"/><path d="M80 168h165" stroke="#3a4739" strokeWidth="4" strokeDasharray="11 6"/>
+     <rect x="205" y="95" width="26" height="34" rx="3" fill="#3c5647" stroke="#d5aa70"/><circle cx="217" cy="106" r="5" fill="#a3e6ae"/>
+    </g>}
     {id==='miner'&&<g>
       <path d="M68 87l18-37 103-8 35 30v82H68z" fill={'url(#body-'+id+')'}/>
       <path d="M86 51l14-23 80-4 27 24-18 14-91 5z" fill="#d0b477"/>
@@ -650,7 +660,7 @@ export default function App(){
   const progressionLevel=Math.max(1,Math.floor((1+Math.sqrt(1+4*s.experience/75))/2));
   const levelStart=xpForLevel(progressionLevel);
   const nextGoal=xpForLevel(progressionLevel+1);
-  const reputationUnlock:Record<MachineId,number>={miner:0,smelter:2,press:8,assembler:18,copperMiner:20,copperSmelter:35,wiremill:50,circuitpress:60,beamMill:18,coilWinder:50};
+  const reputationUnlock:Record<MachineId,number>={miner:0,smelter:2,press:8,assembler:18,copperMiner:20,copperSmelter:35,wiremill:50,circuitpress:60,beamMill:18,coilWinder:50,motorworks:220};
   const machineTypesOwned=machines.filter(m=>s[m.id]>0).length;
   const companyRanks=[
     {name:'WORKSHOP',rep:0,xp:0,sales:0,machines:0},
@@ -667,7 +677,7 @@ export default function App(){
   const nextRep=nextRank?.rep??currentRank.rep;
   const repProgress=nextRank?Math.min(100,s.reputation/Math.max(1,nextRank.rep)*100):100;
   const goalProgress=Math.min(100,(s.experience-levelStart)/(nextGoal-levelStart)*100);
-  const unlockAt:Record<MachineId,number>={miner:0,smelter:25,press:150,assembler:200,copperMiner:200,copperSmelter:350,wiremill:500,circuitpress:700,beamMill:260,coilWinder:650};
+  const unlockAt:Record<MachineId,number>={miner:0,smelter:25,press:150,assembler:200,copperMiner:200,copperSmelter:350,wiremill:500,circuitpress:700,beamMill:260,coilWinder:650,motorworks:3500};
   // Keep the floor focused: show every machine already owned and just the next milestone.
   const stageReached=(stage:number)=>{
     const goal=FACTORY_STAGES[stage-1];
@@ -1077,7 +1087,7 @@ export default function App(){
           const perUnitRate=unitsWorking>0?s.lastOutput[m.id]/unitsWorking:0;
           const cycleSeconds=perUnitRate>0?1/perUnitRate:0;
           const lights:Array<'on'|'off'|'empty'>=Array.from({length:MAX_MACHINE_UNITS},(_,i)=>i>=owned?'empty':!active||(s.unitFaults[m.id][i]||0)>0?'off':'on');
-          const inputNames:Partial<Record<MachineId,string>>={smelter:'raw ore',press:'iron ingots',beamMill:'iron ingots',assembler:'metal plates',copperSmelter:'copper ore',wiremill:'copper ingots',circuitpress:'copper wire',coilWinder:'copper wire'};
+          const inputNames:Partial<Record<MachineId,string>>={smelter:'raw ore',press:'iron ingots',beamMill:'iron ingots',assembler:'metal plates',copperSmelter:'copper ore',wiremill:'copper ingots',circuitpress:'copper wire',coilWinder:'copper wire',motorworks:'2 copper coils and 1 circuit board'};
           const stopReason=owned===0?'':!running?'Factory paused. Resume production to restart.':s.powerCutEvent?'Power cut. Resolve the incident to restore production.':s.cyberAttackEvent?'Network lockdown. Restore the factory systems.':s.breakdownEvent?'Emergency stop. Resolve or dismiss the active breakdown alert.':s.writeOffEvent?'A machine was written off. Acknowledge the incident.':s.powerShortage?'No electricity funds left. Ship goods from Warehouse to restore production.':unitsWorking===0?'All purchased units are broken. Repair at least one.':s.lastOutput[m.id]<=0?'Waiting for '+(inputNames[m.id]||'materials')+' from the previous production stage. Check upstream machines.':'';
           const machineStatus=owned===0?'NOT BUILT':unitsWorking===0?'BROKEN':!running?'PAUSED':s.powerCutEvent?'POWER CUT':s.cyberAttackEvent?'LOCKDOWN':s.breakdownEvent?'EMERGENCY STOP':s.writeOffEvent?'WRITE-OFF':s.powerShortage?'NO POWER':active?failed>0?'PARTIAL':'WORKING':'WAITING FOR INPUT';
           const cost=machineCost(m,s);
