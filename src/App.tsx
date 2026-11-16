@@ -280,63 +280,32 @@ const BOOSTS:{id:BoostId;name:string;subtitle:string;description:string;cost:num
 ];
 const boostClock=(seconds:number)=>`${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;
 
-// A consistent 16-bit palette gives every machine the same visual language.
-// Each of the seven animation frames is pixel-converted from its actual moving
-// machinery, preserving gameplay-synchronised animation without extra smoke overlays.
+// Pixel art comes from the supplied ZIP. Never redraw old machine photos in
+// a canvas: that kept the previous artwork and its smoke effects visible.
 type PixelMachineArt={sheet:string;icon:string};
-const PIXEL_FRAME=100;
 const pixelMachineCache=new Map<MachineId,Promise<PixelMachineArt>>();
-const machineSheetUrl=(id:MachineId)=>'/resources/machines/'+id+'-sheet.webp';
-const pixelColours=[
-  '#171b1c','#222725','#303431','#444742','#60615b','#7f8075','#a4a497','#d0c9b7','#f0e9d5',
-  '#182b24','#294338','#405c49','#58735b','#839879','#b5c6a3',
-  '#382b29','#59372e','#7b4635','#a15b39','#cb7850','#ebad6a','#f6d19b',
-  '#3c3326','#685137','#957044','#c69a5b','#e6c887','#f6e4b8',
-  '#313341','#525160','#77727e','#aaa3aa','#ded2d5',
-  '#4b2a21','#842f24','#c2482b','#ea712e','#ffae3b','#ffdc72',
-  '#253d42','#42616a','#68939c','#9cb8b4'
-].map(hex=>[parseInt(hex.slice(1,3),16),parseInt(hex.slice(3,5),16),parseInt(hex.slice(5,7),16)]);
+const PIXEL_ART_ARCHIVE='/machines/ore-and-order-pixel-machines.zip?v=2';
+let pixelArchive:Promise<Record<string,Uint8Array>>|null=null;
+function pixelArtFiles(){
+  if(!pixelArchive)pixelArchive=(async()=>{
+    const response=await fetch(PIXEL_ART_ARCHIVE);
+    if(!response.ok)throw new Error('Pixel artwork ZIP could not be loaded: '+response.status);
+    const {unzipSync}=await import('fflate');
+    return unzipSync(new Uint8Array(await response.arrayBuffer()));
+  })().catch(error=>{pixelArchive=null;throw error;});
+  return pixelArchive;
+}
 function loadPixelMachine(id:MachineId):Promise<PixelMachineArt>{
   const cached=pixelMachineCache.get(id);
   if(cached)return cached;
-  const result=new Promise<PixelMachineArt>((resolve,reject)=>{
-    const source=new Image();
-    source.decoding='async';
-    source.onerror=()=>reject(new Error('Missing machine sprite: '+id));
-    source.onload=()=>{
-      try{
-        const frameCount=7;
-        const sheet=document.createElement('canvas');
-        sheet.width=PIXEL_FRAME*frameCount;
-        sheet.height=PIXEL_FRAME;
-        const ctx=sheet.getContext('2d',{willReadFrequently:true});
-        if(!ctx)throw new Error('Canvas unavailable');
-        const frameWidth=source.naturalWidth/frameCount;
-        ctx.imageSmoothingEnabled=true;
-        for(let i=0;i<frameCount;i++){
-          ctx.drawImage(source,i*frameWidth,0,frameWidth,source.naturalHeight,i*PIXEL_FRAME,0,PIXEL_FRAME,PIXEL_FRAME);
-        }
-        const image=ctx.getImageData(0,0,sheet.width,sheet.height);
-        const px=image.data;
-        for(let p=0;p<px.length;p+=4){
-          if(px[p+3]<8)continue;
-          const r=px[p],g=px[p+1],b=px[p+2];
-          let nearest=pixelColours[0],best=Infinity;
-          for(const colour of pixelColours){
-            const dr=r-colour[0],dg=g-colour[1],db=b-colour[2];
-            const dist=dr*dr*.30+dg*dg*.59+db*db*.11;
-            if(dist<best){best=dist;nearest=colour;}
-          }
-          px[p]=nearest[0];px[p+1]=nearest[1];px[p+2]=nearest[2];
-        }
-        ctx.putImageData(image,0,0);
-        const icon=document.createElement('canvas');
-        icon.width=PIXEL_FRAME;icon.height=PIXEL_FRAME;
-        icon.getContext('2d')?.drawImage(sheet,0,0,PIXEL_FRAME,PIXEL_FRAME,0,0,PIXEL_FRAME,PIXEL_FRAME);
-        resolve({sheet:sheet.toDataURL('image/png'),icon:icon.toDataURL('image/png')});
-      }catch(err){reject(err);}
+  const result=pixelArtFiles().then(files=>{
+    const sheet=files['game_sprite_sheets/'+id+'-sheet.webp'];
+    const icon=files['icons/'+id+'-icon.png'];
+    if(!sheet||!icon)throw new Error('Missing pixel art for '+id);
+    return {
+      sheet:URL.createObjectURL(new Blob([new Uint8Array(sheet)],{type:'image/webp'})),
+      icon:URL.createObjectURL(new Blob([new Uint8Array(icon)],{type:'image/png'}))
     };
-    source.src=machineSheetUrl(id);
   });
   pixelMachineCache.set(id,result);
   result.catch(()=>pixelMachineCache.delete(id));
@@ -356,12 +325,12 @@ function MachineIcon({id,size=36}:{id:MachineId;size?:number}){
   const [art,setArt]=useState<PixelMachineArt|null>(null);
   useEffect(()=>{if(id==='motorworks')return;let mounted=true;loadPixelMachine(id).then(v=>{if(mounted)setArt(v)}).catch(()=>{});return()=>{mounted=false;};},[id]);
   if(id==='motorworks')return <span className="motor-icon" role="img" aria-label="Electric Motor Works" style={{width:size,height:size}}><Cog size={Math.max(17,Math.round(size*.7))}/></span>;
-  return art?<img className="pixel-machine-icon" src={art.icon} alt={machines.find(m=>m.id===id)?.name||'Machine'} width={size} height={size}/>:<span className="pixel-machine-fallback" role="img" aria-label={machines.find(m=>m.id===id)?.name||'Machine'} style={{width:size,height:size,backgroundImage:'url('+machineSheetUrl(id)+')'}}/>;
+  return art?<img className="pixel-machine-icon" src={art.icon} alt={machines.find(m=>m.id===id)?.name||'Machine'} width={size} height={size}/>:<span className="pixel-machine-placeholder" role="img" aria-label="Loading pixel art" style={{width:size,height:size}}><Cog size={Math.max(14,Math.round(size*.6))}/></span>;
 }
 
 function MachineArt({id,active,broken,lights,cycleSeconds,progress}:{id:MachineId;active:boolean;broken:boolean;lights:('on'|'off'|'empty')[];cycleSeconds:number;progress:number}){
- const [sprite,setSprite]=useState<PixelMachineArt>({sheet:id==='motorworks'?'':machineSheetUrl(id),icon:''});
- useEffect(()=>{if(id==='motorworks'){setSprite({sheet:'',icon:''});return;}let mounted=true;loadPixelMachine(id).then(v=>{if(mounted)setSprite(v)}).catch(()=>{if(mounted)setSprite({sheet:machineSheetUrl(id),icon:''})});return()=>{mounted=false;};},[id]);
+ const [sprite,setSprite]=useState<PixelMachineArt>({sheet:'',icon:''});
+ useEffect(()=>{if(id==='motorworks'){setSprite({sheet:'',icon:''});return;}let mounted=true;loadPixelMachine(id).then(v=>{if(mounted)setSprite(v)}).catch(()=>{if(mounted)setSprite({sheet:'',icon:''})});return()=>{mounted=false;};},[id]);
  const spriteReady=!!sprite.sheet;
  const safeCycle=cycleSeconds>0?cycleSeconds:8;
  const electrical=['copperMiner','copperSmelter','wiremill','circuitpress','coilWinder','motorworks'].includes(id);
