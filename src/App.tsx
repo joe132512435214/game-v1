@@ -554,12 +554,17 @@ export default function App(){
       const availableWire=downstreamMaterialAvailable(n,'wire',n.wire+wireMade,wireMade);
       const coilsMade=Math.min(availableWire*.45,rate('coilWinder',.065));
       const circuitsMade=Math.min(Math.max(0,availableWire-coilsMade),rate('circuitpress',.07));
+      // Motor assembly uses two coils and one circuit board, including goods
+      // finished earlier in this tick. Protect material reserved by open orders.
+      const freeCoils=Math.max(0,n.coils+coilsMade-contractStockTarget(n,'coils'));
+      const freeCircuits=Math.max(0,n.circuits+circuitsMade-contractStockTarget(n,'circuits'));
+      const motorsMade=Math.min(rate('motorworks',.04),freeCoils/2,freeCircuits);
       // Electricity is metered per working machine that actually makes output.
       // A paused, broken or input-starved machine uses no electricity.
       const proposedOutput:Record<MachineId,number>={
         miner:oreMade,smelter:ingotsMade,press:platesMade,assembler:partsMade,
         copperMiner:copperOreMade,copperSmelter:copperIngotsMade,wiremill:wireMade,
-        circuitpress:circuitsMade,beamMill:beamsMade,coilWinder:coilsMade
+        circuitpress:circuitsMade,beamMill:beamsMade,coilWinder:coilsMade,motorworks:motorsMade
       };
       const powerBill=machines.reduce((sum,m)=>sum+(proposedOutput[m.id]>1e-8
         ?workingUnits(n,m.id)*ELECTRICITY_PER_MINUTE[m.id]*electricitySpeedFactor(speed)*powerCostMultiplier(n)/60:0),0);
@@ -581,8 +586,9 @@ export default function App(){
       n.copperOre=Math.max(0,n.copperOre+copperOreMade-copperIngotsMade);
       n.copperIngot=Math.max(0,n.copperIngot+copperIngotsMade-wireMade);
       n.wire=Math.max(0,n.wire+wireMade-circuitsMade-coilsMade);
-      n.coils+=coilsMade;
-      n.circuits+=circuitsMade;
+      n.coils=Math.max(0,n.coils+coilsMade-2*motorsMade);
+      n.circuits=Math.max(0,n.circuits+circuitsMade-motorsMade);
+      n.motors+=motorsMade;
       // Each visual cycle represents one unit actually produced by a single working machine.
       n.lastOutput={
         miner:oreMade,smelter:ingotsMade,press:platesMade,assembler:partsMade,
