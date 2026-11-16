@@ -240,3 +240,19 @@ body{background:#171b19}.game{max-width:1240px}
 .tier-locked .research-tier-count{color:#879186;border-color:#48554b}
 .research-tier .technology-grid{margin:0}
 @media(max-width:620px){.research-tier{padding:11px}.research-tier-heading h3{font-size:16px}.research-tier-count{font-size:9px;padding:6px}}
+
+
+/* Spend Rivets on temporary factory boosts */
+.boost-store-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:18px 0}
+.boost-store-card{display:flex;flex-direction:column;gap:12px;min-width:0;padding:19px;border:1px solid #536048;border-radius:5px;background:linear-gradient(145deg,#263027,#18221d)}
+.boost-store-card.boost-active{border-color:#9faf73;box-shadow:inset 0 0 0 1px #879a6644}
+.boost-store-heading{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.boost-store-symbol{font-size:27px}
+.boost-store-tag{font:9px 'IBM Plex Mono',monospace;color:#c6aa79;letter-spacing:.3px}
+.boost-store-card h2{margin:0;color:#e7e3cf;font-size:19px}
+.boost-store-card p{margin:0;flex:1;font-size:12px;line-height:1.6;color:#b4beb1}
+.boost-store-timer{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 0;border-top:1px solid #465449}
+.boost-store-timer span{font:10px 'IBM Plex Mono',monospace;color:#9daa9b}
+.boost-store-timer b{font:600 18px 'IBM Plex Mono',monospace;color:#e7c893}
+.boost-store-card button{width:100%;min-height:42px}
+@media(max-width:800px){.boost-store-grid{grid-template-columns:1fr}.boost-store-card{padding:15px}}
