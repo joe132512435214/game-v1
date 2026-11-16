@@ -856,3 +856,89 @@ button:focus-visible,select:focus-visible{outline:2px solid #f1c48d;outline-offs
  .factory-view-switch button{min-width:75px;font-size:9px}
  .factory-view-toolbar .eyebrow{font-size:8px}
 }
+
+
+/* Pixel-machine design system: crisp sprites, unified icons, no double smoke */
+.machine-art.art-sprite-ready{background:#202722!important;border-color:#405244!important}
+.machine-art.art-sprite-ready.art-electrical{background:#282823!important;border-color:#626047!important}
+.machine-art .machine-sprite-layer{
+  z-index:3!important;
+  image-rendering:pixelated!important;
+  background-repeat:no-repeat!important;
+  filter:contrast(1.06) saturate(.93);
+  transform:translateX(-50%)!important;
+  overflow:hidden;
+  will-change:background-position;
+}
+.machine-art:not(.running) .machine-sprite-layer{
+  animation-play-state:paused!important;
+}
+.machine-art .steam-plume{display:none!important}
+.machine-art.art-sprite-ready .art-backdrop,
+.machine-art.art-sprite-ready svg,
+.machine-art.art-sprite-ready .machine-art-floor,
+.machine-art.art-sprite-ready .art-glow{display:none!important}
+.machine-art::after{display:none!important;content:none!important}
+.machine-art.art-sprite-ready .art-cycle-hud{
+  z-index:7!important;
+  background:#141c17ef!important;
+  border-color:#52614d!important;
+}
+.pixel-machine-icon{
+  display:block!important;
+  width:auto;
+  flex-shrink:0;
+  object-fit:contain;
+  image-rendering:pixelated!important;
+  image-rendering:crisp-edges;
+  image-rendering:pixelated!important;
+  border-radius:2px;
+  filter:contrast(1.08);
+}
+.pixel-machine-placeholder{
+  flex-shrink:0;display:grid;place-items:center;
+  color:#bb9a70;font-size:18px;
+}
+.machine-card-head .machine-number{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  min-width:0;
+  font-weight:600;
+  color:#d5c4a6;
+  letter-spacing:.6px;
+}
+.machine-card-head .machine-number .pixel-machine-icon{
+  border:1px solid #4a5b4b;
+  background:#273329;
+}
+.route-symbol{display:flex!important;align-items:center;justify-content:center;overflow:hidden}
+.route-symbol .pixel-machine-icon{max-width:100%;max-height:100%}
+.stock-emoji{
+  display:flex!important;align-items:center;justify-content:center;
+  flex-shrink:0;
+  width:52px;
+  height:52px;
+  border:1px solid #4f604d;
+  background:#1c2720;
+  border-radius:4px;
+  font-size:unset!important;
+}
+.stock-emoji .pixel-machine-icon{width:42px!important;height:42px!important}
+.assignment-machine{
+  width:42px!important;
+  height:42px!important;
+  background:#18241e!important;
+  border:1px solid #475948!important;
+  border-radius:3px!important;
+  overflow:hidden;
+}
+.assignment-machine .pixel-machine-icon{width:33px!important;height:33px!important}
+@media(max-width:620px){
+  .stock-emoji{width:42px;height:42px}
+  .stock-emoji .pixel-machine-icon{width:36px!important;height:36px!important}
+  .machine-card-head .machine-number{gap:5px;font-size:8px}
+}
+@media(prefers-reduced-motion:reduce){
+  .machine-art .machine-sprite-layer{animation:none!important}
+}
