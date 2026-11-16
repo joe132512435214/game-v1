@@ -718,7 +718,7 @@ export default function App(){
         <div className="cashflow-stat cashflow-income"><small>+ AUTOMATIC INCOME / MIN</small><b>+{moneyPerMinute(autoIncomePerMinute)} <i>RVT</i></b></div>
         <div className="cashflow-stat cashflow-expense"><small>− STAFF WAGES / MIN</small><b>−{moneyPerMinute(wagesPerMinute)} <i>RVT</i></b></div>
         <div className="cashflow-stat cashflow-electricity"><small>− ELECTRICITY / MIN</small><b>−{moneyPerMinute(powerPerMinute)} <i>RVT</i></b></div>
-        <div className={'cashflow-stat cashflow-net +(netPerMinute>=0?'positive':'negative')}><small>NET CASH FLOW / MIN</small><b>{netPerMinute>=0?'+':'−'}{moneyPerMinute(netPerMinute)} <i>RVT</i></b></div>
+        <div className={'cashflow-stat cashflow-net '+(netPerMinute>=0?'positive':'negative')}><small>NET CASH FLOW / MIN</small><b>{netPerMinute>=0?'+':'−'}{moneyPerMinute(netPerMinute)} <i>RVT</i></b></div>
         <small className="cashflow-note">{!running?'Paused · staff wages and electricity stopped':s.breakdownEvent||s.powerCutEvent||s.cyberAttackEvent?'Incident · staff wages and electricity paused':s.powerShortage?'INSUFFICIENT POWER FUNDS · ship stored goods to restart machinery':!payrollFunded?'Not enough cash for payroll · dispatch paused':'Live estimates from automatic sales, payroll and electricity · excludes manual shipments and contracts'}{' · Starter grid credit: '+s.starterPowerCredit.toFixed(2)+' RVT'}</small>
       </section>
       {page==='factory'&&<div className="page-content">
