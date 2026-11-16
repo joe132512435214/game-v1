@@ -582,7 +582,7 @@ export default function App(){
   const visibleMachines=machines.filter(m=>s[m.id]>0||(s.pendingReplacement[m.id]||0)>0||m.id===nextMachine?.id||(m.id==='beamMill'&&s.smelter>0)||(m.id==='coilWinder'&&s.wiremill>0));
   const visibleGoods=goods.filter((g)=>{
     const producer=contractProducer;
-    return s[producer[g.id]]>0||producer[g.id]===nextMachine?.id||(producer[g.id]==='beamMill'&&s.smelter>0)||(producer[g.id]==='coilWinder'&&s.wiremill>0);
+    return s[g.id]>=1||s[producer[g.id]]>0||(s.pendingReplacement[producer[g.id]]||0)>0||producer[g.id]===nextMachine?.id||(producer[g.id]==='beamMill'&&s.smelter>0)||(producer[g.id]==='coilWinder'&&s.wiremill>0);
   });
   const achievements=[
     {name:'First Foundations',detail:'Build your first machine',done:machineCount>=1,icon:'🏗️'},
