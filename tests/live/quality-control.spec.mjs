@@ -27,7 +27,7 @@ test('quality control completes a perfect shift and awards two style tokens', as
     await game.getByRole('button', { name: reject ? /REJECT/ : /KEEP/ }).click();
   }
   await expect(game.getByText('10/10 correct')).toBeVisible();
-  await expect(game.getByText(/\+2 Style Tokens/)).toBeVisible();
+  await expect(game.getByText(/\+2 style tokens/i)).toBeVisible();
   await game.getByRole('button', { name: 'BACK TO THEMES' }).click();
   await expect(menu.getByRole('button', { name: /Quality & Themes/i })).toContainText('2');
 });
