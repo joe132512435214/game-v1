@@ -1,0 +1,103 @@
+[
+  {
+    "name": "Opening contract funds the first machine",
+    "sanity": true,
+    "viewport": "mobile",
+    "covers": [
+      "zero-cash fresh start",
+      "opening contract acceptance",
+      "machine advance",
+      "first mine purchase"
+    ],
+    "description": "Verify a fresh save starts with no cash or machines and the first contract advances enough Rivets to buy the mine.",
+    "steps": [
+      "Reset to a fresh factory",
+      "Verify wallet is 0 RVT and no machine is owned",
+      "Accept First Ore Delivery and verify +50 RVT",
+      "Build the Rockbreaker Mine for 50 RVT"
+    ],
+    "expected": "The player starts at zero, must accept the opening contract, receives a 50 RVT advance and can then build the first mine."
+  },
+  {
+    "name": "First delivery triggers the power-cut story and pays once",
+    "viewport": "desktop",
+    "covers": [
+      "starter ore production",
+      "contract stock requirement",
+      "contract cash and reputation reward",
+      "comic storyboard power-cut incident",
+      "production halt and repair choices",
+      "power-cut persistence"
+    ],
+    "description": "Verify the opening order consumes the required ore, pays the reward and triggers the illustrated one-time power failure with working recovery choices.",
+    "steps": [
+      "Accept First Ore Delivery and build the Rockbreaker Mine",
+      "Produce five ore and deliver the order",
+      "Verify 85 RVT and five reputation are awarded and the power-cut comic appears",
+      "Choose the one-off repair for 40 RVT",
+      "Refresh and verify the power-cut incident does not replay"
+    ],
+    "expected": "The order pays once, consumes five ore, grants the stated reward, opens the power-cut storyboard, stops production and resumes after repair."
+  },
+  {
+    "name": "Save and reload retains campaign incidents and contracts",
+    "viewport": "mobile",
+    "covers": [
+      "contract acceptance persistence",
+      "contract completion persistence",
+      "save migration",
+      "one-time incident persistence"
+    ],
+    "description": "Verify contract and incident flags survive a refresh without duplicating an advance, reward or cutscene.",
+    "steps": [
+      "Accept the opening contract",
+      "Refresh and verify the advance is not paid again",
+      "Complete the order and resolve the power cut",
+      "Refresh the game",
+      "Verify the order remains fulfilled and the power-cut story does not replay"
+    ],
+    "expected": "Accepted and completed contract states and resolved one-time incidents persist after reload."
+  },
+  {
+    "name": "Breakdown cutscene stops the line and offers recovery",
+    "viewport": "desktop",
+    "covers": [
+      "random machine breakdown event",
+      "emergency production stop",
+      "persistent incident state",
+      "mechanic repair",
+      "40 RVT emergency repair",
+      "continue and repair later"
+    ],
+    "description": "Verify a machine failure opens a persistent incident overlay, pauses production and provides a safe repair or defer path.",
+    "steps": [
+      "Start a factory with at least one machine running",
+      "Wait for a random machine failure",
+      "Verify the incident overlay names the affected machine and the line stops",
+      "Use an assigned mechanic or spend 40 RVT for emergency repair",
+      "Verify the overlay closes and production resumes"
+    ],
+    "expected": "A breakdown opens one incident at a time, halts all production while active, persists through refresh, and can be repaired with an assigned mechanic or 40 RVT; the player can defer repair without becoming stuck."
+  },
+  {
+    "name": "Mech Assembly unlock triggers the cyberattack cutscene",
+    "viewport": "desktop",
+    "covers": [
+      "Mech Assembly one-time cyberattack trigger",
+      "cyberattack storyboard presentation",
+      "factory production lockout",
+      "cybersecurity specialist hire and permanent protection",
+      "external recovery fallback",
+      "cyberattack save persistence"
+    ],
+    "description": "Verify commissioning Mech Assembly triggers the illustrated network breach, halts production and lets the player hire security or buy an external recovery.",
+    "steps": [
+      "Progress through the early production chain until Mech Assembly can be built",
+      "Keep at least 350 RVT available and build Mech Assembly",
+      "Verify the cyberattack storyboard appears and production is locked",
+      "Hire the cybersecurity specialist",
+      "Refresh and verify the incident does not replay and the specialist remains on staff"
+    ],
+    "expected": "The first Mech Assembly purchase triggers one cyberattack cutscene, halts production, hires a persistent specialist who secures the network, and never replays after reload."
+  }
+]
