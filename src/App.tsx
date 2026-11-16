@@ -697,6 +697,7 @@ function MachineArt({id,active,broken,lights,cycleSeconds,progress}:{id:MachineI
  {active&&<g className="sparkles" fill="#f4d28f" stroke="#f4d28f"><path d="M42 39v-12m-6 6h12"/><path d="M279 83V71m-6 6h12"/><circle cx="291" cy="126" r="2.5"/></g>}
    {broken&&<path d="M151 27l-10 20h12l-7 18 22-26h-13l8-12z" fill="#d47b55" stroke="#ffe0aa" strokeWidth="2"/>}
   </svg>
+  <div className={'living-conveyor'+(active?' is-moving':'')} aria-hidden="true"><div className="living-conveyor-belt"/>{active&&<span className={'living-conveyor-product product-'+id} style={{'--product-offset':'-'+(Math.max(0,Math.min(1,progress))*safeCycle)+'s'} as CSSProperties}><i/><i/></span>}</div>
   <div className="machine-art-floor"/><div className="art-cycle-hud"><span>{active?'PRODUCING':broken?'REPAIR REQUIRED':'STANDBY'}</span><b>{active?'1 UNIT / '+cycleSeconds.toFixed(1)+'s':'MACHINE STOPPED'}</b><i className="art-cycle-track"><i style={{width:(progress*100)+'%'}}/></i></div><span className="art-lamp" role="group" aria-label="Individual machine status lights">{lights.map((light,i)=><i key={i} className={"unit-light "+light} title={"Unit "+(i+1)+": "+(light==="on"?"running":light==="off"?"stopped":"not purchased")}/>)}</span>
   {broken&&<span className="broken-stamp"><AlertTriangle size={14}/> BROKEN</span>}{active&&<span className="art-status-dot"/>}
  </div>;
