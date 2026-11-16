@@ -3,6 +3,7 @@ import {
   Factory, Cog, Pause, Play, RotateCcw, Wrench, Store, Truck, Users, AlertTriangle,
   CheckCircle2, ArrowUpRight, Zap, Boxes, CircleDollarSign, FlaskConical, ShieldCheck, TrendingUp, Cpu
 } from 'lucide-react';
+import { Analytics } from '@vercel/analytics/react';
 
 type MachineId = 'miner' | 'smelter' | 'press' | 'assembler' | 'copperMiner' | 'copperSmelter' | 'wiremill' | 'circuitpress';
 type StockId = 'ore' | 'ingot' | 'plate' | 'parts' | 'copperOre' | 'copperIngot' | 'wire' | 'circuits';
@@ -476,5 +477,6 @@ export default function App(){
     {s.breakdownEvent&&<div className="incident-backdrop" role="dialog" aria-modal="true" aria-labelledby="incident-title"><section className="incident-panel"><div className="incident-siren"><AlertTriangle size={28}/><span>EMERGENCY STOP · 01</span></div><p className="incident-kicker">FACTORY INCIDENT REPORT</p><h2 id="incident-title">Critical machine failure</h2><p className="incident-copy"><b>{machines.find(m=>m.id===s.breakdownEvent)?.name}</b> has suffered a mechanical failure. The line has been stopped while the fault is isolated. Production and automatic dispatch are temporarily suspended.</p><div className="incident-readout"><span>FAULT DETECTED</span><b>DRIVE ASSEMBLY OVERHEATING</b><span>REQUIRED ACTION</span><b>REPAIR THE AFFECTED MACHINE</b></div><div className="incident-actions">{s.mechanicAssignments[s.breakdownEvent]>0&&<button className="primary-button" onClick={()=>resolveBreakdown(true)}>USE ASSIGNED MECHANIC · FREE</button>}<button className="primary-button" disabled={s.cash<40} onClick={()=>resolveBreakdown(false)}>EMERGENCY REPAIR · 40 RVT</button><button className="secondary-button" onClick={()=>{setS(v=>({...v,breakdownEvent:null}));setNotice('Emergency stop cleared. '+machines.find(m=>m.id===s.breakdownEvent)?.name+' still needs repair.')}}>CONTINUE · REPAIR LATER</button></div><small className="incident-footnote">Tip: assign a mechanic in Staff to handle future breakdowns. You can also repair the machine from its factory card.</small></section></div>}
     {notice&&<div className="toast" role="status" aria-live="polite"><span className="toast-icon">{noticeKind==='ORDER DESK'?'📦':noticeKind==='QUICK HEADS-UP'?'🛠️':'🏭'}</span><div className="toast-copy"><small>{noticeKind}</small><b>{noticeTitle}</b><p>{notice}</p></div><button className="toast-close" aria-label="Dismiss notification" onClick={()=>setNotice('')}>×</button></div>
     }{showReset&&<div className="modal-backdrop"><div className="reset-modal"><h2>Reset your factory?</h2><p>This clears machines, Rivets, Gears and staff saved on this device.</p><div><button onClick={()=>setShowReset(false)}>CANCEL</button><button className="danger" onClick={reset}>RESET FACTORY</button></div></div></div>}
+    <Analytics />
   </div>;
 }
