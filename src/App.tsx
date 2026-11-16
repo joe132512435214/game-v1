@@ -439,7 +439,8 @@ export default function App(){
     return sum+amount*item.price*(s.researched.includes('market-intelligence')?1.2:1)*60;
   },0):0;
   const wagesPerMinute=economyActive&&payrollFunded?payroll:0;
-  const netPerMinute=autoIncomePerMinute-wagesPerMinute;
+  const powerPerMinute=economyActive&&!s.powerShortage?electricityCostPerMinute(s,speed):0;
+  const netPerMinute=autoIncomePerMinute-wagesPerMinute-powerPerMinute;
   const moneyPerMinute=(amount:number)=>Math.abs(amount).toFixed(1);
   // XP requirements increase with each level; there is no artificial maximum.
   const xpForLevel=(level:number)=>75*(level-1)*level;
@@ -716,8 +717,9 @@ export default function App(){
       <section className="cashflow-strip" aria-label="Estimated factory cash flow per minute">
         <div className="cashflow-stat cashflow-income"><small>+ AUTOMATIC INCOME / MIN</small><b>+{moneyPerMinute(autoIncomePerMinute)} <i>RVT</i></b></div>
         <div className="cashflow-stat cashflow-expense"><small>− STAFF WAGES / MIN</small><b>−{moneyPerMinute(wagesPerMinute)} <i>RVT</i></b></div>
-        <div className={'cashflow-stat cashflow-net '+(netPerMinute>=0?'positive':'negative')}><small>NET CASH FLOW / MIN</small><b>{netPerMinute>=0?'+':'−'}{moneyPerMinute(netPerMinute)} <i>RVT</i></b></div>
-        <small className="cashflow-note">{!running?'Paused · income and wages stopped':s.breakdownEvent||s.powerCutEvent||s.cyberAttackEvent?'Incident · income and wages paused':!payrollFunded?'Not enough cash for payroll · dispatch paused':'Live estimate from current automatic sales and payroll · excludes manual shipments and contracts'}</small>
+        <div className="cashflow-stat cashflow-electricity"><small>− ELECTRICITY / MIN</small><b>−{moneyPerMinute(powerPerMinute)} <i>RVT</i></b></div>
+        <div className={'cashflow-stat cashflow-net +(netPerMinute>=0?'positive':'negative')}><small>NET CASH FLOW / MIN</small><b>{netPerMinute>=0?'+':'−'}{moneyPerMinute(netPerMinute)} <i>RVT</i></b></div>
+        <small className="cashflow-note">{!running?'Paused · staff wages and electricity stopped':s.breakdownEvent||s.powerCutEvent||s.cyberAttackEvent?'Incident · staff wages and electricity paused':s.powerShortage?'INSUFFICIENT POWER FUNDS · ship stored goods to restart machinery':!payrollFunded?'Not enough cash for payroll · dispatch paused':'Live estimates from automatic sales, payroll and electricity · excludes manual shipments and contracts'}{' · Starter grid credit: '+s.starterPowerCredit.toFixed(2)+' RVT'}</small>
       </section>
       {page==='factory'&&<div className="page-content">
         <section className="welcome-row"><div><span className="eyebrow">{companyRank} · LEVEL {progressionLevel}</span><h1>Factory floor</h1><p>Build machines, keep production moving and ship what you make.</p><div className="level-progress"><span>COMPANY XP · {fmt(s.experience)} · LEVEL {progressionLevel}</span><div><i style={{width:goalProgress+'%'}}/></div><small>{fmt(Math.max(0,nextGoal-s.experience))} XP to level {progressionLevel+1}</small></div><div className="reputation-meter"><span>COMPANY REPUTATION · {s.reputation}</span><div><i style={{width:repProgress+'%'}}/></div><small>{companyRank} · {nextRank?('Next: '+nextRank.name+' · '+Math.max(0,nextRank.rep-s.reputation)+' REP · '+Math.max(0,nextRank.xp-s.experience)+' XP · '+fmt(Math.max(0,nextRank.sales-s.sold))+' RVT shipped · '+Math.max(0,nextRank.machines-machineTypesOwned)+' machine types'):'Top rank reached'}</small></div></div><div className="quick-stats"><div><small>MACHINES</small><b>{machineCount}/{machines.length*MAX_MACHINE_UNITS}</b></div><div><small>THROUGHPUT</small><b>{machines.reduce((sum,m)=>sum+rateFor(m),0).toFixed(2)}<i>/s</i></b></div><div><small>STAFF</small><b>{s.mechanics+s.salespeople}</b></div></div></section>
@@ -733,7 +735,7 @@ export default function App(){
           </div>
           <div className="line-caption"><span>YOUR CURRENT PRODUCTION ROUTE</span><span>{visibleMachines.length} STAGE{visibleMachines.length===1?'':'S'} SHOWN</span></div>
         </section>
-        <section className="machines-heading"><div><span className="eyebrow">YOUR EQUIPMENT</span><h2>Machines</h2><p>Each machine has its own job. Build the next stage when you're ready.</p></div><span className="machine-count">{machineCount} BUILT</span></section>
+        <section className="machines-heading"><div><span className="eyebrow">YOUR EQUIPMENT</span><h2>Machines</h2><p>Each machine has its own job and electricity bill. Power costs apply only while it produces.</p></div><span className="machine-count">{machineCount} BUILT</span></section>
         {s.miner===0&&<section className="starter-contract"><div><span className="eyebrow">YOUR FIRST COMMISSION</span><h2>First Ore Delivery</h2><p>A local foundry has placed a small order for five raw ore. Accept it to receive a 50 RVT equipment advance, buy your first Rockbreaker Mine, produce the ore and deliver it for the final payment.</p><div className="starter-contract-reward"><b>50 RVT ADVANCE</b><span>+85 RVT · +5 REP ON DELIVERY</span></div></div><button className="primary-button" disabled={s.acceptedContracts.includes('first-ore')} onClick={()=>{setS(v=>({...v,acceptedContracts:[...v.acceptedContracts,'first-ore'],cash:v.cash+50}));setNotice('Order accepted. The foundry has advanced 50 RVT. Now buy your first Rockbreaker Mine — try not to spend it all on snacks.')}}>{s.acceptedContracts.includes('first-ore')?'ORDER ACCEPTED · ADVANCE PAID':'ACCEPT ORDER · GET 50 RVT'}</button></section>}
         <section className="machine-grid">{visibleMachines.map(m=>{
           const owned=s[m.id];
@@ -741,14 +743,14 @@ export default function App(){
           const failed=faultCount(s,m.id);
           // A downstream machine can use materials produced in the SAME tick.
           // Checking leftover warehouse inventory here incorrectly labels healthy copper machines STOPPED.
-          const interrupted=!running||!!s.breakdownEvent||s.powerCutEvent||s.cyberAttackEvent;
+          const interrupted=!running||!!s.breakdownEvent||s.powerCutEvent||s.cyberAttackEvent||s.powerShortage;
           const active=!interrupted&&unitsWorking>0&&s.lastOutput[m.id]>0;
           const perUnitRate=unitsWorking>0?s.lastOutput[m.id]/unitsWorking:0;
           const cycleSeconds=perUnitRate>0?1/perUnitRate:0;
           const lights:Array<'on'|'off'|'empty'>=Array.from({length:MAX_MACHINE_UNITS},(_,i)=>i>=owned?'empty':!active||(s.unitFaults[m.id][i]||0)>0?'off':'on');
           const inputNames:Partial<Record<MachineId,string>>={smelter:'raw ore',press:'iron ingots',beamMill:'iron ingots',assembler:'metal plates',copperSmelter:'copper ore',wiremill:'copper ingots',circuitpress:'copper wire',coilWinder:'copper wire'};
-          const stopReason=owned===0?'':!running?'Factory paused. Resume production to restart.':s.powerCutEvent?'Power cut. Resolve the incident to restore production.':s.cyberAttackEvent?'Network lockdown. Restore the factory systems.':s.breakdownEvent?'Emergency stop. Resolve or dismiss the active breakdown alert.':unitsWorking===0?'All purchased units are broken. Repair at least one.':s.lastOutput[m.id]<=0?'Waiting for '+(inputNames[m.id]||'materials')+' from the previous production stage. Check upstream machines.':'';
-          const machineStatus=owned===0?'NOT BUILT':unitsWorking===0?'BROKEN':!running?'PAUSED':s.powerCutEvent?'POWER CUT':s.cyberAttackEvent?'LOCKDOWN':s.breakdownEvent?'EMERGENCY STOP':active?failed>0?'PARTIAL':'WORKING':'WAITING FOR INPUT';
+          const stopReason=owned===0?'':!running?'Factory paused. Resume production to restart.':s.powerCutEvent?'Power cut. Resolve the incident to restore production.':s.cyberAttackEvent?'Network lockdown. Restore the factory systems.':s.breakdownEvent?'Emergency stop. Resolve or dismiss the active breakdown alert.':s.powerShortage?'No electricity funds left. Ship goods from Warehouse to restore production.':unitsWorking===0?'All purchased units are broken. Repair at least one.':s.lastOutput[m.id]<=0?'Waiting for '+(inputNames[m.id]||'materials')+' from the previous production stage. Check upstream machines.':'';
+          const machineStatus=owned===0?'NOT BUILT':unitsWorking===0?'BROKEN':!running?'PAUSED':s.powerCutEvent?'POWER CUT':s.cyberAttackEvent?'LOCKDOWN':s.breakdownEvent?'EMERGENCY STOP':s.powerShortage?'NO POWER':active?failed>0?'PARTIAL':'WORKING':'WAITING FOR INPUT';
           const cost=machineCost(m,s);
           const tier=s['tier_'+m.id];
           const repairCost=repairCostFor(m.id,tier);
@@ -757,6 +759,7 @@ export default function App(){
             <MachineArt id={m.id} active={active} broken={failed>0} lights={lights} cycleSeconds={cycleSeconds} progress={s.visualProgress[m.id]}/>
             <div className="machine-info"><div><h3>{m.name}</h3><p>{m.desc}</p></div><span className="machine-level">LV {tier+1}</span></div>
             <div className="machine-details"><span>OUTPUT</span><b>{rateFor(m).toFixed(2)} / sec</b><span>RUNNING / OWNED</span><b>{active?unitsWorking:0} / {owned}</b></div>
+            <div className="machine-electricity"><Zap size={14}/><span>POWER · {ELECTRICITY_PER_MINUTE[m.id]} RVT/min per running unit</span><b>{active?(unitsWorking*ELECTRICITY_PER_MINUTE[m.id]*electricitySpeedFactor(speed)).toFixed(1):'0.0'} RVT/min</b></div>
             {owned>0&&stopReason&&<div className="machine-stop-reason"><AlertTriangle size={13}/><span>{stopReason}</span></div>}
             {failed>0&&<div className="machine-repair"><span>{failed} broken unit{failed>1?'s':''} · {s.mechanicAssignments[m.id]>0?'mechanic repairing':'awaiting repair'}</span><button onClick={()=>{if(s.cash<repairCost){setNotice('Emergency repair costs '+repairCost+' Rivets per machine.');return;}const index=firstFault(s,m.id);if(index<0)return;setS(v=>({...repairUnit(v,m.id,index),cash:v.cash-repairCost}));setNotice(m.name+' unit '+(index+1)+' repaired.')}}>REPAIR ONE · {fmt(repairCost)} RVT</button></div>}
             <div className="machine-buttons">{owned===0?(!stageReached(machineStage[m.id])||s.experience<unlockAt[m.id]||s.reputation<reputationUnlock[m.id]?<div className="machine-locked-note">🔒 STAGE {machineStage[m.id]} · {unlockAt[m.id]} XP + {reputationUnlock[m.id]} REP</div>:<button className="primary-button" disabled={s.cash<cost} onClick={()=>buyMachine(m)}>BUILD MACHINE · {fmt(cost)} RVT</button>):<><button className="primary-button" disabled={owned>=MAX_MACHINE_UNITS||s.cash<cost} onClick={()=>buyMachine(m)}>{owned>=MAX_MACHINE_UNITS?'3/3 UNITS · MAX':'ADD UNIT '+(owned+1)+' · '+fmt(cost)+' RVT'}</button><button className="secondary-button" disabled={s.gears<(tier+1)*3} onClick={()=>upgradeMachine(m)}><ArrowUpRight size={15}/> UPGRADE · {(tier+1)*3} GEARS</button></>}</div>
