@@ -1451,3 +1451,20 @@ button:focus-visible,select:focus-visible{outline:2px solid #f1c48d;outline-offs
 .contract-mini-toast p{margin:0;font-size:12px;line-height:1.4;color:#eee9dc}
 .contract-mini-toast button{flex-shrink:0;border:0;background:transparent;color:#c8c8bb;font-size:18px;padding:2px 4px}
 @media(max-width:620px){.contract-mini-toast{top:calc(176px + env(safe-area-inset-top,0px));right:12px;max-width:calc(100vw - 24px)}.contract-terms{padding:10px}}
+
+/* Compact inbox launcher; only the opened panel occupies its full width. */
+.mail-dock { width:min(320px,calc(100vw - 24px)); }
+.mail-trigger { width:max-content; max-width:100%; margin-left:auto; min-height:36px; padding:6px 9px; gap:7px; box-shadow:0 3px 10px #0004; }
+.mail-trigger>span { font-size:16px; }
+.mail-trigger>b { font-size:10px; letter-spacing:.4px; }
+.mail-trigger em { padding:2px 6px; font-size:9px; }
+.mail-trigger small { font-size:8px; }
+.mail-dropdown { max-height:min(50vh,440px); max-height:min(50dvh,440px); }
+.mail-heading { padding:9px 10px; flex-wrap:wrap; gap:5px; }
+.mail-subject { padding:9px 10px; gap:6px; }
+.mail-body { padding:10px; }
+@media(max-width:820px) {
+  .mail-dock { width:100%; margin:7px 0; pointer-events:none; }
+  .mail-trigger { min-height:44px; padding:7px 10px; }
+  .mail-dropdown { width:100%; max-height:min(50dvh,400px); }
+}
