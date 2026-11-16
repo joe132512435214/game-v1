@@ -588,3 +588,25 @@ body{background:#171b19}.game{max-width:1240px}
 .capital-maxed{border-color:#8b905c}
 @media(max-width:780px){.capital-grid{grid-template-columns:1fr}.main-nav{gap:4px}.main-nav button{padding:8px 10px;flex:0 0 auto}}
 @media(max-width:560px){.stock-card:has(.stock-flow-control){flex-wrap:wrap}.stock-card:has(.stock-flow-control)>button{margin-left:auto}.capital-card{padding:13px}.capital-card h2{font-size:16px}}
+
+
+/* Staff department control centre */
+.staff-command-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:15px 0 11px}
+.staff-command-overview>div{display:flex;flex-direction:column;gap:6px;padding:14px;background:#202b24;border:1px solid #46574a;border-radius:4px;min-height:93px}
+.staff-command-overview small{font:9px 'IBM Plex Mono',monospace;letter-spacing:.5px;color:#a7b9a4}
+.staff-command-overview b{font:18px 'IBM Plex Mono',monospace;color:#efd3a5}
+.staff-command-overview span{font-size:9px;color:#a5b4a5;line-height:1.5}
+.staff-help-note{display:flex;align-items:start;gap:9px;background:#262a22;color:#d1c3a4;border-left:3px solid #bd925b;padding:12px 14px;font-size:11px;line-height:1.5;margin:12px 0 18px}
+.staff-help-note svg{flex-shrink:0;margin-top:2px}
+.staff-desk{margin:20px 0 0;padding:16px 17px;background:#202823;border:1px solid #425449;border-radius:4px}
+.staff-desk .section-heading{margin-bottom:15px}
+.staff-tab-bar{display:flex;gap:8px}
+.staff-tab-bar button{display:flex;gap:8px;align-items:center;justify-content:center;flex:1;padding:12px 10px;background:#29362d;color:#b8c4b4;border:1px solid #495d4d;border-radius:4px;cursor:pointer;font:10px 'IBM Plex Mono',monospace}
+.staff-tab-bar button.selected{background:#53402e;color:#f4dbb8;border-color:#ac7e50}
+.staff-tab-bar button:hover:not(.selected){border-color:#a77f55}
+.staff-assignments,.sales-setup{margin-top:0;border-top:0;border-top-left-radius:0;border-top-right-radius:0}
+.role-card{min-height:250px}
+.role-bottom{flex-wrap:wrap}
+.role-bottom>small{color:#dbc397;font:9px 'IBM Plex Mono',monospace}
+@media(max-width:900px){.staff-command-overview{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.staff-command-overview>div{padding:10px;min-height:80px}.staff-command-overview b{font-size:14px}.staff-desk{padding:11px}.staff-tab-bar button{font-size:8px;gap:4px;padding:9px 6px}.staff-tab-bar button svg{width:14px}.staff-roles{grid-template-columns:1fr}}
