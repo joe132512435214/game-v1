@@ -197,7 +197,7 @@ const electricityCostPerMinute=(s:GameState,speed:number)=>machines.reduce((sum,
 
 const REPAIR_COSTS:Record<MachineId,number>={miner:40,smelter:65,press:90,assembler:130,copperMiner:85,copperSmelter:155,wiremill:230,circuitpress:340,beamMill:185,coilWinder:285};
 const repairCostFor=(id:MachineId,level:number)=>REPAIR_COSTS[id]+level*15;
-const MAX_MACHINE_UNITS=3;
+const MAX_MACHINE_UNITS=5;
 const GEARS_PER_FINISHED_UNITS=12;
 const finishedGearUnits=(id:StockId,amount:number)=>(id==='parts'||id==='circuits'||id==='beams'||id==='coils')?amount:0;
 const shipmentGearGain=(state:GameState,amount:number)=>{
@@ -753,7 +753,7 @@ export default function App(){
   };
   const buyMachine=(m:typeof machines[number])=>{
     if(m.id==='miner'&&s.miner===0&&!s.acceptedContracts.includes('first-ore')){setNotice('Accept your First Ore Delivery contract to receive the machine advance.');return;}
-    if(s[m.id]>=MAX_MACHINE_UNITS){setNotice('Maximum of three units reached for '+m.name+'.');return;}
+    if(s[m.id]>=MAX_MACHINE_UNITS){setNotice('Maximum of five units reached for '+m.name+'.');return;}
     if(s[m.id]===0&&!(s.pendingReplacement[m.id]>0)&&(!stageReached(machineStage[m.id])||s.experience<unlockAt[m.id]||s.reputation<reputationUnlock[m.id])){setNotice('This machine type is not unlocked yet.');return;}
     const cost=machineCost(m,s);
     if(s.cash<cost){setNotice('Not enough Rivets. Ship some stock to raise funds.');return;}
@@ -1067,7 +1067,7 @@ export default function App(){
             <div className="machine-electricity"><Zap size={14}/><span>POWER · {ELECTRICITY_PER_MINUTE[m.id]} RVT/min per running unit</span><b>{active?(unitsWorking*ELECTRICITY_PER_MINUTE[m.id]*electricitySpeedFactor(speed)*powerCostMultiplier(s)).toFixed(1):'0.0'} RVT/min</b></div>
             {owned>0&&stopReason&&<div className="machine-stop-reason"><AlertTriangle size={13}/><span>{stopReason}</span></div>}
             {failed>0&&<div className="machine-repair"><span>{failed} broken unit{failed>1?'s':''} · {s.mechanicAssignments[m.id]>0?'mechanic repairing':'awaiting repair'}</span><button onClick={()=>{if(s.cash<repairCost){setNotice('Emergency repair costs '+repairCost+' Rivets per machine.');return;}const index=firstFault(s,m.id);if(index<0)return;setS(v=>({...repairUnit(v,m.id,index),cash:v.cash-repairCost}));setNotice(m.name+' unit '+(index+1)+' repaired.')}}>REPAIR ONE · {fmt(repairCost)} RVT</button></div>}
-            <div className="machine-buttons">{owned===0?(!(s.pendingReplacement[m.id]>0)&&(!stageReached(machineStage[m.id])||s.experience<unlockAt[m.id]||s.reputation<reputationUnlock[m.id])?<div className="machine-locked-note">🔒 STAGE {machineStage[m.id]} · {unlockAt[m.id]} XP + {reputationUnlock[m.id]} REP</div>:<button className="primary-button" disabled={s.cash<cost} onClick={()=>buyMachine(m)}>{(s.pendingReplacement[m.id]||0)>0?'REPLACE DESTROYED UNIT':'BUILD MACHINE'} · {fmt(cost)} RVT</button>):<><button className="primary-button" disabled={owned>=MAX_MACHINE_UNITS||s.cash<cost} onClick={()=>buyMachine(m)}>{owned>=MAX_MACHINE_UNITS?'3/3 UNITS · MAX':'ADD UNIT '+(owned+1)+' · '+fmt(cost)+' RVT'}</button><button className="secondary-button" disabled={s.gears<(tier+1)*3} onClick={()=>upgradeMachine(m)}><ArrowUpRight size={15}/> UPGRADE · {(tier+1)*3} GEARS</button></>}</div>
+            <div className="machine-buttons">{owned===0?(!(s.pendingReplacement[m.id]>0)&&(!stageReached(machineStage[m.id])||s.experience<unlockAt[m.id]||s.reputation<reputationUnlock[m.id])?<div className="machine-locked-note">🔒 STAGE {machineStage[m.id]} · {unlockAt[m.id]} XP + {reputationUnlock[m.id]} REP</div>:<button className="primary-button" disabled={s.cash<cost} onClick={()=>buyMachine(m)}>{(s.pendingReplacement[m.id]||0)>0?'REPLACE DESTROYED UNIT':'BUILD MACHINE'} · {fmt(cost)} RVT</button>):<><button className="primary-button" disabled={owned>=MAX_MACHINE_UNITS||s.cash<cost} onClick={()=>buyMachine(m)}>{owned>=MAX_MACHINE_UNITS?'5/5 UNITS · MAX':'ADD UNIT '+(owned+1)+' · '+fmt(cost)+' RVT'}</button><button className="secondary-button" disabled={s.gears<(tier+1)*3} onClick={()=>upgradeMachine(m)}><ArrowUpRight size={15}/> UPGRADE · {(tier+1)*3} GEARS</button></>}</div>
             {owned>0&&<small className="machine-footnote">+25% output per upgrade · {m.output} · {owned}/{MAX_MACHINE_UNITS} units installed{(s.pendingReplacement[m.id]||0)>0?' · REPLACEMENT NEEDED':''}</small>}
             {owned>0&&s.unitPenalties[m.id].some(p=>p>0)&&<div className="machine-replacement-levels">UNIT LEVELS: {s.unitPenalties[m.id].slice(0,owned).map((pen,i)=>'Unit '+(i+1)+' LV '+(Math.max(0,tier-pen)+1)).join(' · ')} · replacement units are up to 5 levels lower</div>}
           </article>;
