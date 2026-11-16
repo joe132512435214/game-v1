@@ -1126,3 +1126,26 @@ button:focus-visible,select:focus-visible{outline:2px solid #f1c48d;outline-offs
 @keyframes reward-value-pop{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:620px){.reward-splash{top:78px;right:10px;padding:11px;width:min(340px,calc(100vw - 20px))}.reward-splash-content h3{font-size:18px}}
 @media(prefers-reduced-motion:reduce){.reward-splash,.reward-splash-mark,.reward-splash-values b{animation:none!important}}
+
+
+/* A clear, live next-goal meter makes the factory loop more rewarding. */
+.delivery-focus{margin:0 0 17px;padding:18px;background:#202e24;border:1px solid #648568;border-radius:5px}
+.delivery-focus-header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.delivery-focus-header h2{font-size:21px;color:#ede6d4;margin:5px 0 3px}
+.delivery-focus-header p{color:#b9c8b8;font-size:11px;margin:0;line-height:1.5}
+.delivery-focus-header>.secondary-button{min-width:140px;white-space:nowrap;align-items:center}
+.delivery-focus-lines{margin-top:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.delivery-focus-line>div:first-child{display:flex;align-items:center;justify-content:space-between;gap:9px;margin-bottom:7px}
+.delivery-focus-line b{font-size:11px;color:#dedcca;font-weight:600}
+.delivery-focus-line span{font:11px 'IBM Plex Mono',monospace;color:#d7c093}
+.delivery-focus-track{height:9px;background:#35483a;border:1px solid #536751;border-radius:3px;overflow:hidden}
+.delivery-focus-track i{display:block;height:100%;border-radius:2px;background:linear-gradient(90deg,#83a475,#edc07e);transition:width .6s ease-out}
+.delivery-focus-footer{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-top:11px}
+.delivery-focus-footer span,.delivery-focus-footer strong{font:10px 'IBM Plex Mono',monospace;color:#c1d2b8}
+.delivery-focus-footer strong{color:#e9c591}
+@media(max-width:620px){
+ .delivery-focus{padding:12px}
+ .delivery-focus-header{align-items:stretch;flex-direction:column}
+ .delivery-focus-header>.secondary-button{align-self:flex-start}
+}
+@media(prefers-reduced-motion:reduce){.delivery-focus-track i{transition:none!important}}
