@@ -13,8 +13,10 @@ type CharityDonation = {cause:CharityId;amount:number;rep:number;at:number};
 type BoostId = 'production' | 'dispatch' | 'protection';
 type StockFlowMode = 'balanced' | 'stockpile' | 'feed';
 type IntermediateStock = 'ingot' | 'wire';
+type FreightRoute='iron'|'copper';
+type VehicleTier=0|1|2|3;
 type GameState = {
-  flowMode:Record<IntermediateStock,StockFlowMode>; cash:number; gears:number; starterPowerCredit:number; powerShortage:boolean; gearShipmentProgress:number; ore:number; beams:number; coils:number; motors:number; ingot:number; plate:number; parts:number; copperOre:number; copperIngot:number; wire:number; circuits:number;
+  flowMode:Record<IntermediateStock,StockFlowMode>; freightTier:VehicleTier; drivers:number; driverAssignments:Record<FreightRoute,number>; oreAtMine:number; copperAtMine:number; cash:number; gears:number; starterPowerCredit:number; powerShortage:boolean; gearShipmentProgress:number; ore:number; beams:number; coils:number; motors:number; ingot:number; plate:number; parts:number; copperOre:number; copperIngot:number; wire:number; circuits:number;
   miner:number; smelter:number; press:number; assembler:number; copperMiner:number; copperSmelter:number; wiremill:number; circuitpress:number; beamMill:number; coilWinder:number; motorworks:number;
   tier_miner:number; tier_smelter:number; tier_press:number; tier_assembler:number; tier_copperMiner:number; tier_copperSmelter:number; tier_wiremill:number; tier_circuitpress:number; tier_beamMill:number; tier_coilWinder:number; tier_motorworks:number;
   level:number; experience:number; sold:number; xpMigrationVersion:number; salesXpProgress:number; autoSalesXpProgress:number; mechanics:number; salespeople:number; reputation:number; acceptedContracts:string[]; contractsCompleted:string[]; repeatContractRounds:number[]; contractClock:number; repeatNextAt:number[]; repeatDeadline:number[]; repeatOffers:(RepeatOrder|null)[]; contractHistory:StockId[]; storyNextAt:Record<string,number>;
@@ -24,7 +26,7 @@ type GameState = {
 };
 const SAVE_KEY = 'ironworks-tycoon-save-v2';
 const fresh:GameState = {
-  flowMode:{ingot:'balanced',wire:'balanced'},cash:0,gears:0,starterPowerCredit:15,powerShortage:false,gearShipmentProgress:0,ore:0,beams:0,coils:0,motors:0,ingot:0,plate:0,parts:0,copperOre:0,copperIngot:0,wire:0,circuits:0,
+  flowMode:{ingot:'balanced',wire:'balanced'},freightTier:0,drivers:0,driverAssignments:{iron:0,copper:0},oreAtMine:0,copperAtMine:0,cash:0,gears:0,starterPowerCredit:15,powerShortage:false,gearShipmentProgress:0,ore:0,beams:0,coils:0,motors:0,ingot:0,plate:0,parts:0,copperOre:0,copperIngot:0,wire:0,circuits:0,
   miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0,beamMill:0,coilWinder:0,motorworks:0,
   tier_miner:0,tier_smelter:0,tier_press:0,tier_assembler:0,tier_copperMiner:0,tier_copperSmelter:0,tier_wiremill:0,tier_circuitpress:0,tier_beamMill:0,tier_coilWinder:0,tier_motorworks:0,
   level:1,experience:0,sold:0,xpMigrationVersion:1,salesXpProgress:0,autoSalesXpProgress:0,mechanics:0,salespeople:0,
@@ -182,7 +184,16 @@ function loadGame():GameState{
     const legacyXpFromMissions=(Array.isArray(saved.missionsClaimed)?saved.missionsClaimed:[]).reduce((total:number,id:number)=>total+(missionXp[id]||0),0);
     const migratedExperience=saved.experience!==undefined?Math.max(0,Number(saved.experience)||0):Math.max(legacyXpFromContracts+legacyXpFromMissions,Number(saved.assembler)>0?270:Number(saved.press)>0?165:Number(saved.smelter)>0?60:Number(saved.miner)>0?25:0);
     const legacyShipmentXp=saved.xpMigrationVersion===undefined?Math.floor(Math.max(0,Number(saved.sold)||0)/500):0;
-    return {...fresh,...saved,capitalLevels:{powerGrid:Math.max(0,Math.min(6,Math.floor(Number(saved.capitalLevels?.powerGrid)||0))),miningNetwork:Math.max(0,Math.min(6,Math.floor(Number(saved.capitalLevels?.miningNetwork)||0))),freightNetwork:Math.max(0,Math.min(6,Math.floor(Number(saved.capitalLevels?.freightNetwork)||0))),safetySystems:Math.max(0,Math.min(6,Math.floor(Number(saved.capitalLevels?.safetySystems)||0)))},capitalSpent:Math.max(0,Number(saved.capitalSpent)||0),
+    return {...fresh,...saved,
+      freightTier:Math.max(0,Math.min(3,Math.floor(Number(saved.freightTier)||0))) as VehicleTier,
+      drivers:saved.drivers!==undefined?Math.max(0,Math.floor(Number(saved.drivers)||0)):(Number(saved.copperMiner)>0?2:Number(saved.miner)>0||completed.includes('first-ore')?1:0),
+      driverAssignments:{
+        iron:saved.driverAssignments?Math.max(0,Math.floor(Number(saved.driverAssignments.iron)||0)):(Number(saved.miner)>0||completed.includes('first-ore')?1:0),
+        copper:saved.driverAssignments?Math.max(0,Math.floor(Number(saved.driverAssignments.copper)||0)):(Number(saved.copperMiner)>0?1:0)
+      },
+      oreAtMine:Math.max(0,Number(saved.oreAtMine)||0),
+      copperAtMine:Math.max(0,Number(saved.copperAtMine)||0),
+      capitalLevels:{powerGrid:Math.max(0,Math.min(6,Math.floor(Number(saved.capitalLevels?.powerGrid)||0))),miningNetwork:Math.max(0,Math.min(6,Math.floor(Number(saved.capitalLevels?.miningNetwork)||0))),freightNetwork:Math.max(0,Math.min(6,Math.floor(Number(saved.capitalLevels?.freightNetwork)||0))),safetySystems:Math.max(0,Math.min(6,Math.floor(Number(saved.capitalLevels?.safetySystems)||0)))},capitalSpent:Math.max(0,Number(saved.capitalSpent)||0),
       charityTotal:Math.max(0,Number(saved.charityTotal)||0),
       charityCount:Math.max(0,Math.floor(Number(saved.charityCount)||0)),
       charityMilestonesClaimed:Math.floor(Math.max(0,Number(saved.charityTotal)||0)/100000),
@@ -216,8 +227,18 @@ const CHARITY_MILESTONE_REP=200;
 const charityMilestoneReward=(currentTotal:number,amount:number)=>
   (Math.floor((currentTotal+amount)/CHARITY_MILESTONE_RVT)-Math.floor(currentTotal/CHARITY_MILESTONE_RVT))*CHARITY_MILESTONE_REP;
 const powerCostMultiplier=(v:GameState)=>Math.max(.52,1-v.capitalLevels.powerGrid*.08);
-const WAGES={mechanic:24,sales:36,cyber:60} as const;
-const payrollPerMinute=(v:GameState)=>v.mechanics*WAGES.mechanic+v.salespeople*WAGES.sales+v.cybersecuritySpecialists*WAGES.cyber;
+const WAGES={mechanic:24,sales:36,cyber:60,driver:8} as const;
+const FREIGHT_TIERS=[
+ {name:'Small Vans',capacity:.3,cost:0,description:'Cheap starter transport. Best for one small mine.'},
+ {name:'Small Lorries',capacity:.9,cost:6500,description:'Triple the carrying capacity of each driver.'},
+ {name:'Medium Lorries',capacity:2.1,cost:35000,description:'Move much larger loads between mines and the factory.'},
+ {name:'Large Lorries',capacity:4.5,cost:175000,description:'High-volume transport for industrial mining operations.'}
+] as const;
+const driverHireCost=(v:GameState)=>Math.floor(150*Math.pow(1.7,v.drivers));
+const freightThroughput=(v:GameState,route:FreightRoute)=>
+  v.driverAssignments[route]*FREIGHT_TIERS[v.freightTier].capacity;
+
+const payrollPerMinute=(v:GameState)=>v.mechanics*WAGES.mechanic+v.salespeople*WAGES.sales+v.cybersecuritySpecialists*WAGES.cyber+v.drivers*WAGES.driver;
 const ELECTRICITY_PER_MINUTE:Record<MachineId,number>={
   miner:6,smelter:12,press:16,assembler:22,
   copperMiner:8,copperSmelter:14,wiremill:18,circuitpress:28,
@@ -582,12 +603,17 @@ export default function App(){
       });
       const rate=(id:MachineId)=>machineCapacity(n,id,multiplier,boostActive.production);
       const oreMade=rate('miner');
-      const ingotsMade=Math.min(n.ore+oreMade,rate('smelter'));
+      // Ore is produced at mine sites; only staffed transport reaches the factory.
+      const hauledOre=Math.min(n.oreAtMine+oreMade,
+        freightThroughput(n,'iron')*(payrollFunded?1:0));
+      const ingotsMade=Math.min(n.ore+hauledOre,rate('smelter'));
       const availableIngots=downstreamMaterialAvailable(n,'ingot',n.ingot+ingotsMade,ingotsMade);
       const [platesMade,beamsMade]=splitMachineSupply(availableIngots,rate('press'),rate('beamMill'));
       const partsMade=Math.min(n.plate+platesMade,rate('assembler'));
       const copperOreMade=rate('copperMiner');
-      const copperIngotsMade=Math.min(n.copperOre+copperOreMade,rate('copperSmelter'));
+      const hauledCopper=Math.min(n.copperAtMine+copperOreMade,
+        freightThroughput(n,'copper')*(payrollFunded?1:0));
+      const copperIngotsMade=Math.min(n.copperOre+hauledCopper,rate('copperSmelter'));
       const wireMade=Math.min(n.copperIngot+copperIngotsMade,rate('wiremill'));
       const availableWire=downstreamMaterialAvailable(n,'wire',n.wire+wireMade,wireMade);
       const [circuitsMade,coilsMade]=splitMachineSupply(availableWire,rate('circuitpress'),rate('coilWinder'));
@@ -615,12 +641,14 @@ export default function App(){
         n.powerShortage=powerBill>0;
       }
       if(powerFunded){
-      n.ore=Math.max(0,n.ore+oreMade-ingotsMade);
+      n.oreAtMine=Math.max(0,n.oreAtMine+oreMade-hauledOre);
+      n.ore=Math.max(0,n.ore+hauledOre-ingotsMade);
       n.ingot=Math.max(0,n.ingot+ingotsMade-platesMade-beamsMade);
       n.beams+=beamsMade;
       n.plate=Math.max(0,n.plate+platesMade-partsMade);
       n.parts+=partsMade;
-      n.copperOre=Math.max(0,n.copperOre+copperOreMade-copperIngotsMade);
+      n.copperAtMine=Math.max(0,n.copperAtMine+copperOreMade-hauledCopper);
+      n.copperOre=Math.max(0,n.copperOre+hauledCopper-copperIngotsMade);
       n.copperIngot=Math.max(0,n.copperIngot+copperIngotsMade-wireMade);
       n.wire=Math.max(0,n.wire+wireMade-circuitsMade-coilsMade);
       n.coils=Math.max(0,n.coils+coilsMade-2*motorsMade);
@@ -1048,7 +1076,7 @@ export default function App(){
           {incomingMail.map(mail=>{const expanded=expandedMail===mail.key;const order=repeatOrders.find(o=>'repeat-'+o.id===mail.key);const story=contracts.find(c=>'story-'+c.id===mail.key);const stock=s[mail.good];return <div className="mail-message" key={mail.key}>
             <button className="mail-subject" onClick={()=>setExpandedMail(expanded?null:mail.key)}><span>✉</span><span><b>{mail.from}</b><small>{mail.kind} · {goods.find(g=>g.id===mail.good)?.name}</small><small>{mail.detail}</small></span><span>{expanded?'−':'+'}</span></button>
             {expanded&&<div className="mail-body"><strong>RE: {mail.title}</strong><p>{mail.detail}</p><div className="mail-order-lines">{mail.items.map(line=><div className="mail-order-line" key={line.good}><ProductIcon id={line.good} size={25}/><b>{line.qty} × {goods.find(g=>g.id===line.good)?.name}</b><small>Available: {fmt(s[line.good])}/{line.qty}</small></div>)}</div>{order&&<small className={order.due-s.contractClock<60?'mail-urgent':''}>Deadline: {boostClock(Math.max(0,order.due-s.contractClock))} remaining</small>}<small>Reward: {fmt(order?.reward??story?.reward??0)} RVT · +{order?.xp??story?.xp??0} XP · +{order?.rep??story?.rep??0} REP</small>
-              {story?.id==='first-ore'&&!s.acceptedContracts.includes('first-ore')&&<button className="secondary-button" onClick={()=>{setS(v=>v.acceptedContracts.includes('first-ore')?v:{...v,acceptedContracts:[...v.acceptedContracts,'first-ore'],cash:v.cash+50});setNotice('Opening order accepted · 50 RVT equipment advance received.')}}>ACCEPT OPENING ORDER · +50 RVT</button>}
+              {story?.id==='first-ore'&&!s.acceptedContracts.includes('first-ore')&&<button className="secondary-button" onClick={()=>{setS(v=>v.acceptedContracts.includes('first-ore')?v:{...v,acceptedContracts:[...v.acceptedContracts,'first-ore'],cash:v.cash+50,drivers:Math.max(1,v.drivers),driverAssignments:{...v.driverAssignments,iron:Math.max(1,v.driverAssignments.iron)},drivers:Math.max(1,v.drivers),driverAssignments:{...v.driverAssignments,iron:Math.max(1,v.driverAssignments.iron)}});setNotice('Opening order accepted · 50 RVT equipment advance + starter delivery van and driver included.')}}>ACCEPT OPENING ORDER · +50 RVT</button>}
               <button className="primary-button" disabled={!mail.items.every(line=>s[line.good]>=line.qty)||!!(story&&s.reputation<story.minRep)||!!(story?.id==='first-ore'&&!s.acceptedContracts.includes('first-ore'))} onClick={()=>{if(order)completeRepeatOrder(order);else if(story)completeContract(story);setExpandedMail(null)}}>{mail.items.every(line=>s[line.good]>=line.qty)?'FULFIL ORDER':'AWAITING PRODUCTS'}</button>
               {(order||(story&&story.id!=='first-ore'))&&<button className="decline-contract" onClick={()=>{if(order)declineRepeatOrder(order);else if(story)declineStoryOrder(story)}}>DECLINE CONTRACT · −2 REP</button>}</div>}
           </div>})}
@@ -1130,7 +1158,7 @@ export default function App(){
           <div className="line-caption"><span>YOUR CURRENT PRODUCTION ROUTE</span><span>{visibleMachines.length} STAGE{visibleMachines.length===1?'':'S'} SHOWN</span></div>
         </section>
         <section className="machines-heading"><div><span className="eyebrow">YOUR EQUIPMENT</span><h2>Machines</h2><p>Plan your supply chain: extra machines and overclocking can cost more power than they earn. Overclock specific machines for +50% output at 3× electricity.</p></div><span className="machine-count">{machineCount} BUILT</span></section>
-        {s.miner===0&&<section className="starter-contract"><div><span className="eyebrow">YOUR FIRST COMMISSION</span><h2>First Ore Delivery</h2><p>A local foundry has placed a small order for five raw ore. Accept it to receive a 50 RVT equipment advance, buy your first Rockbreaker Mine, produce the ore and deliver it for the final payment.</p><div className="starter-contract-reward"><b>50 RVT ADVANCE</b><span>+85 RVT · +5 REP ON DELIVERY</span></div></div><button className="primary-button" disabled={s.acceptedContracts.includes('first-ore')} onClick={()=>{setS(v=>({...v,acceptedContracts:[...v.acceptedContracts,'first-ore'],cash:v.cash+50}));setNotice('Order accepted. The foundry has advanced 50 RVT. Now buy your first Rockbreaker Mine — try not to spend it all on snacks.')}}>{s.acceptedContracts.includes('first-ore')?'ORDER ACCEPTED · ADVANCE PAID':'ACCEPT ORDER · GET 50 RVT'}</button></section>}
+        {s.miner===0&&<section className="starter-contract"><div><span className="eyebrow">YOUR FIRST COMMISSION</span><h2>First Ore Delivery</h2><p>A local foundry has placed a small order for five raw ore. Accept it for 50 RVT, a complimentary delivery van and your first driver. The driver earns wages while the factory runs.</p><div className="starter-contract-reward"><b>50 RVT ADVANCE</b><span>+85 RVT · +5 REP · FREE VAN & DRIVER</span></div></div><button className="primary-button" disabled={s.acceptedContracts.includes('first-ore')} onClick={()=>{setS(v=>({...v,acceptedContracts:[...v.acceptedContracts,'first-ore'],cash:v.cash+50}));setNotice('Order accepted. The foundry has advanced 50 RVT. Your free van and starter driver are ready. Buy the Rockbreaker Mine to start hauling.')}}>{s.acceptedContracts.includes('first-ore')?'ORDER ACCEPTED · ADVANCE PAID':'ACCEPT ORDER · GET 50 RVT'}</button></section>}
         <section className="machine-grid">{visibleMachines.map(m=>{
           const owned=s[m.id];
           const unitsWorking=workingUnits(s,m.id);
