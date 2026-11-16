@@ -1234,3 +1234,55 @@ button:focus-visible,select:focus-visible{outline:2px solid #f1c48d;outline-offs
 @media(prefers-reduced-motion:reduce){
   .machine-balance-track i{transition:none!important}
 }
+
+
+/* Mine haulage: route planning without unnecessary micromanagement. */
+.freight-workshop{background:#202b23;border:1px solid #4e654e;border-radius:6px;padding:18px;margin:14px 0 22px}
+.freight-heading{display:flex;gap:15px;justify-content:space-between;align-items:flex-start;padding-bottom:15px;border-bottom:1px solid #3c5041}
+.freight-heading h2{margin:5px 0 7px;color:#efe3cd;font-size:23px}
+.freight-heading p{margin:0;color:#b4c2b3;font-size:12px;line-height:1.6;max-width:680px}
+.freight-driver-kpi{min-width:150px;padding:13px;border:1px solid #688268;background:#1a261e;border-radius:4px;display:flex;flex-direction:column;gap:6px}
+.freight-driver-kpi span,.freight-driver-kpi small{font:10px 'IBM Plex Mono',monospace;color:#aec3ae}
+.freight-driver-kpi b{font:700 18px 'IBM Plex Mono',monospace;color:#e9c495}
+.freight-current{display:flex;align-items:center;gap:14px;padding:16px 0;border-bottom:1px solid #405445}
+.freight-current-symbol{width:54px;height:54px;background:#354635;border:1px solid #71866b;color:#d5c395;border-radius:5px;display:grid;place-items:center;flex:0 0 auto}
+.freight-current>div:nth-child(2){flex:1}
+.freight-current h3{margin:5px 0 3px;font-size:17px;color:#e4dfce}
+.freight-current p{margin:0;color:#b0c0ae;font-size:11px;line-height:1.5}
+.freight-current>b{font:700 18px 'IBM Plex Mono',monospace;color:#e9cb91;text-align:right}
+.freight-current>b small{display:block;color:#a8bcaa;font:9px 'IBM Plex Mono',monospace;margin-top:6px}
+.freight-route-list{display:grid;gap:10px;margin:15px 0}
+.freight-route{display:flex;align-items:center;gap:13px;padding:13px;background:#19251d;border:1px solid #405b45;border-radius:4px}
+.freight-route-title{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.freight-route-emblem{color:#d4d3bc;display:grid;place-items:center;border:1px solid #536354;background:#2c3a31;width:40px;height:40px;border-radius:5px;flex:0 0 auto}
+.freight-route-emblem.copper{color:#e4ac7a;border-color:#816a4f}
+.freight-route-title>div{min-width:0}
+.freight-route-title b{display:block;font-size:12px;color:#e7e2d1}
+.freight-route-title small{display:block;font-size:10px;color:#b4c0ad;margin-top:5px;line-height:1.35}
+.freight-route-stats{display:flex;gap:16px}
+.freight-route-stats span{display:flex;flex-direction:column;gap:5px;text-align:center}
+.freight-route-stats b{font:700 12px 'IBM Plex Mono',monospace;color:#e4c293}
+.freight-route-stats small{font:9px 'IBM Plex Mono',monospace;color:#a7b7a7}
+.freight-actions,.freight-upgrade{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px;background:#26342b;border:1px solid #536850;border-radius:4px;margin-top:12px}
+.freight-actions>div,.freight-upgrade>div{display:flex;flex:1;flex-direction:column;gap:6px}
+.freight-actions strong,.freight-upgrade h3{color:#e5d6ba;margin:0;font-size:16px}
+.freight-actions small,.freight-upgrade p{color:#b1c1b2;font-size:11px;margin:0;line-height:1.5}
+.freight-actions>.primary-button,.freight-upgrade>.primary-button,.freight-actions>.secondary-button{white-space:nowrap;width:auto}
+.freight-upgrade{border-color:#817352;background:#323327}
+.freight-drone-locked{margin-top:12px;border:1px dashed #5a6255;padding:13px;display:flex;justify-content:space-between;align-items:center;gap:10px;background:#232b23;border-radius:4px;opacity:.7}
+.freight-drone-locked>span{display:flex;align-items:center;gap:8px;color:#dfd4ba;font:600 12px 'IBM Plex Mono',monospace}
+.freight-drone-locked>small{font:10px 'IBM Plex Mono',monospace;color:#b6b5a8}
+@media(max-width:850px){
+ .freight-heading,.freight-route,.freight-current,.freight-actions,.freight-upgrade{flex-wrap:wrap}
+ .freight-route-stats{flex:1;justify-content:center}
+ .freight-actions>.primary-button,.freight-upgrade>.primary-button{flex:1}
+}
+@media(max-width:560px){
+ .freight-workshop{padding:12px}
+ .freight-driver-kpi{width:100%}
+ .freight-current>b{width:100%;text-align:left}
+ .freight-route-stats{justify-content:flex-start}
+ .freight-route .assignment-stepper{margin-left:auto}
+ .freight-actions>.primary-button,.freight-actions>.secondary-button,.freight-upgrade>.primary-button{width:100%}
+ .freight-drone-locked{flex-direction:column;align-items:flex-start}
+}
