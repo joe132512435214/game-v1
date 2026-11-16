@@ -97,9 +97,9 @@ function loadGame():GameState{
 }
 const fmt=(n:number)=>Math.floor(n).toLocaleString();
 const machineCost=(m:typeof machines[number],s:GameState)=>Math.floor(m.cost*Math.pow(1.48,s[m.id]));
-const mechanicCost=(s:GameState)=>Math.floor(180*Math.pow(1.65,s.mechanics));
-const salesCost=(s:GameState)=>Math.floor(240*Math.pow(1.65,s.salespeople));
-const WAGES={mechanic:3,sales:5,cyber:8} as const;
+const mechanicCost=(s:GameState)=>Math.floor(300*Math.pow(1.85,s.mechanics));
+const salesCost=(s:GameState)=>Math.floor(420*Math.pow(1.85,s.salespeople));
+const WAGES={mechanic:5,sales:8,cyber:12} as const;
 const payrollPerMinute=(v:GameState)=>v.mechanics*WAGES.mechanic+v.salespeople*WAGES.sales+v.cybersecuritySpecialists*WAGES.cyber;
 const REPAIR_COSTS:Record<MachineId,number>={miner:40,smelter:65,press:90,assembler:130,copperMiner:85,copperSmelter:155,wiremill:230,circuitpress:340,beamMill:185,coilWinder:285};
 const repairCostFor=(id:MachineId,level:number)=>REPAIR_COSTS[id]+level*15;
@@ -114,7 +114,9 @@ const FACTORY_STAGES=[
   {number:1,name:'First Workshop',xp:0,rep:0,detail:'Mine ore and smelt your first iron ingots.'},
   {number:2,name:'Steel Manufacturing',xp:150,rep:8,detail:'Build precision parts and branch out into structural steel.'},
   {number:3,name:'Copper Expansion',xp:200,rep:20,detail:'Launch the electrical line and supply conductive metals.'},
-  {number:4,name:'Industrial Electronics',xp:500,rep:50,detail:'Turn copper wire into circuit boards and wound coils.'}
+  {number:4,name:'Industrial Electronics',xp:500,rep:50,detail:'Turn copper wire into circuit boards and wound coils.'},
+  {number:5,name:'National Manufacturer',xp:1600,rep:125,detail:'Establish a national supplier network and expand several production lines.'},
+  {number:6,name:'Multinational Manufacturer',xp:6500,rep:350,detail:'Operate a diversified industrial group supplying customers worldwide.'}
 ] as const;
 const machineStage:Record<MachineId,number>={miner:1,smelter:1,press:2,assembler:2,beamMill:2,copperMiner:3,copperSmelter:3,wiremill:3,circuitpress:4,coilWinder:4};
 
@@ -370,16 +372,35 @@ export default function App(){
   const wagesPerMinute=economyActive&&payrollFunded?payroll:0;
   const netPerMinute=autoIncomePerMinute-wagesPerMinute;
   const moneyPerMinute=(amount:number)=>Math.abs(amount).toFixed(1);
-  const progressionLevel=1+Math.floor(s.experience/100);
+  // XP requirements increase with each level; there is no artificial maximum.
+  const xpForLevel=(level:number)=>75*(level-1)*level;
+  const progressionLevel=Math.max(1,Math.floor((1+Math.sqrt(1+4*s.experience/75))/2));
+  const levelStart=xpForLevel(progressionLevel);
+  const nextGoal=xpForLevel(progressionLevel+1);
   const reputationUnlock:Record<MachineId,number>={miner:0,smelter:2,press:8,assembler:18,copperMiner:20,copperSmelter:35,wiremill:50,circuitpress:60,beamMill:18,coilWinder:50};
-  const companyRank=s.reputation>=90?'GLOBAL MANUFACTURER':s.reputation>=50?'INDUSTRIAL CORPORATION':s.reputation>=25?'REGIONAL SUPPLIER':s.reputation>=10?'LOCAL MANUFACTURER':'WORKSHOP';
-  const nextRep=s.reputation<10?10:s.reputation<25?25:s.reputation<50?50:s.reputation<90?90:120;
-  const repProgress=Math.min(100,s.reputation>=90?100:s.reputation/nextRep*100);
-  const nextGoal=progressionLevel*100;
-  const goalProgress=Math.min(100,(s.experience-(progressionLevel-1)*100)/100*100);
+  const machineTypesOwned=machines.filter(m=>s[m.id]>0).length;
+  const companyRanks=[
+    {name:'WORKSHOP',rep:0,xp:0,sales:0,machines:0},
+    {name:'LOCAL MANUFACTURER',rep:15,xp:150,sales:500,machines:2},
+    {name:'REGIONAL SUPPLIER',rep:55,xp:550,sales:5000,machines:4},
+    {name:'INDUSTRIAL CORPORATION',rep:125,xp:1600,sales:20000,machines:6},
+    {name:'NATIONAL MANUFACTURER',rep:220,xp:3500,sales:65000,machines:8},
+    {name:'MULTINATIONAL MANUFACTURER',rep:350,xp:6500,sales:150000,machines:10}
+  ];
+  const rankUnlocked=(rank:typeof companyRanks[number])=>s.reputation>=rank.rep&&s.experience>=rank.xp&&s.sold>=rank.sales&&machineTypesOwned>=rank.machines;
+  const currentRank=[...companyRanks].reverse().find(rankUnlocked)||companyRanks[0];
+  const companyRank=currentRank.name;
+  const nextRank=companyRanks[companyRanks.indexOf(currentRank)+1];
+  const nextRep=nextRank?.rep??currentRank.rep;
+  const repProgress=nextRank?Math.min(100,s.reputation/Math.max(1,nextRank.rep)*100):100;
+  const goalProgress=Math.min(100,(s.experience-levelStart)/(nextGoal-levelStart)*100);
   const unlockAt:Record<MachineId,number>={miner:0,smelter:25,press:150,assembler:200,copperMiner:200,copperSmelter:350,wiremill:500,circuitpress:700,beamMill:260,coilWinder:650};
   // Keep the floor focused: show every machine already owned and just the next milestone.
-  const stageReached=(stage:number)=>{const goal=FACTORY_STAGES[stage-1];return s.experience>=goal.xp&&s.reputation>=goal.rep;};
+  const stageReached=(stage:number)=>{
+    const goal=FACTORY_STAGES[stage-1];
+    if(s.experience<goal.xp||s.reputation<goal.rep)return false;
+    return stage===5?rankUnlocked(companyRanks[3]):stage===6?rankUnlocked(companyRanks[5]):true;
+  };
   const currentStage=[...FACTORY_STAGES].reverse().find(stage=>stageReached(stage.number))||FACTORY_STAGES[0];
   const nextStage=FACTORY_STAGES.find(stage=>stage.number===currentStage.number+1);
   const nextMachine=machines.filter(m=>s[m.id]===0).sort((a,b)=>unlockAt[a.id]-unlockAt[b.id])[0];
@@ -447,7 +468,7 @@ export default function App(){
     setS(v=>({...v,cash:v.cash-40,broken:{...v.broken,miner:0},powerCutEvent:false}));
     setNotice('One-off emergency repair complete. The Rockbreaker Mine is back online.');
   };
-  const cybersecurityCost=(state:GameState)=>Math.floor(350*Math.pow(1.7,state.cybersecuritySpecialists));
+  const cybersecurityCost=(state:GameState)=>Math.floor(600*Math.pow(1.9,state.cybersecuritySpecialists));
   const hireCybersecuritySpecialist=()=>{
     const cost=cybersecurityCost(s);
     if(s.cash<cost){setNotice('Not enough Rivets. Ship existing stock from the Warehouse to fund the security hire.');return;}
@@ -631,8 +652,8 @@ export default function App(){
         <small className="cashflow-note">{!running?'Paused · income and wages stopped':s.breakdownEvent||s.powerCutEvent||s.cyberAttackEvent?'Incident · income and wages paused':!payrollFunded?'Not enough cash for payroll · dispatch paused':'Live estimate from current automatic sales and payroll · excludes manual shipments and contracts'}</small>
       </section>
       {page==='factory'&&<div className="page-content">
-        <section className="welcome-row"><div><span className="eyebrow">{companyRank} · LEVEL {progressionLevel}</span><h1>Factory floor</h1><p>Build machines, keep production moving and ship what you make.</p><div className="level-progress"><span>COMPANY XP · {fmt(s.experience)} · LEVEL {progressionLevel}</span><div><i style={{width:goalProgress+'%'}}/></div><small>{fmt(Math.max(0,nextGoal-s.experience))} XP to level {progressionLevel+1}</small></div><div className="reputation-meter"><span>COMPANY REPUTATION · {s.reputation}</span><div><i style={{width:repProgress+'%'}}/></div><small>{companyRank} · {s.reputation>=90?'Top rank reached':(nextRep-s.reputation)+' reputation to next rank'}</small></div></div><div className="quick-stats"><div><small>MACHINES</small><b>{machineCount}/{machines.length*MAX_MACHINE_UNITS}</b></div><div><small>THROUGHPUT</small><b>{machines.reduce((sum,m)=>sum+rateFor(m),0).toFixed(2)}<i>/s</i></b></div><div><small>STAFF</small><b>{s.mechanics+s.salespeople}</b></div></div></section>
-        <section className="factory-stages"><div className="section-heading"><div><span className="eyebrow">FACTORY ROADMAP</span><h2>Stage {currentStage.number} · {currentStage.name}</h2><p>{currentStage.detail}</p></div><span className="machine-count">{currentStage.number}/{FACTORY_STAGES.length} STAGES</span></div><div className="factory-stages-grid">{FACTORY_STAGES.map(stage=>{const unlocked=stageReached(stage.number);const active=stage.number===currentStage.number;return <div className={'factory-stage '+(active?'current':unlocked?'complete':'locked')} key={stage.number}><span className="factory-stage-num">{unlocked?'✓':'🔒'} STAGE {stage.number}</span><b>{stage.name}</b><small>{stage.detail}</small><small>{stage.xp} XP · {stage.rep} REP</small></div>})}</div>{nextStage&&<p className="stage-upcoming">Next: {nextStage.name} · {Math.max(0,nextStage.xp-s.experience)} XP and {Math.max(0,nextStage.rep-s.reputation)} REP still needed</p>}</section>
+        <section className="welcome-row"><div><span className="eyebrow">{companyRank} · LEVEL {progressionLevel}</span><h1>Factory floor</h1><p>Build machines, keep production moving and ship what you make.</p><div className="level-progress"><span>COMPANY XP · {fmt(s.experience)} · LEVEL {progressionLevel}</span><div><i style={{width:goalProgress+'%'}}/></div><small>{fmt(Math.max(0,nextGoal-s.experience))} XP to level {progressionLevel+1}</small></div><div className="reputation-meter"><span>COMPANY REPUTATION · {s.reputation}</span><div><i style={{width:repProgress+'%'}}/></div><small>{companyRank} · {nextRank?('Next: '+nextRank.name+' · '+Math.max(0,nextRank.rep-s.reputation)+' REP · '+Math.max(0,nextRank.xp-s.experience)+' XP · '+fmt(Math.max(0,nextRank.sales-s.sold))+' RVT shipped · '+Math.max(0,nextRank.machines-machineTypesOwned)+' machine types'):'Top rank reached'}</small></div></div><div className="quick-stats"><div><small>MACHINES</small><b>{machineCount}/{machines.length*MAX_MACHINE_UNITS}</b></div><div><small>THROUGHPUT</small><b>{machines.reduce((sum,m)=>sum+rateFor(m),0).toFixed(2)}<i>/s</i></b></div><div><small>STAFF</small><b>{s.mechanics+s.salespeople}</b></div></div></section>
+        <section className="factory-stages"><div className="section-heading"><div><span className="eyebrow">FACTORY ROADMAP</span><h2>Stage {currentStage.number} · {currentStage.name}</h2><p>{currentStage.detail}</p></div><span className="machine-count">{currentStage.number}/{FACTORY_STAGES.length} STAGES</span></div><div className="factory-stages-grid">{FACTORY_STAGES.map(stage=>{const unlocked=stageReached(stage.number);const active=stage.number===currentStage.number;return <div className={'factory-stage '+(active?'current':unlocked?'complete':'locked')} key={stage.number}><span className="factory-stage-num">{unlocked?'✓':'🔒'} STAGE {stage.number}</span><b>{stage.name}</b><small>{stage.detail}</small><small>{stage.xp} XP · {stage.rep} REP</small></div>})}</div>{nextStage&&<p className="stage-upcoming">Next: {nextStage.name} · {Math.max(0,nextStage.xp-s.experience)} XP and {Math.max(0,nextStage.rep-s.reputation)} REP still needed{nextStage.number>=5?' · company rank and manufacturing scale required':''}</p>}</section>
         <section className="mission-panel"><div className="mission-heading"><div><span className="eyebrow">YOUR NEXT OBJECTIVE</span><h2>{activeMission?activeMission.title:'All missions complete!'}</h2><p>{activeMission?activeMission.detail:'You have completed the starter mission line. Keep expanding your factory.'}</p></div><span className="mission-count">{s.missionsClaimed.length}/{missions.length} COMPLETE</span></div>{activeMission?<><div className="mission-progress"><i style={{width:(activeMission.progress/activeMission.target*100)+'%'}}/></div><div className="mission-footer"><span>{activeMission.target>1?fmt(activeMission.progress)+' / '+fmt(activeMission.target):activeMission.progress>=1?'Objective complete':'Not complete yet'}</span><b>REWARD · {fmt(activeMission.rivets)} RVT · {activeMission.xp} XP{activeMission.gears?' + '+activeMission.gears+' GEARS':''}</b></div></>:<div className="mission-finished">Starter campaign finished. Your next challenge is to grow the factory your way.</div>}</section>
         {brokenCount>0&&<div className="alert-banner"><AlertTriangle size={18}/><span><b>{brokenCount} machine{brokenCount>1?'s':''} broken.</b> Visit Staff to assign a mechanic, or repair them here.</span><button onClick={()=>setPage('staff')}>MANAGE STAFF</button></div>}
         <section className="line-panel"><div className="line-heading"><div><span className="eyebrow">LIVE PRODUCTION</span><h2>Assembly line</h2></div><span className="line-live"><i/> {running?'RUNNING':'PAUSED'}</span></div>
@@ -666,9 +687,9 @@ export default function App(){
         <section className="contract-summary"><span><b>{payroll.toFixed(1)} RVT</b> WAGES PER MINUTE</span><span><b>{(payroll/60).toFixed(2)} RVT</b> PER SECOND</span><span><b>{payrollFunded?'FUNDED':'UNPAID'}</b> PAYROLL</span></section>
         <div className="sales-note"><CircleDollarSign size={18}/> Wages are charged each real-time second while the factory is running, independent of production speed. Pausing or active incident cutscenes pause payroll. If the balance cannot cover wages, automatic dispatch and staff repairs stop until cash is available.</div>
         <section className="staff-roles">
-          <article className="role-card mechanic-role"><div className="role-top"><span className="role-icon"><Wrench size={24}/></span><span className="role-tag">MAINTENANCE</span></div><h2>Mechanic</h2><p>Repairs breakdowns and gets machines running again. Assign each mechanic to the machine you want them to look after.</p><div className="role-bottom"><div><b>{s.mechanics}</b><small>HIRED</small></div><button className="primary-button" disabled={s.cash<mechanicCost(s)} onClick={()=>hire('mechanic')}>HIRE · {fmt(mechanicCost(s))} RVT</button><button className="secondary-button" disabled={s.mechanics===0} onClick={()=>fire('mechanic')}>FIRE ONE</button><small>3 RVT/min per mechanic</small></div></article>
-          <article className="role-card sales-role"><div className="role-top"><span className="role-icon"><Store size={24}/></span><span className="role-tag">DISPATCH & SALES</span></div><h2>Sales representative</h2><p>Sells warehouse stock automatically and earns 1 bonus XP per minute per active salesperson, plus XP based on shipment value. Choose a product and enable automatic sales.</p><div className="role-bottom"><div><b>{s.salespeople}</b><small>HIRED</small></div><button className="primary-button" disabled={s.cash<salesCost(s)} onClick={()=>hire('sales')}>HIRE · {fmt(salesCost(s))} RVT</button><button className="secondary-button" disabled={s.salespeople===0} onClick={()=>fire('sales')}>FIRE ONE</button><small>5 RVT/min per salesperson</small></div></article>
-          <article className="role-card cyber-role"><div className="role-top"><span className="role-icon"><ShieldCheck size={24}/></span><span className="role-tag">NETWORK SECURITY</span></div><h2>Cybersecurity specialist</h2><p>Monitors factory systems, contains digital intrusions and installs a permanent firewall against future cyber incidents.</p><div className="role-bottom"><div><b>{s.cybersecuritySpecialists}</b><small>HIRED</small></div><button className="primary-button" disabled={s.cash<cybersecurityCost(s)} onClick={hireCybersecuritySpecialist}>HIRE · {fmt(cybersecurityCost(s))} RVT</button><button className="secondary-button" disabled={s.cybersecuritySpecialists===0} onClick={()=>fire('cyber')}>FIRE ONE</button><small>8 RVT/min per specialist</small></div></article>
+          <article className="role-card mechanic-role"><div className="role-top"><span className="role-icon"><Wrench size={24}/></span><span className="role-tag">MAINTENANCE</span></div><h2>Mechanic</h2><p>Repairs breakdowns and gets machines running again. Assign each mechanic to the machine you want them to look after.</p><div className="role-bottom"><div><b>{s.mechanics}</b><small>HIRED</small></div><button className="primary-button" disabled={s.cash<mechanicCost(s)} onClick={()=>hire('mechanic')}>HIRE · {fmt(mechanicCost(s))} RVT</button><button className="secondary-button" disabled={s.mechanics===0} onClick={()=>fire('mechanic')}>FIRE ONE</button><small>{WAGES.mechanic} RVT/min per mechanic</small></div></article>
+          <article className="role-card sales-role"><div className="role-top"><span className="role-icon"><Store size={24}/></span><span className="role-tag">DISPATCH & SALES</span></div><h2>Sales representative</h2><p>Sells warehouse stock automatically and earns 1 bonus XP per minute per active salesperson, plus XP based on shipment value. Choose a product and enable automatic sales.</p><div className="role-bottom"><div><b>{s.salespeople}</b><small>HIRED</small></div><button className="primary-button" disabled={s.cash<salesCost(s)} onClick={()=>hire('sales')}>HIRE · {fmt(salesCost(s))} RVT</button><button className="secondary-button" disabled={s.salespeople===0} onClick={()=>fire('sales')}>FIRE ONE</button><small>{WAGES.sales} RVT/min per salesperson</small></div></article>
+          <article className="role-card cyber-role"><div className="role-top"><span className="role-icon"><ShieldCheck size={24}/></span><span className="role-tag">NETWORK SECURITY</span></div><h2>Cybersecurity specialist</h2><p>Monitors factory systems, contains digital intrusions and installs a permanent firewall against future cyber incidents.</p><div className="role-bottom"><div><b>{s.cybersecuritySpecialists}</b><small>HIRED</small></div><button className="primary-button" disabled={s.cash<cybersecurityCost(s)} onClick={hireCybersecuritySpecialist}>HIRE · {fmt(cybersecurityCost(s))} RVT</button><button className="secondary-button" disabled={s.cybersecuritySpecialists===0} onClick={()=>fire('cyber')}>FIRE ONE</button><small>{WAGES.cyber} RVT/min per specialist</small></div></article>
         </section>
         <section className="staff-assignments">
           <div className="section-heading"><div><span className="eyebrow">TEAM SETUP</span><h2>Assign your staff</h2><p>Choose where each mechanic works. One mechanic repairs one machine at a time.</p></div><div className="available-staff"><b>{unassigned}</b><span>AVAILABLE MECHANICS</span></div></div>
