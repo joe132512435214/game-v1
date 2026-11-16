@@ -355,7 +355,10 @@ function loadGame():GameState{
 const fmt=(n:number)=>Math.floor(n).toLocaleString();
 const machineCost=(m:typeof machines[number],s:GameState)=>Math.floor(m.cost*Math.pow(1.48,s[m.id]));
 const mechanicCost=(s:GameState)=>Math.floor(900*Math.pow(2,s.mechanics));
-const salesCost=(s:GameState)=>Math.floor(1350*Math.pow(2,s.salespeople));
+const salesCost=(s:GameState)=>s.salespeople===0?150:Math.floor(1350*Math.pow(2,s.salespeople-1));
+const SALES_UNITS_PER_SECOND=.35;
+const FIRST_SALES_WAGE=12;
+const salesWages=(count:number)=>count>0?FIRST_SALES_WAGE+Math.max(0,count-1)*36:0;
 const CAPITAL_PROJECTS:{id:CapitalId;name:string;subtitle:string;description:string;effect:string;base:number;growth:number;max:number;icon:string}[]=[
   {id:'powerGrid',name:'Modernise the Power Grid',subtitle:'ENERGY INFRASTRUCTURE',description:'Install transformers, waste-heat recovery and more efficient electrical systems.',effect:'8% less electricity per level',base:900,growth:2.35,max:6,icon:'⚡'},
   {id:'miningNetwork',name:'Expand Mining Operations',subtitle:'RESOURCE SECURITY',description:'Upgrade drilling systems and secure new iron and copper extraction sites.',effect:'6% faster ore extraction per level',base:1800,growth:2.4,max:6,icon:'⛏️'},
@@ -413,7 +416,7 @@ const mineDelivery=(waiting:number,productionCapacity:number,haulCapacity:number
   return {made,delivered,waiting:Math.max(0,backlog+made-delivered)};
 };
 
-const payrollPerMinute=(v:GameState)=>v.mechanics*WAGES.mechanic+v.salespeople*WAGES.sales+v.cybersecuritySpecialists*WAGES.cyber+v.drivers*WAGES.driver+droneRunningCount(v)*DRONE_RUNNING_COST;
+const payrollPerMinute=(v:GameState)=>v.mechanics*WAGES.mechanic+salesWages(v.salespeople)+v.cybersecuritySpecialists*WAGES.cyber+v.drivers*WAGES.driver+droneRunningCount(v)*DRONE_RUNNING_COST;
 const ELECTRICITY_PER_MINUTE:Record<MachineId,number>={
   miner:6,smelter:12,press:16,assembler:22,
   copperMiner:8,copperSmelter:14,wiremill:18,circuitpress:28,
@@ -805,7 +808,7 @@ export default function App(){
           const stockFloor=manualFlow?0:contractStockTarget(n,item.id);
           const warehouseBuffer=(item.id==='ingot'||item.id==='wire')&&n.flowMode[item.id]==='balanced'?2:0;
           const availableToSell=Math.max(0,n[item.id]-Math.max(stockFloor,warehouseBuffer));
-          const amount=Math.min(availableToSell,count*.12*(n.researched.includes('dispatch-systems')?1.25:1)*(1+n.capitalLevels.freightNetwork*.1)*multiplier*(boostActive.dispatch?2:1));
+          const amount=Math.min(availableToSell,count*SALES_UNITS_PER_SECOND*(n.researched.includes('dispatch-systems')?1.25:1)*(1+n.capitalLevels.freightNetwork*.1)*multiplier*(boostActive.dispatch?2:1));
           if(amount<=0)return;
           const revenue=amount*item.price*saleBonus;
           const total=n.salesXpProgress+revenue;
@@ -915,7 +918,7 @@ export default function App(){
     const manualFlow=(item.id==='ingot'||item.id==='wire')&&s.flowMode[item.id]==='feed';
     const stockFloor=manualFlow?0:contractStockTarget(s,item.id);
     const warehouseBuffer=(item.id==='ingot'||item.id==='wire')&&s.flowMode[item.id]==='balanced'?2:0;
-    const amount=Math.min(Math.max(0,s[item.id]-Math.max(stockFloor,warehouseBuffer)),assigned*.12*(s.researched.includes('dispatch-systems')?1.25:1)*(1+s.capitalLevels.freightNetwork*.1)*speed*(s.boostSeconds.dispatch>0?2:1));
+    const amount=Math.min(Math.max(0,s[item.id]-Math.max(stockFloor,warehouseBuffer)),assigned*SALES_UNITS_PER_SECOND*(s.researched.includes('dispatch-systems')?1.25:1)*(1+s.capitalLevels.freightNetwork*.1)*speed*(s.boostSeconds.dispatch>0?2:1));
     return sum+amount*item.price*(s.researched.includes('market-intelligence')?1.2:1)*60;
   },0):0;
   const wagesPerMinute=economyActive&&payrollFunded?payroll:0;
@@ -1146,8 +1149,15 @@ export default function App(){
   const hire=(role:'mechanic'|'sales')=>{
     const cost=role==='mechanic'?mechanicCost(s):salesCost(s);
     if(s.cash<cost){setNotice('You need '+fmt(cost)+' Rivets to hire this person.');return;}
-    setS(v=>({...v,cash:v.cash-cost,[role==='mechanic'?'mechanics':'salespeople']:v[role==='mechanic'?'mechanics':'salespeople']+1}));
-    setNotice(role==='mechanic'?'Mechanic hired. Assign them to a machine below.':'Sales representative hired. Set their product target below.');
+    setS(v=>{
+      const currentCost=role==='mechanic'?mechanicCost(v):salesCost(v);
+      if(v.cash<currentCost)return v;
+      const firstSales=role==='sales'&&v.salespeople===0;
+      const starterProduct=goods.find(g=>v[contractProducer[g.id]]>0)?.id;
+      return {...v,cash:v.cash-currentCost,[role==='mechanic'?'mechanics':'salespeople']:v[role==='mechanic'?'mechanics':'salespeople']+1,
+        ...(firstSales&&starterProduct?{autoSell:true,salesAssignments:{...fresh.salesAssignments,[starterProduct]:1}}:{})};
+    });
+    setNotice(role==='mechanic'?'Mechanic hired. Assign them to a machine below.':s.salespeople===0?'First salesperson hired · automatic sales enabled for your first installed product. Contract stock stays protected.':'Sales representative hired. Assign them to a product below.');
   };
   const fire=(role:'mechanic'|'sales'|'cyber')=>{
     const key=role==='mechanic'?'mechanics':role==='sales'?'salespeople':'cybersecuritySpecialists';
@@ -1169,7 +1179,7 @@ export default function App(){
       }
       return next;
     });
-    setNotice('Employee dismissed. Payroll reduced by '+(role==='mechanic'?WAGES.mechanic:role==='sales'?WAGES.sales:WAGES.cyber)+' RVT per minute.');
+    setNotice('Employee dismissed. Payroll reduced by '+(role==='mechanic'?WAGES.mechanic:role==='sales'?salesWages(s.salespeople)-salesWages(s.salespeople-1):WAGES.cyber)+' RVT per minute.');
   };
   const assignSales=(id:StockId,count:number)=>{
     setS(v=>{
@@ -1408,7 +1418,7 @@ export default function App(){
         <div className="staff-help-note"><CircleDollarSign size={17}/> Staff and drivers cost wages each minute the factory operates; assigned drones consume battery power. Route upgrades are permanent; rush boosts last 60 seconds with a 4-minute cooldown. Unpaid drivers stop hauling ore, which can starve every downstream production line. Production speed does not multiply wages.</div>
         <section className="staff-roles">
           <article className="role-card mechanic-role"><div className="role-top"><span className="role-icon"><Wrench size={24}/></span><span className="role-tag">MAINTENANCE</span></div><h2>Mechanic</h2><p>Repairs breakdowns and gets machines running again. Assign each mechanic to the machine you want them to look after.</p><div className="role-bottom"><div><b>{s.mechanics}</b><small>HIRED</small></div><button className="primary-button" disabled={s.cash<mechanicCost(s)} onClick={()=>hire('mechanic')}>HIRE · {fmt(mechanicCost(s))} RVT</button><button className="secondary-button" disabled={s.mechanics===0} onClick={()=>fire('mechanic')}>FIRE ONE</button><small>{WAGES.mechanic} RVT/min per mechanic</small></div></article>
-          <article className="role-card sales-role"><div className="role-top"><span className="role-icon"><Store size={24}/></span><span className="role-tag">DISPATCH & SALES</span></div><h2>Sales representative</h2><p>Sells warehouse stock automatically and earns 1 bonus XP per minute per active salesperson, plus XP based on shipment value. Choose a product and enable automatic sales.</p><div className="role-bottom"><div><b>{s.salespeople}</b><small>HIRED</small></div><button className="primary-button" disabled={s.cash<salesCost(s)} onClick={()=>hire('sales')}>HIRE · {fmt(salesCost(s))} RVT</button><button className="secondary-button" disabled={s.salespeople===0} onClick={()=>fire('sales')}>FIRE ONE</button><small>{WAGES.sales} RVT/min per salesperson</small></div></article>
+          <article className="role-card sales-role"><div className="role-top"><span className="role-icon"><Store size={24}/></span><span className="role-tag">DISPATCH & SALES</span></div><h2>Sales representative</h2><p>Sells warehouse stock automatically and earns 1 bonus XP per minute per active salesperson, plus XP based on shipment value. Each can ship 21 units/min at normal speed before bonuses. Your first hire automatically sells your first installed product; contract stock is protected.</p><p>First hire: 150 RVT and 12 RVT/min wages. Additional staff: 36 RVT/min each. A basic mine can earn about 79 RVT/min after the first salesperson, driver and electricity, when all ore is available for sale.</p><div className="role-bottom"><div><b>{s.salespeople}</b><small>HIRED</small></div><button className="primary-button" disabled={s.cash<salesCost(s)} onClick={()=>hire('sales')}>HIRE · {fmt(salesCost(s))} RVT</button><button className="secondary-button" disabled={s.salespeople===0} onClick={()=>fire('sales')}>FIRE ONE</button><small>{salesWages(s.salespeople)} RVT/min team wages · next hire +{s.salespeople===0?FIRST_SALES_WAGE:WAGES.sales} RVT/min</small></div></article>
           <article className="role-card cyber-role"><div className="role-top"><span className="role-icon"><ShieldCheck size={24}/></span><span className="role-tag">NETWORK SECURITY</span></div><h2>Cybersecurity specialist</h2><p>Monitors factory systems, contains digital intrusions and installs a permanent firewall against future cyber incidents.</p><div className="role-bottom"><div><b>{s.cybersecuritySpecialists}</b><small>HIRED</small></div><button className="primary-button" disabled={s.cash<cybersecurityCost(s)} onClick={hireCybersecuritySpecialist}>HIRE · {fmt(cybersecurityCost(s))} RVT</button><button className="secondary-button" disabled={s.cybersecuritySpecialists===0} onClick={()=>fire('cyber')}>FIRE ONE</button><small>{WAGES.cyber} RVT/min per specialist</small></div></article>
         </section>
         <section className="staff-desk"><div className="section-heading"><div><span className="eyebrow">DEPARTMENT DESK</span><h2>Staff assignments</h2><p>Switch between maintenance and dispatch to keep responsibilities clear.</p></div></div>
@@ -1453,7 +1463,7 @@ export default function App(){
           <div className="assignment-list">{machines.filter(m=>s[m.id]>0).map(m=><div className="assignment-row" key={m.id}><span className="assignment-machine"><Cog size={19}/></span><div className="assignment-copy"><b>{m.name}</b><small>{faultCount(s,m.id)>0?faultCount(s,m.id)+' broken unit(s) · '+(s.mechanicAssignments[m.id]>0?'being repaired':'awaiting mechanic'):s[m.id]>0?'Machines operational':'Not built yet'}</small></div><div className="assignment-stepper" role="group" aria-label={m.name+' mechanic assignments'}><button type="button" aria-label={'Remove a mechanic from '+m.name} disabled={s.mechanicAssignments[m.id]===0} onClick={()=>assignMechanic(m.id,Math.max(0,s.mechanicAssignments[m.id]-1))}>−</button><output aria-live="polite">{s.mechanicAssignments[m.id]}</output><button type="button" aria-label={'Assign a mechanic to '+m.name} disabled={s.mechanics===0||unassigned===0} onClick={()=>assignMechanic(m.id,s.mechanicAssignments[m.id]+1)}>+</button></div></div>)}</div>
           {s.mechanics===0&&<div className="empty-hint"><Wrench size={17}/> Hire a mechanic above to unlock machine assignments.</div>}
         </section>}
-        {staffTab==='dispatch'&&<section className="sales-setup"><div className="sales-setup-title"><span className="role-icon"><Truck size={22}/></span><div><span className="eyebrow">DISPATCH SETTINGS</span><h2>Sales team assignments</h2><p>Assign your sales representatives to different goods. Each sells their assigned product independently.</p></div></div><div className="contract-summary"><span><b>{assignedSales}</b> ASSIGNED</span><span><b>{unassignedSales}</b> AVAILABLE</span><span><b>{s.salespeople}</b> TOTAL SALESPEOPLE</span></div><div className="assignment-list">{goods.filter(g=>s[contractProducer[g.id]]>0).map(g=><div className="assignment-row" key={g.id}><span className="assignment-machine"><ProductIcon id={g.id} size={33}/></span><div className="assignment-copy"><b>{g.name}</b><small>{((s.salesAssignments[g.id]||0)*.12).toFixed(2)} units/sec when automatic sales are on</small></div><div className="assignment-stepper" role="group" aria-label={g.name+' sales assignments'}><button type="button" aria-label={'Remove a salesperson from '+g.name} disabled={(s.salesAssignments[g.id]||0)===0} onClick={()=>assignSales(g.id,Math.max(0,(s.salesAssignments[g.id]||0)-1))}>−</button><output aria-live="polite">{s.salesAssignments[g.id]||0}</output><button type="button" aria-label={'Assign a salesperson to '+g.name} disabled={s.salespeople===0||unassignedSales===0} onClick={()=>assignSales(g.id,(s.salesAssignments[g.id]||0)+1)}>+</button></div></div>)}</div><div className="sales-controls"><div className="sales-toggle-row"><span><b>Automatic dispatch</b><small>{s.autoSell?'Staff are actively shipping available products.':'Turn on to let your sales team ship automatically.'} Contract reserves are protected.</small></span><button type="button" role="switch" className={'dashboard-switch '+(s.autoSell?'is-on':'')} aria-checked={s.autoSell} aria-label="Automatic dispatch" disabled={s.salespeople===0} onClick={()=>setS(v=>({...v,autoSell:!v.autoSell}))}><i/></button></div></div></section>}
+        {staffTab==='dispatch'&&<section className="sales-setup"><div className="sales-setup-title"><span className="role-icon"><Truck size={22}/></span><div><span className="eyebrow">DISPATCH SETTINGS</span><h2>Sales team assignments</h2><p>Assign your sales representatives to different goods. Each sells their assigned product independently.</p></div></div><div className="contract-summary"><span><b>{assignedSales}</b> ASSIGNED</span><span><b>{unassignedSales}</b> AVAILABLE</span><span><b>{s.salespeople}</b> TOTAL SALESPEOPLE</span></div><div className="assignment-list">{goods.filter(g=>s[contractProducer[g.id]]>0).map(g=><div className="assignment-row" key={g.id}><span className="assignment-machine"><ProductIcon id={g.id} size={33}/></span><div className="assignment-copy"><b>{g.name}</b><small>{((s.salesAssignments[g.id]||0)*SALES_UNITS_PER_SECOND).toFixed(2)} units/sec when automatic sales are on</small></div><div className="assignment-stepper" role="group" aria-label={g.name+' sales assignments'}><button type="button" aria-label={'Remove a salesperson from '+g.name} disabled={(s.salesAssignments[g.id]||0)===0} onClick={()=>assignSales(g.id,Math.max(0,(s.salesAssignments[g.id]||0)-1))}>−</button><output aria-live="polite">{s.salesAssignments[g.id]||0}</output><button type="button" aria-label={'Assign a salesperson to '+g.name} disabled={s.salespeople===0||unassignedSales===0} onClick={()=>assignSales(g.id,(s.salesAssignments[g.id]||0)+1)}>+</button></div></div>)}</div><div className="sales-controls"><div className="sales-toggle-row"><span><b>Automatic dispatch</b><small>{s.autoSell?'Staff are actively shipping available products.':'Turn on to let your sales team ship automatically.'} Contract reserves are protected.</small></span><button type="button" role="switch" className={'dashboard-switch '+(s.autoSell?'is-on':'')} aria-checked={s.autoSell} aria-label="Automatic dispatch" disabled={s.salespeople===0} onClick={()=>setS(v=>({...v,autoSell:!v.autoSell}))}><i/></button></div></div></section>}
       </div>}
       {page==='capital'&&<div className="page-content">
         <section className="welcome-row"><div><span className="eyebrow">LONG-TERM INDUSTRIAL INVESTMENT</span><h1>Capital Projects</h1><p>Spend Rivets on permanent infrastructure that makes your factory more efficient and reliable. Prices rise with each level, and every purchase stays saved.</p></div><div className="staff-summary"><b>{fmt(s.capitalSpent)}</b><span>RIVETS INVESTED</span><small>{fmt(s.cash)} RVT currently available</small></div></section>

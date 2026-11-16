@@ -8,7 +8,7 @@ import ts from 'typescript';
 const root=dirname(dirname(fileURLToPath(import.meta.url)));
 const folder=await mkdtemp(join(root,'.contract-test-'));
 const source=await readFile(join(root,'src/App.tsx'),'utf8');
-const output=ts.transpileModule(source+'\nexport {fresh,goods,machines,contracts,issueRepeatOrder,estimateContractSeconds,orderPayout,orderExpiry,updateContractOffers,deliverRepeatOrder,closeRepeatOrder,contractStockTarget,stockSaleReminder,sellSurplusStock,loadGame,CONTRACT_TERMS};',{
+const output=ts.transpileModule(source+'\nexport {fresh,goods,machines,contracts,issueRepeatOrder,estimateContractSeconds,orderPayout,orderExpiry,updateContractOffers,deliverRepeatOrder,closeRepeatOrder,contractStockTarget,stockSaleReminder,sellSurplusStock,salesWages,salesCost,SALES_UNITS_PER_SECOND,payrollPerMinute,loadGame,CONTRACT_TERMS};',{
   compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.ReactJSX}
 }).outputText;
 await writeFile(join(folder,'game.mjs'),output);
@@ -177,4 +177,18 @@ test('surplus sale preserves exact researched revenue and XP/Gear carryover',()=
 test('surplus sale pays nothing for fully reserved or fractional-only stock',()=>{
   const s=factory();const o=offer(s);s.repeatOffers=[o,null,null];s.ore=o.qty;s.parts=.9;
   assert.strictEqual(game.sellSurplusStock(s),s);
+});
+
+test('first salesperson is affordable and profitable with one basic ore mine',()=>{
+ const s=factory();s.salespeople=0;
+ assert.equal(game.salesCost(s),150);
+ assert.equal(game.salesWages(1),12);
+ const revenue=Math.min(.35,game.SALES_UNITS_PER_SECOND)*60*5;
+ assert.equal(revenue-8-6-game.salesWages(1),79);
+});
+test('later hires retain higher wages and cost; first discount is counted once',()=>{
+ const s=factory();s.salespeople=1;assert.equal(game.salesCost(s),1350);
+ assert.equal(game.salesWages(0),0);assert.equal(game.salesWages(2),48);assert.equal(game.salesWages(3),84);
+ s.salespeople=2;assert.equal(game.payrollPerMinute(s),48+2*8);
+ assert.equal(game.salesCost(s),2700);
 });
