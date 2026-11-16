@@ -1149,3 +1149,29 @@ button:focus-visible,select:focus-visible{outline:2px solid #f1c48d;outline-offs
  .delivery-focus-header>.secondary-button{align-self:flex-start}
 }
 @media(prefers-reduced-motion:reduce){.delivery-focus-track i{transition:none!important}}
+
+
+/* Product illustrations: distinct from machine artwork across UI */
+.product-item-icon{
+  display:inline-grid;place-items:center;flex:0 0 auto;
+  color:#dec592;background:#25352b;border:1px solid #5b775c;
+  border-radius:5px;line-height:1;
+}
+.product-item-ore,.product-item-ingot,.product-item-plate,.product-item-beams{color:#d1bd99;background:#32362e;border-color:#646859}
+.product-item-copperOre,.product-item-copperIngot,.product-item-wire,.product-item-coils{color:#f4bf84;background:#443329;border-color:#987250}
+.product-item-circuits{color:#9cdeb1;background:#263d30;border-color:#5f906a}
+.product-item-parts,.product-item-motors{color:#d2dced;background:#303944;border-color:#647d99}
+.stock-emoji .product-item-icon{border-radius:6px}
+.assignment-machine .product-item-icon{width:33px;height:33px;border:0;background:transparent}
+.mail-order-line .product-item-icon{margin-right:5px}
+.motor-icon{
+  display:inline-grid;place-items:center;flex:0 0 auto;border-radius:5px;
+  color:#d9b681;background:#334039;border:1px solid #8a7a58;
+}
+.machine-art.running .motor-works-asset .motor-rotor{
+  transform-box:fill-box;transform-origin:center;
+  animation:motorRotorSpin var(--machine-cycle,8s) linear infinite;
+}
+.machine-art:not(.running) .motor-works-asset .motor-rotor{animation-play-state:paused}
+@keyframes motorRotorSpin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.machine-art .motor-works-asset .motor-rotor{animation:none!important}}
