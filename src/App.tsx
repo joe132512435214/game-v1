@@ -11,7 +11,7 @@ type GameState = {
   cash:number; gears:number; ore:number; ingot:number; plate:number; parts:number; copperOre:number; copperIngot:number; wire:number; circuits:number;
   miner:number; smelter:number; press:number; assembler:number; copperMiner:number; copperSmelter:number; wiremill:number; circuitpress:number;
   tier_miner:number; tier_smelter:number; tier_press:number; tier_assembler:number; tier_copperMiner:number; tier_copperSmelter:number; tier_wiremill:number; tier_circuitpress:number;
-  level:number; experience:number; sold:number; mechanics:number; salespeople:number; reputation:number; acceptedContracts:string[]; contractsCompleted:string[];
+  level:number; experience:number; sold:number; xpMigrationVersion:number; mechanics:number; salespeople:number; reputation:number; acceptedContracts:string[]; contractsCompleted:string[];
   broken:Record<MachineId,number>; mechanicAssignments:Record<MachineId,number>; breakdownEvent:MachineId|null; powerCutEvent:boolean; powerCutSeen:boolean; cyberAttackEvent:boolean; cyberAttackSeen:boolean; cybersecuritySpecialists:number;
   salesTarget:StockId; autoSell:boolean; missionsClaimed:number[]; researched:string[];
 };
@@ -20,7 +20,7 @@ const fresh:GameState = {
   cash:0,gears:0,ore:0,ingot:0,plate:0,parts:0,copperOre:0,copperIngot:0,wire:0,circuits:0,
   miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0,
   tier_miner:0,tier_smelter:0,tier_press:0,tier_assembler:0,tier_copperMiner:0,tier_copperSmelter:0,tier_wiremill:0,tier_circuitpress:0,
-  level:1,experience:0,sold:0,mechanics:0,salespeople:0,
+  level:1,experience:0,sold:0,xpMigrationVersion:1,mechanics:0,salespeople:0,
   broken:{miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0},
   mechanicAssignments:{miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0},breakdownEvent:null,powerCutEvent:false,powerCutSeen:false,cyberAttackEvent:false,cyberAttackSeen:false,cybersecuritySpecialists:0,
   salesTarget:'parts',autoSell:false,missionsClaimed:[],researched:[],reputation:0,acceptedContracts:[],contractsCompleted:[]
@@ -65,7 +65,8 @@ function loadGame():GameState{
     const legacyXpFromContracts=completed.reduce((total:string|number,id:string)=>Number(total)+(contracts.find(c=>c.id===id)?.xp||0),0);
     const legacyXpFromMissions=(Array.isArray(saved.missionsClaimed)?saved.missionsClaimed:[]).reduce((total:number,id:number)=>total+(missionXp[id]||0),0);
     const migratedExperience=saved.experience!==undefined?Math.max(0,Number(saved.experience)||0):Math.max(legacyXpFromContracts+legacyXpFromMissions,Number(saved.assembler)>0?270:Number(saved.press)>0?165:Number(saved.smelter)>0?60:Number(saved.miner)>0?25:0);
-    return {...fresh,...saved,broken:{...fresh.broken,...saved.broken},mechanicAssignments:{...fresh.mechanicAssignments,...saved.mechanicAssignments},breakdownEvent:saved.breakdownEvent??null,powerCutEvent:shouldRecoverPowerCut?true:(saved.powerCutEvent??false),powerCutSeen:shouldRecoverPowerCut?true:(saved.powerCutSeen??false),cyberAttackEvent:shouldRecoverCyberAttack?true:(saved.cyberAttackEvent??false),cyberAttackSeen:shouldRecoverCyberAttack?true:(saved.cyberAttackSeen??false),cybersecuritySpecialists:Math.max(0,Number(saved.cybersecuritySpecialists)||0),researched:Array.isArray(saved.researched)?saved.researched:[],acceptedContracts:Array.isArray(saved.acceptedContracts)?saved.acceptedContracts:[],contractsCompleted:completed,experience:migratedExperience,reputation:Math.max(0,Number(saved.reputation)||0)};
+    const legacyShipmentXp=saved.xpMigrationVersion===undefined?Math.floor(Math.max(0,Number(saved.sold)||0)/500):0;
+    return {...fresh,...saved,xpMigrationVersion:1,broken:{...fresh.broken,...saved.broken},mechanicAssignments:{...fresh.mechanicAssignments,...saved.mechanicAssignments},breakdownEvent:saved.breakdownEvent??null,powerCutEvent:shouldRecoverPowerCut?true:(saved.powerCutEvent??false),powerCutSeen:shouldRecoverPowerCut?true:(saved.powerCutSeen??false),cyberAttackEvent:shouldRecoverCyberAttack?true:(saved.cyberAttackEvent??false),cyberAttackSeen:shouldRecoverCyberAttack?true:(saved.cyberAttackSeen??false),cybersecuritySpecialists:Math.max(0,Number(saved.cybersecuritySpecialists)||0),researched:Array.isArray(saved.researched)?saved.researched:[],acceptedContracts:Array.isArray(saved.acceptedContracts)?saved.acceptedContracts:[],contractsCompleted:completed,experience:migratedExperience+legacyShipmentXp,reputation:Math.max(0,Number(saved.reputation)||0)};
   }catch{return fresh;}
 }
 const fmt=(n:number)=>Math.floor(n).toLocaleString();
@@ -237,7 +238,10 @@ export default function App(){
         const amount=Math.min(n[id],n.salespeople*.12*multiplier);
         const item=goods.find(g=>g.id===id)!;
         const saleBonus=n.researched.includes('market-intelligence')?1.2:1;
-        n[id]-=amount;n.cash+=amount*item.price*saleBonus;n.sold+=amount*item.price*saleBonus;
+        const revenue=amount*item.price*saleBonus;
+        const shipmentXpBefore=Math.floor(n.sold/500);
+        n[id]-=amount;n.cash+=revenue;n.sold+=revenue;
+        n.experience+=Math.floor(n.sold/500)-shipmentXpBefore;
         if(id==='parts'||id==='circuits')n.gears+=amount;
       }
       return n;
@@ -256,7 +260,7 @@ export default function App(){
   const repProgress=Math.min(100,s.reputation>=90?100:s.reputation/nextRep*100);
   const nextGoal=progressionLevel*100;
   const goalProgress=Math.min(100,(s.experience-(progressionLevel-1)*100)/100*100);
-  const unlockAt:Record<MachineId,number>={miner:0,smelter:25,press:150,assembler:200,copperMiner:220,copperSmelter:350,wiremill:500,circuitpress:700};
+  const unlockAt:Record<MachineId,number>={miner:0,smelter:25,press:150,assembler:200,copperMiner:200,copperSmelter:350,wiremill:500,circuitpress:700};
   // Keep the floor focused: show every machine already owned and just the next milestone.
   const nextMachine=machines.filter(m=>s[m.id]===0).sort((a,b)=>unlockAt[a.id]-unlockAt[b.id])[0];
   const visibleMachines=machines.filter(m=>s[m.id]>0||m.id===nextMachine?.id);
@@ -352,8 +356,10 @@ export default function App(){
   const sellStock=(id:StockId)=>{
     const item=goods.find(g=>g.id===id)!;const amount=Math.floor(s[id]);
     if(amount<1){setNotice('There are no full units ready to ship.');return;}
-    setS(v=>({...v,[id]:v[id]-amount,cash:v.cash+amount*item.price*saleMultiplier,sold:v.sold+amount*item.price*saleMultiplier,gears:v.gears+((id==='parts'||id==='circuits')?amount:0)}));
-    setNotice('Shipped '+fmt(amount)+' '+item.name+' for '+fmt(amount*item.price)+' Rivets.');
+    const revenue=amount*item.price*saleMultiplier;
+    setS(v=>{const shipmentXp=Math.floor((v.sold+revenue)/500)-Math.floor(v.sold/500);return {...v,[id]:v[id]-amount,cash:v.cash+revenue,sold:v.sold+revenue,experience:v.experience+shipmentXp,gears:v.gears+((id==='parts'||id==='circuits')?amount:0)};});
+    const shipmentXp=Math.floor((s.sold+revenue)/500)-Math.floor(s.sold/500);
+    setNotice('Shipped '+fmt(amount)+' '+item.name+' for '+fmt(revenue)+' Rivets.'+(shipmentXp>0?' · +'+shipmentXp+' XP from shipments.':''));
   };
   const completeContract=(contract:typeof contracts[number])=>{
     if(s.contractsCompleted.includes(contract.id))return;
