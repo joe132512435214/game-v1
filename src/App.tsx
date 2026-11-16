@@ -1380,61 +1380,36 @@ export default function App(){
       {page==='factory'&&<div className="page-content">
         <div className="factory-view-toolbar"><div><span className="eyebrow">FACTORY CONTROL</span><strong>{factoryView==='overview'?'Overview':'Equipment floor'}</strong></div><div className="factory-view-switch" role="tablist" aria-label="Factory view"><button type="button" role="tab" aria-selected={factoryView==='overview'} className={factoryView==='overview'?'selected':''} onClick={()=>setFactoryView('overview')}><TrendingUp size={15}/> Dashboard</button><button type="button" role="tab" aria-selected={factoryView==='equipment'} className={factoryView==='equipment'?'selected':''} onClick={()=>setFactoryView('equipment')}><Factory size={15}/> Machines</button></div></div>
         {factoryView==='overview'&&<>
-        <section className="ops-dashboard" aria-label="Factory dashboard">
-          <div className="ops-dashboard-header">
-            <div className="ops-dashboard-title">
-              <span className="ops-kicker"><span className={running&&!s.powerShortage&&!s.breakdownEvent&&!s.powerCutEvent&&!s.cyberAttackEvent&&!s.writeOffEvent?'ops-pip':'ops-pip is-idle'}/> CONTROL ROOM <i>/</i> {companyRank}</span>
-              <h1>Factory overview</h1>
-              <p>Track production, fulfil orders and grow your operation.</p>
-            </div>
-            <div className="ops-quick-actions">
-              <button className="primary-button" onClick={()=>setFactoryView('equipment')}><Factory size={16}/> Manage machines</button>
-
-            </div>
-          </div>
-          <div className="ops-kpi-grid">
-            <div className="ops-kpi"><div className="ops-kpi-label"><Factory size={16}/> MACHINES OPERATING</div><strong>{machinesWorking}<small> / {machineCount}</small></strong><p>{brokenCount>0?brokenCount+' unit(s) need repairs':machineCount===0?'Build your first machine':'Installed units currently producing'}</p></div>
-
-            <div className="ops-kpi"><div className="ops-kpi-label"><Truck size={16}/> CUSTOMER ORDERS</div><strong>{readyOrders}<small> ready</small></strong><p>{activeOrders} in progress · {incomingMail.length} in your inbox</p></div>
-
-          </div>
-          <div className="ops-command-grid">
-            <div className="ops-growth">
-              <div className="ops-section-title"><span>COMPANY DEVELOPMENT</span><strong>LEVEL {progressionLevel}</strong></div>
-              <h2>Stage {currentStage.number} · {currentStage.name}</h2>
-              <p>{currentStage.detail}</p>
-              <div className="ops-growth-meter"><div><span>LEVEL EXPERIENCE</span><b>{fmt(s.experience)} / {fmt(nextGoal)} XP</b></div><div className="ops-track"><i style={{width:goalProgress+'%'}}/></div></div>
-              <div className="ops-growth-meter"><div><span>COMPANY REPUTATION</span><b>{s.reputation} / {nextRank?.rep??s.reputation} REP</b></div><div className="ops-track ops-track-rep"><i style={{width:repProgress+'%'}}/></div></div>
-              <div className="ops-growth-next">{nextStage?<>NEXT STAGE <strong>{nextStage.name}</strong> · {fmt(Math.max(0,nextStage.xp-s.experience))} XP / {Math.max(0,nextStage.rep-s.reputation)} REP needed</>:'All factory stages reached · keep building your industrial network'}</div>
-            </div>
-            <div className="ops-focus">
-              <div className="ops-section-title"><span>PRIORITY ACTION</span><strong>{s.powerShortage||brokenCount>0||!!s.writeOffEvent?'ATTENTION':'OPERATIONS'}</strong></div>
-              {s.powerShortage?<><h2>Restore electricity</h2><p>Running machinery needs Rivets for its power bill. Sell spare stock to bring production back online.</p><button className="secondary-button" onClick={()=>setPage('warehouse')}>OPEN WAREHOUSE <ArrowUpRight size={15}/></button></>:
-               s.writeOffEvent?<><h2>Replace written-off equipment</h2><p>A machine was lost permanently. Resolve the incident and order a replacement unit.</p><button className="secondary-button" onClick={()=>setFactoryView('equipment')}>VIEW EQUIPMENT <ArrowUpRight size={15}/></button></>:
-               brokenCount>0?<><h2>{brokenCount} machine {brokenCount===1?'needs':'units need'} repair</h2><p>Assign mechanics or pay for a one-off repair to recover production.</p><button className="secondary-button" onClick={()=>{setPage('staff');setStaffTab('maintenance')}}>ASSIGN MAINTENANCE <ArrowUpRight size={15}/></button></>:
-               readyOrders>0?<><h2>{readyOrders} order{readyOrders===1?' is':'s are'} ready</h2><p>Your warehouse has the required products. Deliver now to earn Rivets, reputation and experience.</p><button className="secondary-button" onClick={()=>setInboxOpen(true)}>OPEN ORDER INBOX <ArrowUpRight size={15}/></button></>:
-               machineCount===0?<><h2>Get the workshop running</h2><p>Accept your opening contract and purchase the first Rockbreaker Mine.</p><button className="secondary-button" onClick={()=>setFactoryView('equipment')}>OPEN FACTORY FLOOR <ArrowUpRight size={15}/></button></>:
-               unassigned>0?<><h2>Put your mechanics to work</h2><p>{unassigned} mechanic{unassigned===1?' is':'s are'} unassigned. Choose the machines they should maintain.</p><button className="secondary-button" onClick={()=>{setPage('staff');setStaffTab('maintenance')}}>MANAGE STAFF <ArrowUpRight size={15}/></button></>:
-               <><h2>{activeMission?activeMission.title:'Plan your next expansion'}</h2><p>{activeMission?activeMission.detail:'The factory is stable. Invest in equipment, technology or infrastructure.'}</p><button className="secondary-button" onClick={()=>setPage('capital')}>VIEW CAPITAL PROJECTS <ArrowUpRight size={15}/></button></>}
-            </div>
-          </div>
+        <section className="home-hero" aria-label="Factory at a glance">
+          <div className="home-hero-top"><div><span className="eyebrow">YOUR FACTORY · {companyRank}</span><h1>Factory floor</h1><p>Stage {currentStage.number} · {currentStage.name}</p></div><span className={'home-status '+(running&&!s.powerShortage&&!brokenCount?'is-running':'is-idle')}>{running&&!s.powerShortage&&!brokenCount?'● Producing':'● Needs attention'}</span></div>
+          <div className="home-factory-machines">{(visibleMachines.filter(m=>s[m.id]>0).length?visibleMachines.filter(m=>s[m.id]>0):visibleMachines.slice(0,1)).slice(0,4).map(m=><button type="button" className="home-machine" key={m.id} onClick={()=>setFactoryView('equipment')}><MachineIcon id={m.id} size={72}/><b>{m.name}</b><small>{s[m.id]===0?'BUILD FIRST':!running?'PAUSED':s.lastOutput[m.id]>0?'● WORKING':'IDLE'}</small></button>)}</div>
+          <button className="home-floor-link" type="button" onClick={()=>setFactoryView('equipment')}>Manage factory floor <ArrowUpRight size={16}/></button>
         </section>
-        <div className="ops-details-toggle"><button type="button" className="secondary-button" aria-expanded={showDashboardDetails} onClick={()=>setShowDashboardDetails(v=>!v)}>{showDashboardDetails?"HIDE EXTRA DETAILS":"SHOW MORE DETAILS"} <span aria-hidden="true">{showDashboardDetails?"−":"+"}</span></button></div>
-        {showDashboardDetails&&<>
-        <section className="ops-roadmap" aria-label="Factory progression">
-          <div className="ops-roadmap-heading"><b>PROGRESSION</b><span>Completed stages, current stage and your next milestone</span></div>
-          <div className="ops-roadmap-steps">{FACTORY_STAGES.filter(stage=>stage.number<=currentStage.number+1).map(stage=><div key={stage.number} className={'ops-roadmap-step '+(stage.number===currentStage.number?'is-current':stage.number<currentStage.number?'is-done':'is-upcoming')}><span>{stage.number<currentStage.number?'✓':String(stage.number).padStart(2,'0')}</span><div><b>{stage.name}</b><small>{stage.number<currentStage.number?'COMPLETE':stage.number===currentStage.number?'IN PROGRESS':'NEXT UNLOCK'}</small></div></div>)}</div>
+        <div className="home-stats" aria-label="Factory quick stats">
+          <div><small>Machines</small><strong>{machinesWorking}<span> / {machineCount} running</span></strong></div>
+          <div><small>Orders ready</small><strong>{readyOrders}</strong></div>
+          <div><small>Reputation</small><strong>{s.reputation}</strong></div>
+        </div>
+        <section className="home-next" aria-label="Your next action">
+          <div><span className="eyebrow">NEXT ACTION</span>
+          {s.powerShortage?<><h2>Restore power</h2><p>Sell stock to cover electricity.</p></>:
+          s.writeOffEvent?<><h2>Replace damaged equipment</h2><p>Resolve the incident to resume production.</p></>:
+          brokenCount>0?<><h2>Repair {brokenCount} machine{brokenCount===1?'':'s'}</h2><p>Assign maintenance to get production moving.</p></>:
+          readyOrders>0?<><h2>{readyOrders} order{readyOrders===1?'':'s'} ready</h2><p>Deliver stock and collect your reward.</p></>:
+          machineCount===0?<><h2>Build your first machine</h2><p>Accept your first order and start mining.</p></>:
+          unassigned>0?<><h2>Assign your mechanics</h2><p>{unassigned} mechanic{unassigned===1?' is':'s are'} waiting for work.</p></>:
+          <><h2>{activeMission?.title||'Expand your factory'}</h2><p>{activeMission?.detail||'Invest in your next upgrade.'}</p></>}
+          </div>
+          <button type="button" className="primary-button" onClick={()=>{
+            if(s.powerShortage){setPage('warehouse');return;}
+            if(s.writeOffEvent||machineCount===0){setFactoryView('equipment');return;}
+            if(brokenCount>0||unassigned>0){setPage('staff');setStaffTab('maintenance');return;}
+            if(readyOrders>0){setInboxOpen(true);return;}
+            setFactoryView('equipment');
+          }}>{s.powerShortage?'OPEN WAREHOUSE':brokenCount>0||unassigned>0?'MANAGE STAFF':readyOrders>0?'VIEW ORDERS':'VIEW MACHINES'} <ArrowUpRight size={16}/></button>
         </section>
-        <section className="ops-machines-preview" aria-label="Factory equipment overview">
-          <div className="ops-machines-preview-head"><div><span className="eyebrow">MACHINE ROSTER</span><h2>Your equipment</h2><p>See what is running before opening the full factory floor.</p></div><button type="button" className="secondary-button" onClick={()=>setFactoryView('equipment')}>VIEW ALL MACHINES <ArrowUpRight size={15}/></button></div>
-          <div className="ops-machine-tiles">{(visibleMachines.filter(m=>s[m.id]>0).length?visibleMachines.filter(m=>s[m.id]>0):visibleMachines.slice(0,1)).slice(0,5).map(m=><button type="button" key={m.id} className="ops-machine-tile" onClick={()=>setFactoryView('equipment')}><MachineIcon id={m.id} size={64}/><span className="ops-machine-tile-copy"><b>{m.name}</b><small>{s[m.id]===0?'READY TO BUILD':!running?'PAUSED':s.lastOutput[m.id]>0?'PRODUCING':'WAITING / STOPPED'}</small></span><ArrowUpRight size={14}/></button>)}</div>
-        </section>
-        </>}
-        {focusDelivery&&<section className="delivery-focus" aria-label="Next delivery progress"><div className="delivery-focus-header"><div><span className="eyebrow">YOUR NEXT PAYDAY</span><h2>{focusDelivery.name}</h2><p>Watch inventory build, then fulfil the order for {fmt(focusDelivery.reward)} RVT.</p></div><button type="button" className="secondary-button" onClick={()=>{setInboxOpen(true);setExpandedMail(focusDelivery.key)}}>{orderCompletion(focusDelivery)>=1?'DELIVER NOW':'VIEW ORDER'} <ArrowUpRight size={15}/></button></div><div className="delivery-focus-lines">{focusDelivery.items.map(line=><div className="delivery-focus-line" key={line.good}><div><b>{goods.find(g=>g.id===line.good)?.name}</b><span>{fmt(Math.min(s[line.good],line.qty))} / {line.qty}</span></div><div className="delivery-focus-track"><i style={{width:Math.min(100,(s[line.good]/line.qty)*100)+'%'}}/></div></div>)}</div><div className="delivery-focus-footer"><span>{Math.round(orderCompletion(focusDelivery)*100)}% READY</span><strong>{orderCompletion(focusDelivery)>=1?'✓ READY TO SHIP':fmt(Math.ceil(focusDelivery.items.reduce((missing,line)=>missing+Math.max(0,line.qty-s[line.good]),0)))+' UNITS TO GO'}</strong></div></section>}
-        {((s.miner>0&&freightThroughput(s,'iron')===0)||(s.copperMiner>0&&freightThroughput(s,'copper')===0))&&<div className="freight-route-warning"><AlertTriangle size={18}/><span><b>Ore transport stopped.</b> {s.miner>0&&freightThroughput(s,'iron')===0?'Iron ':' '}{s.copperMiner>0&&freightThroughput(s,'copper')===0?'Copper ':''}mines need assigned drivers or drones before ore can reach your factory.</span><button type="button" onClick={()=>{setPage('staff');setStaffTab('haulage')}}>MANAGE FREIGHT</button></div>}
-        {showDashboardDetails&&constrainedMachines.length>0&&<section className="factory-flow-advisor"><div><span className="eyebrow">PRODUCTION ADVISOR</span><h2>Where should you expand?</h2><p>These machines have more capacity than their suppliers can feed. More of the same machine won't help yet.</p></div><div className="factory-flow-picks">{constrainedMachines.map(m=><button key={m.id} onClick={()=>setFactoryView('equipment')}><span><b>{m.name}</b><small>Improve: {upstreamAdvice[m.id]}</small></span><strong>{Math.round(utilizationOf(m.id)*100)}% USED</strong><ArrowUpRight size={15}/></button>)}</div></section>}
-        {showDashboardDetails&&<section className="mission-panel"><div className="mission-heading"><div><span className="eyebrow">YOUR NEXT OBJECTIVE</span><h2>{activeMission?activeMission.title:'All missions complete!'}</h2><p>{activeMission?activeMission.detail:'You have completed the starter mission line. Keep expanding your factory.'}</p></div><span className="mission-count">{s.missionsClaimed.length}/{missions.length} COMPLETE</span></div>{activeMission?<><div className="mission-progress"><i style={{width:(activeMission.progress/activeMission.target*100)+'%'}}/></div><div className="mission-footer"><span>{activeMission.target>1?fmt(activeMission.progress)+' / '+fmt(activeMission.target):activeMission.progress>=1?'Objective complete':'Not complete yet'}</span><b>REWARD · {fmt(activeMission.rivets)} RVT · {activeMission.xp} XP{activeMission.gears?' + '+activeMission.gears+' GEARS':''}</b></div></>:<div className="mission-finished">Starter campaign finished. Your next challenge is to grow the factory your way.</div>}</section>}
-        {brokenCount>0&&<div className="alert-banner"><AlertTriangle size={18}/><span><b>{brokenCount} machine{brokenCount>1?'s':''} broken.</b> Visit Staff to assign a mechanic, or repair them here.</span><button onClick={()=>{setPage('staff');setStaffTab('maintenance')}}>MANAGE STAFF</button></div>}
+        {focusDelivery&&<section className="home-delivery"><div><span className="eyebrow">CURRENT ORDER</span><h2>{focusDelivery.name}</h2><small>{Math.round(orderCompletion(focusDelivery)*100)}% ready</small></div><div className="home-delivery-track"><i style={{width:Math.round(orderCompletion(focusDelivery)*100)+'%'}}/></div><button type="button" className="secondary-button" onClick={()=>{setInboxOpen(true);setExpandedMail(focusDelivery.key)}}>{orderCompletion(focusDelivery)>=1?'DELIVER':'VIEW ORDER'}</button></section>}
+        <div className="home-secondary"><span>Level {progressionLevel} · {fmt(s.experience)} XP</span><button type="button" onClick={()=>setFactoryView('equipment')}>Equipment & upgrades <ArrowUpRight size={14}/></button></div>
         </>}
         {factoryView==='equipment'&&<>
         <section className="line-panel"><div className="line-heading"><div><span className="eyebrow">LIVE PRODUCTION</span><h2>Assembly line</h2></div><span className="line-live"><i/> {running?'RUNNING':'PAUSED'}</span></div>
