@@ -297,3 +297,219 @@ body{background:#171b19}.game{max-width:1240px}
 .stage-upcoming{margin:13px 0 0;color:#d6b982;font:10px 'IBM Plex Mono',monospace}
 @media(max-width:780px){.factory-stages-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:480px){.factory-stages{padding:12px}.factory-stages .section-heading h2{font-size:17px}.factory-stage{padding:10px}}
+
+
+/* Production-synced machine illustrations. Each cycle represents one
+   completed product per working unit, using the actual simulation output.
+   These selectors intentionally replace earlier fast decorative animations. */
+.machine-art{
+  --machine-cycle:8s;
+  height:236px!important;
+  margin:12px -2px 13px!important;
+  border:1px solid #566351!important;
+  border-radius:7px!important;
+  background:linear-gradient(180deg,#394239,#263029 65%,#18221d)!important;
+  box-shadow:inset 0 1px #e1dbb11d,inset 0 -12px 24px #060c0960!important;
+}
+.machine-art.art-electrical{
+  background:linear-gradient(180deg,#403c34,#2d302a 68%,#1d211e)!important;
+  border-color:#796047!important;
+}
+.machine-art .art-backdrop{
+  background:
+    radial-gradient(ellipse at 52% 45%,#dfa86415,transparent 55%),
+    repeating-linear-gradient(90deg,transparent 0 42px,#ffffff07 43px,#ffffff07 44px,transparent 45px),
+    linear-gradient(180deg,#ffffff06,transparent 55%,#00000033)!important;
+}
+.machine-art svg{
+  height:208px!important;
+  max-width:94%!important;
+  margin-top:-13px;
+  filter:drop-shadow(0 9px 5px #0008)!important;
+}
+.machine-art.running svg,
+.machine-art.running.art-press svg,
+.machine-art.running.art-assembler svg,
+.machine-art.running.art-miner svg{
+  animation:none!important;
+  transform:none!important;
+}
+.machine-art:after{
+  content:'FACTORY EQUIPMENT'!important;
+  z-index:3;
+  font-size:7px!important;
+  letter-spacing:.75px!important;
+  color:#d5c7a1b3!important;
+}
+.machine-art .art-lamp{z-index:6;right:11px;top:9px;gap:5px}
+.machine-art .art-lamp .unit-light{width:9px;height:9px}
+.machine-art .art-status-dot{top:14px;left:12px;z-index:5}
+.machine-art .machine-art-floor{bottom:35px}
+.machine-art .art-cycle-hud{
+  position:absolute;z-index:5;left:11px;right:11px;bottom:8px;
+  display:grid;grid-template-columns:1fr auto;row-gap:5px;align-items:center;
+  background:#101b16d9;border:1px solid #65766263;border-radius:4px;
+  padding:6px 9px;color:#e2dac5;
+  font-family:'IBM Plex Mono',monospace;
+}
+.machine-art .art-cycle-hud span{font-size:9px;letter-spacing:.55px;color:#a5d5a9}
+.machine-art .art-cycle-hud b{font-size:9px;letter-spacing:.3px;font-weight:600;color:#eac48d}
+.machine-art:not(.running) .art-cycle-hud span{color:#da9980}
+.machine-art:not(.running) .art-cycle-hud b{color:#b9b8a9}
+.machine-art .art-cycle-track{
+  grid-column:1/-1;display:block;height:4px;border-radius:4px;
+  background:#4c5a4e;overflow:hidden;
+}
+.machine-art .art-cycle-track>i{
+  display:block;height:100%;background:linear-gradient(90deg,#80b787,#e3c17c);
+  border-radius:4px;transition:width .9s linear;
+}
+.machine-art:not(.running) .art-cycle-track>i{background:#a58872}
+.machine-art .moving-part,.machine-art .press-ram,.machine-art .robot-arm,
+.machine-art .wire-spool,.machine-art .roller-top,.machine-art .roller-bottom,
+.machine-art .rolling-beam,.machine-art .coil-feed,.machine-art .coil-spindle,
+.machine-art .coil-guide,.machine-art .circuit-head,.machine-art .assembly-parts{
+  transform-box:fill-box;
+}
+.machine-art .moving-part{transform-origin:85% 24%}
+.machine-art .press-ram{transform-origin:center top}
+.machine-art .robot-arm{transform-origin:18% 85%}
+.machine-art .wire-spool{transform-origin:center}
+.machine-art .roller-top,.machine-art .roller-bottom,.machine-art .coil-feed{transform-origin:center}
+.machine-art .coil-spindle{transform-origin:center}
+.machine-art .coil-guide{transform-origin:25% 85%}
+.machine-art .circuit-head{transform-origin:center top}
+.machine-art .steam-plume,.machine-art .molten-flow,.machine-art .crusher-dust,
+.machine-art .stamp-sparks,.machine-art .coil-spark,.machine-art .sparkles{opacity:0}
+.machine-art.running.art-miner .moving-part,
+.machine-art.running.art-copperMiner .moving-part{
+  animation:syncCrusher var(--machine-cycle) cubic-bezier(.48,.02,.3,1) infinite;
+}
+.machine-art.running.art-smelter .furnace-flame,
+.machine-art.running.art-copperSmelter .furnace-flame{
+  transform-box:fill-box;transform-origin:center bottom;
+  animation:syncFire var(--machine-cycle) ease-in-out infinite;
+}
+.machine-art.running .steam-plume{
+  animation:syncSteam var(--machine-cycle) ease-out infinite;
+}
+.machine-art.running .molten-flow{
+  animation:syncPour var(--machine-cycle) ease-in-out infinite;
+}
+.machine-art.running .crusher-dust{
+  animation:syncDust var(--machine-cycle) ease-out infinite;
+}
+.machine-art.running.art-press .press-ram{
+  animation:syncStamp var(--machine-cycle) cubic-bezier(.55,.05,.38,1) infinite;
+}
+.machine-art.running .stamp-sparks,.machine-art.running .sparkles{
+  animation:syncSpark var(--machine-cycle) ease-out infinite;
+}
+.machine-art.running.art-assembler .robot-arm{
+  animation:syncRobot var(--machine-cycle) ease-in-out infinite;
+}
+.machine-art.running .assembly-parts,.machine-art.running .rolling-beam{
+  animation:syncMaterial var(--machine-cycle) ease-in-out infinite;
+}
+.machine-art.running.art-wiremill .wire-spool{
+  animation:syncWire var(--machine-cycle) ease-in-out infinite;
+}
+.machine-art.running.art-circuitpress .circuit-head{
+  animation:syncCircuit var(--machine-cycle) ease-in-out infinite;
+}
+.machine-art.running.art-beamMill .roller-top{
+  animation:syncRoller var(--machine-cycle) linear infinite;
+}
+.machine-art.running.art-beamMill .roller-bottom{
+  animation:syncRollerReverse var(--machine-cycle) linear infinite;
+}
+.machine-art.running.art-coilWinder .coil-feed{
+  animation:syncRoller var(--machine-cycle) linear infinite;
+}
+.machine-art.running.art-coilWinder .coil-spindle{
+  animation:syncSpindle var(--machine-cycle) ease-in-out infinite;
+}
+.machine-art.running.art-coilWinder .coil-guide{
+  animation:syncCoilGuide var(--machine-cycle) ease-in-out infinite;
+}
+.machine-art.running .coil-spark{
+  animation:syncSpark var(--machine-cycle) ease-out infinite;
+}
+@keyframes syncCrusher{
+  0%,14%,90%,100%{transform:translate(0,0) rotate(0)}
+  32%{transform:translate(0,-8px) rotate(-9deg)}
+  53%,59%{transform:translate(7px,9px) rotate(12deg)}
+  76%{transform:translate(1px,1px) rotate(1deg)}
+}
+@keyframes syncFire{
+  0%,100%{transform:scale(.94,1);filter:brightness(.9)}
+  42%,52%{transform:scale(1.13,1.18);filter:brightness(1.3)}
+  75%{transform:scale(.96,1.03);filter:brightness(1)}
+}
+@keyframes syncSteam{
+  0%,14%{opacity:0;transform:translateY(13px) scale(.78)}
+  32%,58%{opacity:.9;transform:translateY(-1px) scale(1)}
+  88%,100%{opacity:0;transform:translateY(-21px) scale(1.28)}
+}
+@keyframes syncPour{
+  0%,32%,78%,100%{opacity:0;transform:translateY(-5px)}
+  45%,65%{opacity:1;transform:translateY(0)}
+}
+@keyframes syncDust{
+  0%,40%,76%,100%{opacity:0;transform:translateY(4px) scale(.6)}
+  55%{opacity:.95;transform:translateY(-4px) scale(1)}
+}
+@keyframes syncStamp{
+  0%,23%,100%{transform:translateY(-8px)}
+  43%,53%{transform:translateY(12px)}
+  71%{transform:translateY(-6px)}
+}
+@keyframes syncSpark{
+  0%,39%,68%,100%{opacity:0;transform:scale(.5)}
+  48%,54%{opacity:1;transform:scale(1.12)}
+}
+@keyframes syncRobot{
+  0%,14%,100%{transform:rotate(-7deg)}
+  32%,50%{transform:rotate(18deg)}
+  69%{transform:rotate(3deg)}
+  84%{transform:rotate(-8deg)}
+}
+@keyframes syncMaterial{
+  0%,20%{opacity:.75;transform:translateX(-13px)}
+  52%,66%{opacity:1;transform:translateX(0)}
+  92%,100%{opacity:0;transform:translateX(24px)}
+}
+@keyframes syncWire{
+  0%,100%{transform:translateX(-5px) scaleX(.97)}
+  45%,62%{transform:translateX(5px) scaleX(1.05)}
+}
+@keyframes syncCircuit{
+  0%,18%,100%{transform:translate(-20px,-6px)}
+  42%,58%{transform:translate(17px,12px)}
+  72%{transform:translate(17px,-6px)}
+}
+@keyframes syncRoller{
+  to{transform:rotate(360deg)}
+}
+@keyframes syncRollerReverse{
+  to{transform:rotate(-360deg)}
+}
+@keyframes syncSpindle{
+  0%,100%{transform:scaleX(.92)}
+  50%{transform:scaleX(1.08)}
+}
+@keyframes syncCoilGuide{
+  0%,100%{transform:rotate(-13deg)}
+  50%{transform:rotate(16deg)}
+}
+@media(max-width:620px){
+  .machine-art{height:179px!important}
+  .machine-art svg{height:155px!important;max-width:98%!important;margin-top:-10px}
+  .machine-art .art-cycle-hud{padding:4px 6px;bottom:5px}
+  .machine-art .art-cycle-hud span,.machine-art .art-cycle-hud b{font-size:7px}
+  .machine-art .machine-art-floor{bottom:28px}
+}
+@media(prefers-reduced-motion:reduce){
+  .machine-art.running svg *{animation:none!important}
+  .machine-art .art-cycle-track>i{transition:none!important}
+}
