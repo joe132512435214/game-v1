@@ -1539,3 +1539,32 @@ body { font-family:var(--font-ui)!important; font-size:14px; line-height:1.5; }
  .stock-sale-reminder>.secondary-button{grid-column:2;grid-row:2;justify-self:start;min-width:125px}
  .stock-sale-reminder-dismiss{grid-column:3;grid-row:1;align-self:start;width:28px}
 }
+
+.qc-invite,.qc-game,.theme-shop{margin:16px 0;padding:20px;border:1px solid #4b6050;border-radius:10px;background:#202d25}
+.qc-invite{display:flex;align-items:center;gap:24px}.qc-invite>div{flex:1}.qc-invite>.primary-button{width:auto;min-width:190px}
+.qc-game-heading{display:flex;align-items:center;justify-content:space-between;gap:16px}.qc-game-heading>.secondary-button{width:auto}
+.qc-game h2,.qc-invite h2{margin:6px 0}.qc-score{display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:700}
+.qc-conveyor{display:grid;place-items:center;max-width:420px;margin:18px auto;background:repeating-linear-gradient(90deg,#1c2525 0 20px,#34423c 20px 24px);border:4px solid #50645b;border-radius:12px}
+.qc-conveyor svg{width:100%;height:220px}.qc-accessible-defect{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+.qc-actions{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:420px;margin:auto}
+.qc-actions button{min-height:54px;font:700 16px var(--font-ui);border:1px solid;border-radius:8px;touch-action:manipulation}
+.qc-reject{background:#55302b;color:#ffe1d6;border-color:#b87666!important}.qc-keep{background:#304f38;color:#ddf5d8;border-color:#7da67a!important}
+.qc-result{text-align:center;padding:30px 12px}.qc-result>b{font-size:30px}.qc-result h3{font-size:22px;color:#dec28a}
+.theme-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:16px}.theme-card{padding:14px;border:1px solid #58675a;border-radius:8px;min-width:0}
+.theme-swatches{display:flex;height:70px;overflow:hidden;border-radius:7px;border:1px solid #718074}.theme-swatches span{flex:1}.theme-card h3{font-size:15px}
+@media(max-width:800px){.theme-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.qc-invite{flex-direction:column;align-items:stretch}.qc-invite>.primary-button{width:100%}}
+@media(max-width:420px){.theme-grid{grid-template-columns:1fr}.qc-game-heading{flex-wrap:wrap}.qc-score{font-size:11px}.qc-invite,.qc-game,.theme-shop{padding:14px}}
+
+/* Cosmetic colour schemes keep all text contrast and gameplay semantics. */
+.game[data-theme="ocean"]{--theme-bg:#101c2c;--theme-panel:#1a2c40;--theme-edge:#486786;--theme-accent:#8ac9ee;--theme-button:#274962}
+.game[data-theme="violet"]{--theme-bg:#211a30;--theme-panel:#30253f;--theme-edge:#75608b;--theme-accent:#d3b5f5;--theme-button:#4b3861}
+.game[data-theme="copper"]{--theme-bg:#2b1c18;--theme-panel:#3e2b23;--theme-edge:#947158;--theme-accent:#efba83;--theme-button:#65432f}
+body:has(.game[data-theme="ocean"]){background:#101c2c!important}
+body:has(.game[data-theme="violet"]){background:#211a30!important}
+body:has(.game[data-theme="copper"]){background:#2b1c18!important}
+.game:not([data-theme="workshop"]){background:var(--theme-bg);--dashboard-bg:var(--theme-bg);--dashboard-line:var(--theme-edge);--dashboard-accent:var(--theme-accent)}
+.game:not([data-theme="workshop"]) :is(.topbar,.main-nav){background:var(--theme-bg)!important;border-color:var(--theme-edge)!important}
+.game:not([data-theme="workshop"]) :is(.ops-dashboard,.ops-kpi,.ops-growth,.ops-focus,.line-panel,.machine-card,.role-card,.staff-desk,.staff-assignments,.warehouse-total,.stock-card,.technology-tree,.capital-card,.qc-game,.qc-invite,.theme-shop,.mail-dropdown,.mail-body){background:var(--theme-panel)!important;border-color:var(--theme-edge)!important}
+.game:not([data-theme="workshop"]) :is(.primary-button,.brand-mark){background:var(--theme-accent)!important;color:#15202a!important}
+.game:not([data-theme="workshop"]) :is(.secondary-button,.main-nav button.active){background:var(--theme-button)!important;color:#f4eee8!important;border-color:var(--theme-edge)!important}
+.game:not([data-theme="workshop"]) :is(.eyebrow,.ops-kicker,.theme-card h3){color:var(--theme-accent)!important}

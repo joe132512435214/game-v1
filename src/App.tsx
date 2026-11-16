@@ -7,7 +7,7 @@ import { Analytics } from '@vercel/analytics/react';
 
 type MachineId = 'miner' | 'smelter' | 'press' | 'assembler' | 'copperMiner' | 'copperSmelter' | 'wiremill' | 'circuitpress' | 'beamMill' | 'coilWinder' | 'motorworks';
 type StockId = 'ore' | 'ingot' | 'plate' | 'parts' | 'copperOre' | 'copperIngot' | 'wire' | 'circuits' | 'beams' | 'coils' | 'motors';
-type Page = 'factory' | 'staff' | 'warehouse' | 'research' | 'store' | 'capital';
+type Page = 'factory' | 'staff' | 'warehouse' | 'research' | 'store' | 'capital' | 'extras';
 type CapitalId = 'powerGrid' | 'miningNetwork' | 'freightNetwork' | 'safetySystems';
 type CharityId = 'apprenticeships' | 'community' | 'environment' | 'relief';
 type CharityDonation = {cause:CharityId;amount:number;rep:number;at:number};
@@ -16,7 +16,77 @@ type StockFlowMode = 'balanced' | 'stockpile' | 'feed';
 type IntermediateStock = 'ingot' | 'wire';
 type FreightRoute='iron'|'copper';
 type VehicleTier=0|1|2|3;
+type FactoryTheme='workshop'|'ocean'|'violet'|'copper';
+const FACTORY_THEMES:{id:FactoryTheme;name:string;colours:string[];cost:number}[]=[
+ {id:'workshop',name:'Workshop Green',colours:['#171f1b','#304b37','#d3a36c'],cost:0},
+ {id:'ocean',name:'Ocean Blue',colours:['#101c2c','#243e59','#8ac9ee'],cost:2},
+ {id:'violet',name:'Midnight Violet',colours:['#211a30','#44345b','#d3b5f5'],cost:2},
+ {id:'copper',name:'Copper Works',colours:['#2b1c18','#55372b','#efba83'],cost:2}
+];
+const QC_COOLDOWN=180;
+const qcTokenReward=(correct:number)=>correct===10?2:correct>=7?1:0;
+function normaliseStyle(saved:any){
+ const unlockedThemes:FactoryTheme[]=['workshop',...FACTORY_THEMES.filter(t=>t.id!=='workshop'&&Array.isArray(saved.unlockedThemes)&&saved.unlockedThemes.includes(t.id)).map(t=>t.id)];
+ const theme:FactoryTheme=unlockedThemes.includes(saved.theme)?saved.theme:'workshop';
+ return {styleTokens:Math.max(0,Math.floor(Number(saved.styleTokens)||0)),unlockedThemes,theme,
+   qcReadyAt:Math.max(0,Number(saved.qcReadyAt)||0),qcSession:null as string|null};
+}
+function buyFactoryTheme(s:GameState,id:FactoryTheme):GameState{
+ const theme=FACTORY_THEMES.find(t=>t.id===id);if(!theme)return s;
+ if(s.unlockedThemes.includes(id))return {...s,theme:id};
+ if(s.styleTokens<theme.cost)return s;
+ return {...s,styleTokens:s.styleTokens-theme.cost,unlockedThemes:[...s.unlockedThemes,id],theme:id};
+}
+function startQualityControl(s:GameState,id:string):GameState{
+ if(s.miner===0||s.qcSession||s.contractClock<s.qcReadyAt||s.powerShortage||s.powerCutEvent||s.breakdownEvent||s.cyberAttackEvent||s.writeOffEvent)return s;
+ return {...s,qcSession:id,qcReadyAt:s.contractClock+QC_COOLDOWN};
+}
+function finishQualityControl(s:GameState,id:string,correct:number):GameState{
+ if(s.qcSession!==id)return s;
+ const score=Math.max(0,Math.min(10,Math.floor(correct)));
+ return {...s,qcSession:null,styleTokens:s.styleTokens+qcTokenReward(score)};
+}
+type QCItem={id:number;defect:'crack'|'bolt'|null};
+type QCRound={index:number;correct:number;mistakes:number;done:boolean};
+function judgeQuality(round:QCRound,item:QCItem,reject:boolean|null):QCRound{
+ if(round.done||item.id!==round.index)return round;
+ const correct=reject!==null&&reject===Boolean(item.defect);
+ const next={index:round.index+1,correct:round.correct+(correct?1:0),mistakes:round.mistakes+(correct?0:1),done:false};
+ next.done=next.index>=10||next.mistakes>=3;return next;
+}
+function QualityControlGame({session,playing,onFinish,onClose}:{session:string;playing:boolean;onFinish:(id:string,correct:number)=>void;onClose:()=>void}){
+ const [items]=useState<QCItem[]>(()=>Array.from({length:10},(_,id)=>({id,defect:Math.random()<.5?null:Math.random()<.5?'crack':'bolt'})));
+ const [round,setRound]=useState<QCRound>({index:0,correct:0,mistakes:0,done:false});
+ const timer=useRef<ReturnType<typeof setTimeout>|null>(null);
+ const remaining=useRef(2500);
+ const pick=(reject:boolean|null)=>{
+   if(!playing||round.done)return;
+   if(timer.current)clearTimeout(timer.current);
+   setRound(v=>judgeQuality(v,items[round.index],reject));
+ };
+ useEffect(()=>{remaining.current=2500;},[round.index]);
+ useEffect(()=>{
+   if(round.done||!playing)return;
+   const started=Date.now();
+   timer.current=setTimeout(()=>setRound(v=>judgeQuality(v,items[round.index],null)),remaining.current);
+   return()=>{if(timer.current)clearTimeout(timer.current);remaining.current=Math.max(0,remaining.current-(Date.now()-started));};
+ },[round.index,round.done,playing,items]);
+ useEffect(()=>{if(round.done)onFinish(session,round.correct);},[round.done,round.correct,session,onFinish]);
+ const item=items[Math.min(9,round.index)];
+ return <section className="qc-game" aria-label="Quality Control mini-game">
+   <div className="qc-game-heading"><div><span className="eyebrow">QUALITY CONTROL</span><h2>{round.done?'Shift complete':'Inspect the next plate'}</h2></div><button type="button" className="secondary-button" onClick={onClose}>{round.done?'BACK TO THEMES':'LEAVE SHIFT'}</button></div>
+   {round.done?<div className="qc-result" role="status"><b>{round.correct}/10 correct</b><h3>{qcTokenReward(round.correct)?'Nice work! +'+qcTokenReward(round.correct)+' Style Token'+(qcTokenReward(round.correct)>1?'s':''):'No tokens this time'}</h3><p>{round.mistakes>=3?'Three mistakes ended this shift. ':''}Get at least 7 correct to earn a token. A perfect shift earns 2.</p></div>:<>
+    <p>Keep good plates. Reject plates with a crack or a missing corner bolt. You have 2.5 seconds per plate; three mistakes end the shift.</p>
+    <div className="qc-score"><span>PLATE {round.index+1}/10</span><span>{round.correct} CORRECT</span><span>{3-round.mistakes} LIVES</span></div>
+    <div className="qc-conveyor"><svg viewBox="0 0 240 160" role="img" aria-label="Inspect this plate visually: check for cracks and all four corner bolts"><rect x="40" y="20" width="160" height="120" rx="12" fill="#aab8bd" stroke="#344750" strokeWidth="6"/><rect x="58" y="38" width="124" height="84" rx="5" fill="#72868d"/>{[[56,36],[184,36],[56,124],[184,124]].map(([x,y],i)=>item.defect==='bolt'&&i===3?<circle key={i} cx={x} cy={y} r="7" fill="#253238"/>:<g key={i}><circle cx={x} cy={y} r="7" fill="#dbe7e9" stroke="#344750" strokeWidth="2"/><path d={'M'+(x-4)+' '+y+'h8'} stroke="#344750" strokeWidth="2"/></g>)}{item.defect==='crack'&&<path d="M105 20l14 27-15 15 28 21-14 19 24 38" fill="none" stroke="#2f1917" strokeWidth="6"/>}</svg><span className="qc-accessible-defect">{item.defect==='crack'?'Crack through the plate':item.defect==='bolt'?'Bottom-right bolt is missing':'All bolts present; no cracks'}</span></div>
+    <div className="qc-actions"><button type="button" disabled={!playing} className="qc-reject" onClick={()=>pick(true)}>✕ REJECT</button><button type="button" disabled={!playing} className="qc-keep" onClick={()=>pick(false)}>✓ KEEP</button></div>
+    <p role="status">{playing?'Factory production continues while you play.':'Shift paused with your factory. Resume the factory to continue.'}</p>
+   </>}
+ </section>;
+}
+
 type GameState = {
+  styleTokens:number; unlockedThemes:FactoryTheme[]; theme:FactoryTheme; qcReadyAt:number; qcSession:string|null;
   flowMode:Record<IntermediateStock,StockFlowMode>; freightTier:VehicleTier; drivers:number; driverAssignments:Record<FreightRoute,number>; oreAtMine:number; copperAtMine:number; drones:number; droneAssignments:Record<FreightRoute,number>; freightRouteLevels:Record<FreightRoute,number>; freightBoostSeconds:Record<FreightRoute,number>; freightBoostReadyAt:Record<FreightRoute,number>; freightLastMined:Record<FreightRoute,number>; freightLastDelivered:Record<FreightRoute,number>; cash:number; gears:number; starterPowerCredit:number; powerShortage:boolean; gearShipmentProgress:number; ore:number; beams:number; coils:number; motors:number; ingot:number; plate:number; parts:number; copperOre:number; copperIngot:number; wire:number; circuits:number;
   miner:number; smelter:number; press:number; assembler:number; copperMiner:number; copperSmelter:number; wiremill:number; circuitpress:number; beamMill:number; coilWinder:number; motorworks:number;
   tier_miner:number; tier_smelter:number; tier_press:number; tier_assembler:number; tier_copperMiner:number; tier_copperSmelter:number; tier_wiremill:number; tier_circuitpress:number; tier_beamMill:number; tier_coilWinder:number; tier_motorworks:number;
@@ -27,6 +97,7 @@ type GameState = {
 };
 const SAVE_KEY = 'ironworks-tycoon-save-v2';
 const fresh:GameState = {
+  styleTokens:0,unlockedThemes:['workshop'],theme:'workshop',qcReadyAt:0,qcSession:null,
   flowMode:{ingot:'balanced',wire:'balanced'},freightTier:0,drivers:0,driverAssignments:{iron:0,copper:0},oreAtMine:0,copperAtMine:0,drones:0,droneAssignments:{iron:0,copper:0},freightRouteLevels:{iron:0,copper:0},freightBoostSeconds:{iron:0,copper:0},freightBoostReadyAt:{iron:0,copper:0},freightLastMined:{iron:0,copper:0},freightLastDelivered:{iron:0,copper:0},cash:0,gears:0,starterPowerCredit:15,powerShortage:false,gearShipmentProgress:0,ore:0,beams:0,coils:0,motors:0,ingot:0,plate:0,parts:0,copperOre:0,copperIngot:0,wire:0,circuits:0,
   miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0,beamMill:0,coilWinder:0,motorworks:0,
   tier_miner:0,tier_smelter:0,tier_press:0,tier_assembler:0,tier_copperMiner:0,tier_copperSmelter:0,tier_wiremill:0,tier_circuitpress:0,tier_beamMill:0,tier_coilWinder:0,tier_motorworks:0,
@@ -325,7 +396,7 @@ function loadGame():GameState{
     const legacyXpFromMissions=(Array.isArray(saved.missionsClaimed)?saved.missionsClaimed:[]).reduce((total:number,id:number)=>total+(missionXp[id]||0),0);
     const migratedExperience=saved.experience!==undefined?Math.max(0,Number(saved.experience)||0):Math.max(legacyXpFromContracts+legacyXpFromMissions,Number(saved.assembler)>0?270:Number(saved.press)>0?165:Number(saved.smelter)>0?60:Number(saved.miner)>0?25:0);
     const legacyShipmentXp=saved.xpMigrationVersion===undefined?Math.floor(Math.max(0,Number(saved.sold)||0)/500):0;
-    return {...fresh,...saved,
+    return {...fresh,...saved,...normaliseStyle(saved),
       freightTier:Math.max(0,Math.min(3,Math.floor(Number(saved.freightTier)||0))) as VehicleTier,
       drivers:saved.drivers!==undefined?Math.max(0,Math.floor(Number(saved.drivers)||0)):(Number(saved.copperMiner)>0?2:Number(saved.miner)>0||(completed.includes('first-ore')||saved.acceptedContracts?.includes('first-ore'))?1:0),
       driverAssignments:{
@@ -633,7 +704,9 @@ function MachineArt({id,active,broken,lights,cycleSeconds,progress}:{id:MachineI
 
 export default function App(){
   const [s,setS]=useState<GameState>(loadGame);
+  const [qcView,setQcView]=useState<string|null>(null);
   const [page,setPage]=useState<Page>('factory');
+  useEffect(()=>{if(page!=='extras'&&qcView){setQcView(null);setS(v=>({...v,qcSession:null}));}},[page,qcView]);
   const [staffTab,setStaffTab]=useState<'maintenance'|'dispatch'|'haulage'>('maintenance');
   const [factoryView,setFactoryView]=useState<'overview'|'equipment'>('overview');
   const [showDashboardDetails,setShowDashboardDetails]=useState(false);
@@ -1248,8 +1321,8 @@ export default function App(){
     setS(v=>v.boostSeconds[id]>0||v.cash<offer.cost?v:{...v,cash:v.cash-offer.cost,boostSeconds:{...v.boostSeconds,[id]:offer.duration}});
     setNotice(offer.name+' activated for '+boostClock(offer.duration)+' · '+fmt(offer.cost)+' RVT spent.');
   };
-  const reset=()=>{setStockPromptDismissedUntil(0);setS(fresh);setRunning(true);setSpeed(1);setShowReset(false);setNotice('A fresh factory. Let’s get to work!');};
-  return <div className="game">
+  const reset=()=>{setStockPromptDismissedUntil(0);setQcView(null);setS(v=>({...fresh,styleTokens:v.styleTokens,unlockedThemes:v.unlockedThemes,theme:v.theme,qcReadyAt:Math.max(0,v.qcReadyAt-v.contractClock)}));setRunning(true);setSpeed(1);setShowReset(false);setNotice('A fresh factory. Let’s get to work!');};
+  return <div className="game" data-theme={s.theme}>
     {contractToast&&<div className={'contract-mini-toast '+contractToast.tone} role="status" aria-live="polite"><span aria-hidden="true">{contractToast.tone==='good'?'✓':'!'}</span><p>{contractToast.message}</p><button type="button" aria-label="Dismiss contract notification" onClick={()=>setContractToast(null)}>×</button></div>}
     <header className="topbar">
       <div className="brand"><span className="brand-mark"><Factory size={23}/></span><span><b>ORE &amp; ORDER</b><small>FACTORY TYCOON</small></span></div>
@@ -1268,6 +1341,7 @@ export default function App(){
         <button className={page==='research'?'active':''} onClick={()=>setPage('research')}><FlaskConical size={16}/> Research <span>{s.researched.filter(id=>technologies.some(t=>t.id===id)).length}/{technologies.length}</span></button>
         <button className={page==='store'?'active':''} onClick={()=>setPage('store')}><Zap size={16}/> Boost Store</button>
         <button className={page==='capital'?'active':''} onClick={()=>setPage('capital')}><TrendingUp size={16}/> Capital Projects</button>
+        <button className={page==='extras'?'active':''} onClick={()=>setPage('extras')}><Gem size={16}/> Quality & Themes <span>{s.styleTokens}</span></button>
       </nav>
       <aside className="mail-dock">
         <button className="mail-trigger" onClick={()=>setInboxOpen(v=>!v)} aria-expanded={inboxOpen}><span>✉</span><b>ORDER INBOX</b><em>{incomingMail.length}</em><small>{inboxOpen?'▲':'▼'}</small></button>
@@ -1296,6 +1370,11 @@ export default function App(){
         <button type="button" className="secondary-button" onClick={()=>setPage('warehouse')}>VIEW STOCK <ArrowUpRight size={14}/></button>
         <button type="button" className="stock-sale-reminder-dismiss" aria-label="Dismiss stock reminder for 3 game minutes" onClick={()=>setStockPromptDismissedUntil(s.contractClock+180)}>×</button>
       </section>}
+      {page==='extras'&&<div className="page-content">
+        <div className="welcome-row"><div><span className="eyebrow">AFTER-HOURS EXTRAS</span><h1>Quality & Themes</h1><p>Earn cosmetic rewards by inspecting products. Themes never affect production, prices or difficulty.</p></div><div className="staff-summary"><b>{s.styleTokens}</b><span>STYLE TOKENS</span></div></div>
+        {qcView?<QualityControlGame key={qcView} session={qcView} playing={economyActive&&!s.powerShortage} onFinish={(id,correct)=>setS(v=>finishQualityControl(v,id,correct))} onClose={()=>{setQcView(null);setS(v=>({...v,qcSession:null}));}}/>:<section className="qc-invite"><div><span className="eyebrow">OPTIONAL · ABOUT 25 SECONDS</span><h2>Quality Control</h2><p>Inspect 10 plates. Reject cracks and missing bolts. Three mistakes end your shift. Get 7 correct for 1 Style Token, or all 10 for 2.</p><small>One shift every 3 game minutes. Leaving or reloading ends the shift without a reward; no money or reputation is lost.</small></div><button type="button" className="primary-button" disabled={s.miner===0||!economyActive||s.powerShortage||s.contractClock<s.qcReadyAt} onClick={()=>{if(s.miner===0||!economyActive||s.powerShortage||s.contractClock<s.qcReadyAt)return;const id=Date.now()+'-'+Math.random();setS(v=>startQualityControl(v,id));setQcView(id);}}>{s.miner===0?'BUILD YOUR FIRST MINE':s.contractClock<s.qcReadyAt?'NEXT SHIFT · '+boostClock(s.qcReadyAt-s.contractClock):!economyActive||s.powerShortage?'RESUME PRODUCTION TO PLAY':'START QUALITY CHECK'}</button></section>}
+        <section className="theme-shop"><div className="section-heading"><div><span className="eyebrow">FACTORY COLOURS</span><h2>Choose your theme</h2><p>Unlock a colour scheme once, then switch whenever you like. Themes and tokens stay with your save, even after a factory reset.</p></div></div><div className="theme-grid">{FACTORY_THEMES.map(theme=>{const owned=s.unlockedThemes.includes(theme.id);return <article className="theme-card" key={theme.id}><div className="theme-swatches" aria-hidden="true">{theme.colours.map(colour=><span key={colour} style={{background:colour}}/>)}</div><h3>{theme.name}</h3><button type="button" className={s.theme===theme.id?'primary-button':'secondary-button'} aria-pressed={s.theme===theme.id} disabled={!owned&&s.styleTokens<theme.cost} onClick={()=>setS(v=>buyFactoryTheme(v,theme.id))}>{s.theme===theme.id?'SELECTED':owned?'USE THEME':'UNLOCK · '+theme.cost+' STYLE TOKENS'}</button></article>})}</div></section>
+      </div>}
       {page==='factory'&&<div className="page-content">
         <div className="factory-view-toolbar"><div><span className="eyebrow">FACTORY CONTROL</span><strong>{factoryView==='overview'?'Overview':'Equipment floor'}</strong></div><div className="factory-view-switch" role="tablist" aria-label="Factory view"><button type="button" role="tab" aria-selected={factoryView==='overview'} className={factoryView==='overview'?'selected':''} onClick={()=>setFactoryView('overview')}><TrendingUp size={15}/> Dashboard</button><button type="button" role="tab" aria-selected={factoryView==='equipment'} className={factoryView==='equipment'?'selected':''} onClick={()=>setFactoryView('equipment')}><Factory size={15}/> Machines</button></div></div>
         {factoryView==='overview'&&<>

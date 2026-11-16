@@ -8,7 +8,7 @@ import ts from 'typescript';
 const root=dirname(dirname(fileURLToPath(import.meta.url)));
 const folder=await mkdtemp(join(root,'.contract-test-'));
 const source=await readFile(join(root,'src/App.tsx'),'utf8');
-const output=ts.transpileModule(source+'\nexport {fresh,goods,machines,contracts,issueRepeatOrder,estimateContractSeconds,orderPayout,orderExpiry,updateContractOffers,deliverRepeatOrder,closeRepeatOrder,contractStockTarget,stockSaleReminder,sellSurplusStock,salesWages,salesCost,SALES_UNITS_PER_SECOND,payrollPerMinute,loadGame,CONTRACT_TERMS};',{
+const output=ts.transpileModule(source+'\nexport {fresh,goods,machines,contracts,issueRepeatOrder,estimateContractSeconds,orderPayout,orderExpiry,updateContractOffers,deliverRepeatOrder,closeRepeatOrder,contractStockTarget,stockSaleReminder,sellSurplusStock,salesWages,salesCost,SALES_UNITS_PER_SECOND,payrollPerMinute,qcTokenReward,judgeQuality,startQualityControl,finishQualityControl,buyFactoryTheme,normaliseStyle,loadGame,CONTRACT_TERMS};',{
   compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.ReactJSX}
 }).outputText;
 await writeFile(join(folder,'game.mjs'),output);
@@ -191,4 +191,53 @@ test('later hires retain higher wages and cost; first discount is counted once',
  assert.equal(game.salesWages(0),0);assert.equal(game.salesWages(2),48);assert.equal(game.salesWages(3),84);
  s.salespeople=2;assert.equal(game.payrollPerMinute(s),48+2*8);
  assert.equal(game.salesCost(s),2700);
+});
+
+test('QC rewards practice without awarding factory cash or reputation',()=>{
+ assert.equal(game.qcTokenReward(6),0);assert.equal(game.qcTokenReward(7),1);assert.equal(game.qcTokenReward(10),2);
+ const s=factory();s.qcSession='shift';const next=game.finishQualityControl(s,'shift',10);
+ assert.equal(next.styleTokens,2);assert.equal(next.cash,s.cash);assert.equal(next.reputation,s.reputation);
+ assert.strictEqual(game.finishQualityControl(next,'shift',10),next);
+ assert.strictEqual(game.finishQualityControl(s,'wrong',10),s);
+});
+test('QC judges defects, clean plates and timeouts and prevents repeated answers',()=>{
+ let r={index:0,correct:0,mistakes:0,done:false};
+ r=game.judgeQuality(r,{id:0,defect:'crack'},true);assert.equal(r.correct,1);
+ assert.strictEqual(game.judgeQuality(r,{id:0,defect:'crack'},true),r);
+ r=game.judgeQuality(r,{id:1,defect:null},false);assert.equal(r.correct,2);
+ r=game.judgeQuality(r,{id:2,defect:'bolt'},null);assert.equal(r.mistakes,1);
+ r=game.judgeQuality(r,{id:3,defect:null},true);
+ r=game.judgeQuality(r,{id:4,defect:'crack'},false);assert.equal(r.done,true);assert.equal(r.mistakes,3);
+ assert.strictEqual(game.judgeQuality(r,{id:5,defect:null},false),r);
+});
+test('perfect QC shift ends after ten items',()=>{
+ let r={index:0,correct:0,mistakes:0,done:false};
+ for(let i=0;i<10;i++)r=game.judgeQuality(r,{id:i,defect:i%2?'bolt':null},!!(i%2));
+ assert.deepEqual(r,{index:10,correct:10,mistakes:0,done:true});
+});
+test('theme purchase spends cosmetic tokens once and free switching preserves economy',()=>{
+ const s=factory();assert.strictEqual(game.buyFactoryTheme(s,'ocean'),s);
+ s.styleTokens=4;const ocean=game.buyFactoryTheme(s,'ocean');assert.equal(ocean.styleTokens,2);assert.equal(ocean.theme,'ocean');
+ assert.equal(ocean.cash,s.cash);assert.equal(ocean.experience,s.experience);
+ const green=game.buyFactoryTheme(ocean,'workshop');const again=game.buyFactoryTheme(green,'ocean');
+ assert.equal(again.styleTokens,2);assert.equal(again.unlockedThemes.filter(x=>x==='ocean').length,1);
+ const violet=game.buyFactoryTheme(again,'violet');assert.equal(violet.styleTokens,0);
+ assert.strictEqual(game.buyFactoryTheme(violet,'copper'),violet);
+});
+test('old saves get safe style defaults and purchased themes survive reload',()=>{
+ assert.deepEqual(game.normaliseStyle({}),{styleTokens:0,unlockedThemes:['workshop'],theme:'workshop',qcReadyAt:0,qcSession:null});
+ const style=game.normaliseStyle({styleTokens:3,unlockedThemes:['violet','bogus','violet'],theme:'violet',qcReadyAt:600,qcSession:'abandoned'});
+ assert.equal(style.theme,'violet');assert.equal(style.styleTokens,3);assert.equal(style.qcSession,null);assert.equal(style.qcReadyAt,600);
+ assert.deepEqual(style.unlockedThemes,['workshop','violet']);
+ assert.equal(game.normaliseStyle({theme:'ocean',styleTokens:-10}).theme,'workshop');
+ assert.equal(game.normaliseStyle({styleTokens:-10}).styleTokens,0);
+});
+
+test('QC start consumes a persistent cooldown and blocks simultaneous shifts',()=>{
+ const s=factory();s.qcReadyAt=0;const start=game.startQualityControl(s,'a');
+ assert.equal(start.qcReadyAt,s.contractClock+180);assert.equal(start.qcSession,'a');
+ assert.strictEqual(game.startQualityControl(start,'b'),start);
+ const done=game.finishQualityControl(start,'a',7);assert.strictEqual(game.startQualityControl(done,'b'),done);
+ done.contractClock=done.qcReadyAt;assert.equal(game.startQualityControl(done,'b').qcSession,'b');
+ const blocked=factory();blocked.powerShortage=true;assert.strictEqual(game.startQualityControl(blocked,'x'),blocked);
 });
