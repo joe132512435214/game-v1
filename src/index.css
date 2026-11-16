@@ -1087,3 +1087,42 @@ button:focus-visible,select:focus-visible{outline:2px solid #f1c48d;outline-offs
 .charity-milestone>small{display:block;font:10px/1.65 'IBM Plex Mono',monospace;color:#b6bead;margin-top:8px}
 .charity-amount-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
 @media(max-width:560px){.charity-amount-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.charity-milestone{padding:11px}}
+
+
+/* Tactile factory rewards. Compact enough to celebrate without blocking gameplay. */
+.reward-splash{
+  position:fixed;right:22px;top:102px;z-index:95;display:flex;
+  align-items:flex-start;gap:12px;width:min(395px,calc(100vw - 28px));
+  background:#233126;border:1px solid #90ae7f;border-left:4px solid #b8d28e;
+  box-shadow:0 15px 45px #07120b91,0 0 0 1px #b4e4a318;
+  border-radius:5px;padding:15px 13px;pointer-events:auto;
+  animation:reward-enter .4s cubic-bezier(.15,1.15,.3,1) both;
+}
+.reward-splash.reward-contract{border-color:#e4bc7b;background:#353528;border-left-color:#f1be64}
+.reward-splash.reward-upgrade{border-color:#8fb9c0;background:#233331;border-left-color:#83cdd1}
+.reward-splash-mark{
+  background:#3e5640;border:1px solid #73916b;border-radius:6px;
+  display:grid;place-items:center;min-width:45px;height:45px;color:#d2efb9;
+  animation:reward-punch .6s cubic-bezier(.2,1.5,.3,1) .18s both
+}
+.reward-contract .reward-splash-mark{background:#554a32;border-color:#b99961;color:#ffdf9e}
+.reward-upgrade .reward-splash-mark{background:#304c4d;border-color:#689c9d;color:#b6eaf0}
+.reward-splash-content{flex:1;min-width:0}
+.reward-splash-content>small{font:700 9px 'IBM Plex Mono',monospace;letter-spacing:1px;color:#a9cf9d}
+.reward-contract .reward-splash-content>small{color:#ebc282}
+.reward-splash-content h3{font-size:20px;letter-spacing:-.5px;margin:3px 0 2px;color:#f3e7ce}
+.reward-splash-content p{font-size:11px;color:#b7c6b7;margin:0 0 10px;line-height:1.5}
+.reward-splash-values{display:flex;gap:6px;flex-wrap:wrap}
+.reward-splash-values b{
+  display:inline-flex;padding:5px 8px;border:1px solid #7e976c;
+  background:#354638;color:#ddf0c7;border-radius:3px;
+  font:700 11px 'IBM Plex Mono',monospace;
+  animation:reward-value-pop .35s ease-out .18s both
+}
+.reward-contract .reward-splash-values b{background:#52452f;border-color:#a98a5d;color:#ffdea1}
+.reward-splash>button{border:0;background:transparent;color:#bed2b8;font-size:22px;line-height:1;cursor:pointer;padding:0 3px}
+@keyframes reward-enter{from{opacity:0;transform:translateY(-21px) scale(.94)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes reward-punch{from{transform:scale(.55) rotate(-15deg)}70%{transform:scale(1.16) rotate(3deg)}to{transform:scale(1) rotate(0)}}
+@keyframes reward-value-pop{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:620px){.reward-splash{top:78px;right:10px;padding:11px;width:min(340px,calc(100vw - 20px))}.reward-splash-content h3{font-size:18px}}
+@media(prefers-reduced-motion:reduce){.reward-splash,.reward-splash-mark,.reward-splash-values b{animation:none!important}}
