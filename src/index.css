@@ -1068,3 +1068,22 @@ button:focus-visible,select:focus-visible{outline:2px solid #f1c48d;outline-offs
   .charity-cause{padding:12px 35px 12px 11px}
   .charity-history>div>span{min-width:100%}
 }
+
+
+/* Cumulative charity reputation milestone, not a timer-based reward. */
+.charity-milestone{
+  margin:17px 0 4px;padding:14px 16px;
+  border:1px solid #756448;border-radius:4px;
+  background:linear-gradient(100deg,#342f24,#222c24);
+}
+.charity-milestone-title{
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:7px;margin-bottom:11px;
+}
+.charity-milestone-title span{font:600 10px 'IBM Plex Mono',monospace;color:#c6c9b7;letter-spacing:.5px}
+.charity-milestone-title b{font:700 11px 'IBM Plex Mono',monospace;color:#edc08a}
+.charity-milestone-track{height:8px;background:#485041;border-radius:3px;overflow:hidden}
+.charity-milestone-track i{display:block;height:100%;background:linear-gradient(90deg,#a8bd83,#e7b276);border-radius:3px;transition:width .3s}
+.charity-milestone>small{display:block;font:10px/1.65 'IBM Plex Mono',monospace;color:#b6bead;margin-top:8px}
+.charity-amount-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:560px){.charity-amount-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.charity-milestone{padding:11px}}
