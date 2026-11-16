@@ -273,13 +273,13 @@ function loadPixelMachine(id:MachineId):Promise<PixelMachineArt>{
 function MachineIcon({id,size=36}:{id:MachineId;size?:number}){
   const [art,setArt]=useState<PixelMachineArt|null>(null);
   useEffect(()=>{let mounted=true;loadPixelMachine(id).then(v=>{if(mounted)setArt(v)}).catch(()=>{});return()=>{mounted=false;};},[id]);
-  return art?<img className="pixel-machine-icon" src={art.icon} alt={machines.find(m=>m.id===id)?.name||'Machine'} width={size} height={size}/>:<span className="pixel-machine-placeholder" style={{width:size,height:size}} aria-hidden="true">⚙</span>;
+  return art?<img className="pixel-machine-icon" src={art.icon} alt={machines.find(m=>m.id===id)?.name||'Machine'} width={size} height={size}/>:<span className="pixel-machine-fallback" role="img" aria-label={machines.find(m=>m.id===id)?.name||'Machine'} style={{width:size,height:size,backgroundImage:'url('+machineSheetUrl(id)+')'}}/>;
 }
 
 function MachineArt({id,active,broken,lights,cycleSeconds,progress}:{id:MachineId;active:boolean;broken:boolean;lights:('on'|'off'|'empty')[];cycleSeconds:number;progress:number}){
- const [sprite,setSprite]=useState<PixelMachineArt|null>(null);
+ const [sprite,setSprite]=useState<PixelMachineArt>({sheet:machineSheetUrl(id),icon:''});
  useEffect(()=>{let mounted=true;loadPixelMachine(id).then(v=>{if(mounted)setSprite(v)}).catch(()=>{if(mounted)setSprite({sheet:machineSheetUrl(id),icon:''})});return()=>{mounted=false;};},[id]);
- const spriteReady=!!sprite;
+ const spriteReady=!!sprite.sheet;
  const safeCycle=cycleSeconds>0?cycleSeconds:8;
  const electrical=['copperMiner','copperSmelter','wiremill','circuitpress','coilWinder'].includes(id);
  const copper=electrical?'#bd8054':'#bd985e';
