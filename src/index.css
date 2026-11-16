@@ -1175,3 +1175,62 @@ button:focus-visible,select:focus-visible{outline:2px solid #f1c48d;outline-offs
 .machine-art:not(.running) .motor-works-asset .motor-rotor{animation-play-state:paused}
 @keyframes motorRotorSpin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.machine-art .motor-works-asset .motor-rotor{animation:none!important}}
+
+
+/* Supply-chain gameplay: fast to read, simple to act on */
+.machine-balance{
+  margin:9px 0;padding:10px 11px;background:#1b2820;
+  border:1px solid #455c46;border-radius:4px
+}
+.machine-balance-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.machine-balance-head span{font:600 9px 'IBM Plex Mono',monospace;color:#b7c6b4;letter-spacing:.5px}
+.machine-balance-head b{font:600 12px 'IBM Plex Mono',monospace;color:#b7deac}
+.machine-balance-head b.low{color:#e1b67e}
+.machine-balance-track{height:7px;margin:8px 0;background:#38493c;border-radius:2px;overflow:hidden}
+.machine-balance-track i{
+  display:block;height:100%;background:#8cb582;border-radius:2px;
+  transition:width .4s ease-out
+}
+.machine-balance-head:has(b.low)+.machine-balance-track i{background:#d3a36a}
+.machine-balance small{display:block;font-size:10px;line-height:1.5;color:#b6c2b3}
+.machine-overclock-row{
+  display:flex;justify-content:space-between;align-items:center;gap:12px;
+  margin:9px 0;padding:11px;background:#2c2c25;
+  border:1px solid #665b41;border-radius:4px
+}
+.machine-overclock-row>div{flex:1;min-width:0}
+.machine-overclock-row b{display:flex;align-items:center;gap:6px;font:700 10px 'IBM Plex Mono',monospace;color:#edc68d}
+.machine-overclock-row b svg{color:#e9b45c}
+.machine-overclock-row small{display:block;margin-top:5px;font-size:10px;line-height:1.5;color:#c4bba5}
+.machine-overclock-row .dashboard-switch{flex:0 0 auto}
+.machine-overclock-row .dashboard-switch.is-on{background:#a07644;border-color:#e2b876}
+.machine-electricity:has(+.machine-balance){margin-bottom:0}
+.factory-flow-advisor{
+  margin:0 0 16px;background:#292e24;border:1px solid #7a7651;
+  border-left:3px solid #d4b16f;border-radius:4px;padding:16px
+}
+.factory-flow-advisor h2{margin:5px 0 4px;font-size:18px;color:#e8dfce}
+.factory-flow-advisor p{margin:0 0 12px;font-size:11px;color:#c1c6b4;line-height:1.5}
+.factory-flow-picks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.factory-flow-picks button{
+  min-width:0;display:flex;align-items:center;text-align:left;gap:10px;
+  padding:11px;background:#1d281f;border:1px solid #59694f;border-radius:4px;
+  color:#e5e5d4;cursor:pointer
+}
+.factory-flow-picks button:hover{border-color:#d4ab6b;background:#2b382c}
+.factory-flow-picks button span{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
+.factory-flow-picks button b{font-size:12px}
+.factory-flow-picks button small{font-size:10px;color:#b8c7b1}
+.factory-flow-picks button strong{
+  font:700 10px 'IBM Plex Mono',monospace;color:#e7bf83;
+  white-space:nowrap
+}
+.factory-flow-picks button svg{flex-shrink:0}
+@media(max-width:720px){
+  .factory-flow-picks{grid-template-columns:1fr}
+  .factory-flow-advisor{padding:12px}
+  .machine-overclock-row{padding:9px}
+}
+@media(prefers-reduced-motion:reduce){
+  .machine-balance-track i{transition:none!important}
+}
