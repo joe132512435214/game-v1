@@ -87,6 +87,7 @@ function QualityControlGame({session,playing,onFinish,onClose}:{session:string;p
 
 type GameState = {
   styleTokens:number; unlockedThemes:FactoryTheme[]; theme:FactoryTheme; qcReadyAt:number; qcSession:string|null;
+  qualityInspectors:number;
   flowMode:Record<IntermediateStock,StockFlowMode>; freightTier:VehicleTier; drivers:number; driverAssignments:Record<FreightRoute,number>; oreAtMine:number; copperAtMine:number; drones:number; droneAssignments:Record<FreightRoute,number>; freightRouteLevels:Record<FreightRoute,number>; freightBoostSeconds:Record<FreightRoute,number>; freightBoostReadyAt:Record<FreightRoute,number>; freightLastMined:Record<FreightRoute,number>; freightLastDelivered:Record<FreightRoute,number>; cash:number; gears:number; starterPowerCredit:number; powerShortage:boolean; gearShipmentProgress:number; ore:number; beams:number; coils:number; motors:number; ingot:number; plate:number; parts:number; copperOre:number; copperIngot:number; wire:number; circuits:number;
   miner:number; smelter:number; press:number; assembler:number; copperMiner:number; copperSmelter:number; wiremill:number; circuitpress:number; beamMill:number; coilWinder:number; motorworks:number;
   tier_miner:number; tier_smelter:number; tier_press:number; tier_assembler:number; tier_copperMiner:number; tier_copperSmelter:number; tier_wiremill:number; tier_circuitpress:number; tier_beamMill:number; tier_coilWinder:number; tier_motorworks:number;
@@ -97,7 +98,7 @@ type GameState = {
 };
 const SAVE_KEY = 'ironworks-tycoon-save-v2';
 const fresh:GameState = {
-  styleTokens:0,unlockedThemes:['workshop'],theme:'workshop',qcReadyAt:0,qcSession:null,
+  styleTokens:0,unlockedThemes:['workshop'],theme:'workshop',qcReadyAt:0,qcSession:null,qualityInspectors:0,
   flowMode:{ingot:'balanced',wire:'balanced'},freightTier:0,drivers:0,driverAssignments:{iron:0,copper:0},oreAtMine:0,copperAtMine:0,drones:0,droneAssignments:{iron:0,copper:0},freightRouteLevels:{iron:0,copper:0},freightBoostSeconds:{iron:0,copper:0},freightBoostReadyAt:{iron:0,copper:0},freightLastMined:{iron:0,copper:0},freightLastDelivered:{iron:0,copper:0},cash:0,gears:0,starterPowerCredit:15,powerShortage:false,gearShipmentProgress:0,ore:0,beams:0,coils:0,motors:0,ingot:0,plate:0,parts:0,copperOre:0,copperIngot:0,wire:0,circuits:0,
   miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0,beamMill:0,coilWinder:0,motorworks:0,
   tier_miner:0,tier_smelter:0,tier_press:0,tier_assembler:0,tier_copperMiner:0,tier_copperSmelter:0,tier_wiremill:0,tier_circuitpress:0,tier_beamMill:0,tier_coilWinder:0,tier_motorworks:0,
@@ -382,7 +383,7 @@ const machineCapacity=(state:GameState,id:MachineId,speed:number,boosted:boolean
     (state.researched.includes('precision-tooling')?1.3:1)*
     (state.researched.includes('smart-robotics')?1.2:1);
   const mine=(id==='miner'||id==='copperMiner')?1+state.capitalLevels.miningNetwork*.06:1;
-  return effectiveUnits*MACHINE_BASE_RATE[id]*research*speed*(boosted?2:1)*
+  return effectiveUnits*MACHINE_BASE_RATE[id]*research*speed*(boosted?1.3:1)*(state.qualityInspectors>0&&['press','assembler','beamMill','wiremill','circuitpress','coilWinder','motorworks'].includes(id)?1+Math.min(2,state.qualityInspectors)*.08:1)*
     (state.overclocked[id]?OVERCLOCK_OUTPUT:1)*mine;
 };
 function loadGame():GameState{
@@ -397,6 +398,8 @@ function loadGame():GameState{
     const migratedExperience=saved.experience!==undefined?Math.max(0,Number(saved.experience)||0):Math.max(legacyXpFromContracts+legacyXpFromMissions,Number(saved.assembler)>0?270:Number(saved.press)>0?165:Number(saved.smelter)>0?60:Number(saved.miner)>0?25:0);
     const legacyShipmentXp=saved.xpMigrationVersion===undefined?Math.floor(Math.max(0,Number(saved.sold)||0)/500):0;
     return {...fresh,...saved,...normaliseStyle(saved),
+      qualityInspectors:Math.max(0,Math.min(2,Math.floor(Number(saved.qualityInspectors)||0))),
+      boostSeconds:{production:Math.max(0,Math.min(540,Number(saved.boostSeconds?.production)||0)),dispatch:Math.max(0,Math.min(540,Number(saved.boostSeconds?.dispatch)||0)),protection:Math.max(0,Math.min(540,Number(saved.boostSeconds?.protection)||0))},
       freightTier:Math.max(0,Math.min(3,Math.floor(Number(saved.freightTier)||0))) as VehicleTier,
       drivers:saved.drivers!==undefined?Math.max(0,Math.floor(Number(saved.drivers)||0)):(Number(saved.copperMiner)>0?2:Number(saved.miner)>0||(completed.includes('first-ore')||saved.acceptedContracts?.includes('first-ore'))?1:0),
       driverAssignments:{
@@ -452,7 +455,10 @@ const CHARITY_MILESTONE_REP=200;
 const charityMilestoneReward=(currentTotal:number,amount:number)=>
   (Math.floor((currentTotal+amount)/CHARITY_MILESTONE_RVT)-Math.floor(currentTotal/CHARITY_MILESTONE_RVT))*CHARITY_MILESTONE_REP;
 const powerCostMultiplier=(v:GameState)=>Math.max(.52,1-v.capitalLevels.powerGrid*.08);
-const WAGES={mechanic:24,sales:36,cyber:60,driver:8} as const;
+const WAGES={mechanic:24,sales:36,cyber:60,driver:8,quality:28} as const;
+const QA_HIRE_COST=750;
+const QA_TRIGGER_CONTRACT='steel-plates';
+const qaComplaintPending=(v:GameState)=>v.contractsCompleted.includes(QA_TRIGGER_CONTRACT)&&v.qualityInspectors===0;
 const FREIGHT_TIERS=[
  {name:'Small Vans',capacity:.75,cost:0,description:'Starter vans can comfortably collect from one basic mine.'},
  {name:'Small Lorries',capacity:1.8,cost:6500,description:'Move 2.4 times as much ore per driver.'},
@@ -487,7 +493,7 @@ const mineDelivery=(waiting:number,productionCapacity:number,haulCapacity:number
   return {made,delivered,waiting:Math.max(0,backlog+made-delivered)};
 };
 
-const payrollPerMinute=(v:GameState)=>v.mechanics*WAGES.mechanic+salesWages(v.salespeople)+v.cybersecuritySpecialists*WAGES.cyber+v.drivers*WAGES.driver+droneRunningCount(v)*DRONE_RUNNING_COST;
+const payrollPerMinute=(v:GameState)=>v.mechanics*WAGES.mechanic+salesWages(v.salespeople)+v.cybersecuritySpecialists*WAGES.cyber+v.qualityInspectors*WAGES.quality+v.drivers*WAGES.driver+droneRunningCount(v)*DRONE_RUNNING_COST;
 const ELECTRICITY_PER_MINUTE:Record<MachineId,number>={
   miner:6,smelter:12,press:16,assembler:22,
   copperMiner:8,copperSmelter:14,wiremill:18,circuitpress:28,
@@ -523,9 +529,9 @@ const firstFault=(v:GameState,id:MachineId)=>v.unitFaults[id].findIndex((f,i)=>i
 const repairUnit=(v:GameState,id:MachineId,index:number)=>({...v,unitFaults:{...v.unitFaults,[id]:v.unitFaults[id].map((f,i)=>i===index?0:f)},broken:{...v.broken,[id]:0}});
 
 const BOOSTS:{id:BoostId;name:string;subtitle:string;description:string;cost:number;duration:number}[]=[
-  {id:'production',name:'Production Overdrive',subtitle:'2× FACTORY OUTPUT',description:'Double every working machine’s output for three minutes. Does not increase breakdown risk.',cost:350,duration:180},
-  {id:'dispatch',name:'Express Dispatch',subtitle:'2× AUTOMATIC SALES',description:'Salespeople ship twice as much stock for three minutes. Earn the normal XP from all those sales.',cost:250,duration:180},
-  {id:'protection',name:'Machine Insurance',subtitle:'NO RANDOM BREAKDOWNS',description:'Protect all machines from new random breakdowns for three minutes. Existing faults still need repairs.',cost:300,duration:180}
+  {id:'production',name:'Production Overdrive',subtitle:'+30% FACTORY OUTPUT',description:'Increase working machine output by 30% for three minutes. Buying again extends the timer, not the power.',cost:350,duration:180},
+  {id:'dispatch',name:'Express Dispatch',subtitle:'+30% AUTOMATIC SALES',description:'Salespeople ship 30% more stock for three minutes. Buying again extends the timer, not the power.',cost:250,duration:180},
+  {id:'protection',name:'Machine Insurance',subtitle:'50% LESS BREAKDOWN RISK',description:'Halve random breakdown risk for three minutes. Existing faults still need repairs. Extra purchases extend the timer.',cost:300,duration:180}
 ];
 const boostClock=(seconds:number)=>`${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;
 
@@ -759,10 +765,10 @@ export default function App(){
       const reliabilityBonus=(n.researched.includes('reinforced-bearings')?.35:0)+(n.researched.includes('predictive-maintenance')?.2:0);
       let destroyedUnit=false;
       for(const m of machines){
-        if(boostActive.protection)break;
+        // Insurance reduces new breakdown risk rather than making machinery invulnerable.
         for(let i=0;i<n[m.id];i++){
           if(n.unitFaults[m.id][i]>0)continue;
-          if(Math.random()>=.00022*(speed===2?2:1)*(1-reliabilityBonus)*Math.max(.4,1-n.capitalLevels.safetySystems*.1))continue;
+          if(Math.random()>=.00022*(boostActive.protection?.5:1)*(speed===2?2:1)*(1-reliabilityBonus)*Math.max(.4,1-n.capitalLevels.safetySystems*.1))continue;
           // Catastrophic failures are rare and limited to established factories.
           // Protect the only ore mine and enforce a long cooldown between losses.
           const eligible=n.contractClock>=n.nextWriteOffAt&&n.experience>=500&&n.reputation>=50&&
@@ -881,7 +887,7 @@ export default function App(){
           const stockFloor=manualFlow?0:contractStockTarget(n,item.id);
           const warehouseBuffer=(item.id==='ingot'||item.id==='wire')&&n.flowMode[item.id]==='balanced'?2:0;
           const availableToSell=Math.max(0,n[item.id]-Math.max(stockFloor,warehouseBuffer));
-          const amount=Math.min(availableToSell,count*SALES_UNITS_PER_SECOND*(n.researched.includes('dispatch-systems')?1.25:1)*(1+n.capitalLevels.freightNetwork*.1)*multiplier*(boostActive.dispatch?2:1));
+          const amount=Math.min(availableToSell,count*SALES_UNITS_PER_SECOND*(n.researched.includes('dispatch-systems')?1.25:1)*(1+n.capitalLevels.freightNetwork*.1)*multiplier*(boostActive.dispatch?1.3:1));
           if(amount<=0)return;
           const revenue=amount*item.price*saleBonus;
           const total=n.salesXpProgress+revenue;
@@ -1056,7 +1062,8 @@ export default function App(){
   const activeMission=missions.find(m=>!s.missionsClaimed.includes(m.id));
   const visibleContracts=contracts.filter(c=>!s.contractsCompleted.includes(c.id)&&s.contractClock>=(s.storyNextAt[c.id]||0)&&(c.id==='first-ore'||(s.reputation>=c.minRep&&s[contractProducer[c.good]]>0&&Number.isFinite(estimateContractSeconds(s,[{good:c.good,qty:c.qty}],false)))));
   const repeatOrders=generateRepeatOrders(s);
-  const incomingMailRaw=[...visibleContracts.map(c=>({key:'story-'+c.id,title:c.name,from:'Contract Office',detail:c.detail,good:c.good,qty:c.qty,items:[{good:c.good,qty:c.qty}],kind:'STORY ORDER',due:0})),...repeatOrders.map(o=>({key:'repeat-'+o.id,title:o.name,from:o.name,detail:o.detail,good:o.good,qty:o.qty,items:o.items,kind:o.kind,due:o.due}))];
+  const qualityMail=qaComplaintPending(s)?[{key:'quality-complaint',title:'Quality complaint · action required',from:'Construction Accounts',detail:'The last steel plate consignment had inconsistent finishing. Please appoint a Quality Assurance inspector before we accept another precision order.',good:'plate' as StockId,qty:0,items:[] as OrderLine[],kind:'CUSTOMER COMPLAINT',due:0}]:[];
+  const incomingMailRaw=[...qualityMail,...visibleContracts.map(c=>({key:'story-'+c.id,title:c.name,from:'Contract Office',detail:c.detail,good:c.good,qty:c.qty,items:[{good:c.good,qty:c.qty}],kind:'STORY ORDER',due:0})),...repeatOrders.map(o=>({key:'repeat-'+o.id,title:o.name,from:o.name,detail:o.detail,good:o.good,qty:o.qty,items:o.items,kind:o.kind,due:o.due}))];
   // Stable keys prevent duplicate entries for the same offer across refreshes.
   const incomingMail=Array.from(new Map(incomingMailRaw.map(mail=>[mail.key,mail])).values());
   const nextMailWait=!s.contractsCompleted.includes('first-ore')?Infinity:s.repeatNextAt.slice(0,s.experience>=500?3:s.experience>=150?2:1).map((at,i)=>repeatOrders.some(o=>o.slot===i)?Infinity:Math.max(0,Math.max(at,s.nextContractOfferAt)-s.contractClock)).reduce((a,b)=>Math.min(a,b),Infinity);
@@ -1190,6 +1197,7 @@ export default function App(){
     if(s.contractsCompleted.includes(contract.id))return;
     if(contract.id==='first-ore'&&!s.acceptedContracts.includes('first-ore')){setNotice('Accept the opening contract before delivering goods.');return;}
     if(s.reputation<contract.minRep){setNotice('Your company needs '+contract.minRep+' reputation.');return;}
+    if(contract.id==='precision-order'&&qaComplaintPending(s)){setNotice('Customer requires a Quality Assurance inspector before accepting precision parts. See Staff.');return;}
     if(s[contract.good]<contract.qty){setNotice('You need '+contract.qty+' units in stock.');return;}
     setS(v=>({...v,[contract.good]:v[contract.good]-contract.qty,cash:v.cash+contract.reward,reputation:v.reputation+contract.rep,experience:v.experience+contract.xp,contractsCompleted:[...v.contractsCompleted,contract.id],contractAlert:{id:'story-'+contract.id,tone:'good',message:'Delivered · +'+contract.reward+' RVT · +'+contract.rep+' REP'},...(contract.id==='first-ore'&&!v.powerCutSeen?{powerCutSeen:true,powerCutEvent:true,broken:{...v.broken,miner:Math.max(v.broken.miner,30)},unitFaults:{...v.unitFaults,miner:v.unitFaults.miner.map((fault,i)=>i===0?Math.max(fault,30):fault)}}:{})}));
     if(contract.id==='first-ore')setNotice('DELIVERY SIGNED OFF · +'+contract.xp+' XP — then the lights go out. The Rockbreaker Mine has lost power.');
@@ -1209,6 +1217,8 @@ export default function App(){
       storyNextAt:{...v.storyNextAt,[contract.id]:v.contractClock+300},contractAlert:{id:'declined-story-'+contract.id+'-'+v.contractClock,tone:'bad',message:'Order declined · −1 REP'}});
     setExpandedMail(null);
   };
+  const hireQualityInspector=()=>{setS(v=>v.qualityInspectors>=2||!v.contractsCompleted.includes(QA_TRIGGER_CONTRACT)||v.cash<QA_HIRE_COST?v:{...v,cash:v.cash-QA_HIRE_COST,qualityInspectors:v.qualityInspectors+1});setNotice('Quality inspector recruited · +8% finished-goods output; +28 RVT/min payroll.');};
+  const fireQualityInspector=()=>{setS(v=>v.qualityInspectors===0?v:{...v,qualityInspectors:v.qualityInspectors-1});setNotice('Quality inspector dismissed · −28 RVT/min payroll. Precision orders require at least one inspector.');};
   const hire=(role:'mechanic'|'sales')=>{
     const cost=role==='mechanic'?mechanicCost(s):salesCost(s);
     if(s.cash<cost){setNotice('You need '+fmt(cost)+' Rivets to hire this person.');return;}
@@ -1306,10 +1316,10 @@ export default function App(){
   const buyBoost=(id:BoostId)=>{
     const offer=BOOSTS.find(b=>b.id===id);
     if(!offer)return;
-    if(s.boostSeconds[id]>0){setNotice('That boost is already running. You can buy it again after it expires.');return;}
+    if(s.boostSeconds[id]>360){setNotice('Maximum 9 minutes banked for this boost. Let the timer run down first.');return;}
     if(s.cash<offer.cost){setNotice('You need '+fmt(offer.cost)+' Rivets for '+offer.name+'.');return;}
-    setS(v=>v.boostSeconds[id]>0||v.cash<offer.cost?v:{...v,cash:v.cash-offer.cost,boostSeconds:{...v.boostSeconds,[id]:offer.duration}});
-    setNotice(offer.name+' activated for '+boostClock(offer.duration)+' · '+fmt(offer.cost)+' RVT spent.');
+    setS(v=>v.boostSeconds[id]>360||v.cash<offer.cost?v:{...v,cash:v.cash-offer.cost,boostSeconds:{...v.boostSeconds,[id]:v.boostSeconds[id]+offer.duration}});
+    setNotice(offer.name+' · +'+boostClock(offer.duration)+' added to the timer. Power does not multiply.');
   };
   const reset=()=>{setStockPromptDismissedUntil(0);setQcView(null);setS(v=>({...fresh,styleTokens:v.styleTokens,unlockedThemes:v.unlockedThemes,theme:v.theme,qcReadyAt:Math.max(0,v.qcReadyAt-v.contractClock)}));setRunning(true);setSpeed(1);setShowReset(false);setNotice('A fresh factory. Let’s get to work!');};
   return <div className="game" data-theme={s.theme}>
@@ -1326,7 +1336,7 @@ export default function App(){
     <main>
       <nav className="main-nav" aria-label="Main menu">
         <button className={page==='factory'?'active':''} onClick={()=>setPage('factory')}><Factory size={16}/> Factory</button>
-        <button className={page==='staff'?'active':''} onClick={()=>setPage('staff')}><Users size={16}/> Staff <span>{s.mechanics+s.salespeople+s.cybersecuritySpecialists+s.drivers}</span></button>
+        <button className={page==='staff'?'active':''} onClick={()=>setPage('staff')}><Users size={16}/> Staff <span>{s.mechanics+s.salespeople+s.cybersecuritySpecialists+s.drivers+s.qualityInspectors}</span></button>
         <button className={page==='warehouse'?'active':''} onClick={()=>setPage('warehouse')}><Boxes size={16}/> Warehouse</button>
         <button className={page==='research'?'active':''} onClick={()=>setPage('research')}><FlaskConical size={16}/> Research <span>{s.researched.filter(id=>technologies.some(t=>t.id===id)).length}/{technologies.length}</span></button>
         <button className={page==='store'?'active':''} onClick={()=>setPage('store')}><Zap size={16}/> Boost Store</button>
@@ -1336,12 +1346,12 @@ export default function App(){
       <aside className="mail-dock">
         <button className="mail-trigger" onClick={()=>setInboxOpen(v=>!v)} aria-expanded={inboxOpen}><span>✉</span><b>ORDER INBOX</b><em>{incomingMail.length}</em><small>{inboxOpen?'▲':'▼'}</small></button>
         {inboxOpen&&<div className="mail-dropdown"><div className="mail-heading"><strong>ORDERS</strong><small>{incomingMail.length} available</small></div>
-          {incomingMail.map(mail=>{const expanded=expandedMail===mail.key;const order=repeatOrders.find(o=>'repeat-'+o.id===mail.key);const story=contracts.find(c=>'story-'+c.id===mail.key);return <div className="mail-message" key={mail.key}>
-            <button className="mail-subject" aria-expanded={expanded} onClick={()=>setExpandedMail(expanded?null:mail.key)}><span aria-hidden="true">✉</span><span><b>{mail.title}</b><small>{mail.items.map(line=>line.qty+' × '+(goods.find(g=>g.id===line.good)?.name||line.good)).join(' · ')}</small><small>{fmt(order?orderPayout(order,s.contractClock):story?.reward??0)} RVT{order?' · '+(s.contractClock>order.due?'Late · expires '+boostClock(Math.max(0,orderExpiry(order)-s.contractClock)):boostClock(Math.max(0,order.due-s.contractClock))+' left'):''}</small></span><span aria-hidden="true">{expanded?'−':'+'}</span></button>
-            {expanded&&<div className="mail-body"><strong>Order details</strong><div className="mail-order-lines">{mail.items.map(line=><div className="mail-order-line" key={line.good}><ProductIcon id={line.good} size={25}/><b>{line.qty} × {goods.find(g=>g.id===line.good)?.name}</b><small>Available: {fmt(s[line.good])}/{line.qty}</small></div>)}</div>{order?<div className={'contract-terms difficulty-'+orderDifficulty(order)}><b>{CONTRACT_TERMS[orderDifficulty(order)].label} · {s.contractClock>order.due?'LATE DELIVERY':'ON-TIME WINDOW'}</b><strong>{fmt(orderPayout(order,s.contractClock))} RVT <small>{s.contractClock>order.due?'current reduced payout':'on-time payout'}</small></strong><span>{s.contractClock>order.due?'Late by '+boostClock(s.contractClock-order.due)+' · −2 REP total':boostClock(Math.max(0,order.due-s.contractClock))+' until deadline'}</span><span>Expires in {boostClock(Math.max(0,orderExpiry(order)-s.contractClock))}</span><small>Decline −1 REP · Late −2 REP · Expired −3 REP</small></div>:<small>No deadline</small>}<small>Reward: {fmt(order?orderPayout(order,s.contractClock):story?.reward??0)} RVT · +{order?.xp??story?.xp??0} XP · +{order?(s.contractClock>order.due?0:order.rep):story?.rep??0} REP</small>
+          {incomingMail.map(mail=>{const expanded=expandedMail===mail.key;const order=repeatOrders.find(o=>'repeat-'+o.id===mail.key);const story=contracts.find(c=>'story-'+c.id===mail.key);const isQualityMail=mail.key==='quality-complaint';return <div className="mail-message" key={mail.key}>
+            <button className="mail-subject" aria-expanded={expanded} onClick={()=>setExpandedMail(expanded?null:mail.key)}><span aria-hidden="true">✉</span><span><b>{mail.title}</b><small>{isQualityMail?'Customer complaint · quality check needed':mail.items.map(line=>line.qty+' × '+(goods.find(g=>g.id===line.good)?.name||line.good)).join(' · ')}</small><small>{isQualityMail?'ACTION REQUIRED':fmt(order?orderPayout(order,s.contractClock):story?.reward??0)+' RVT'}{order?' · '+(s.contractClock>order.due?'Late · expires '+boostClock(Math.max(0,orderExpiry(order)-s.contractClock)):boostClock(Math.max(0,order.due-s.contractClock))+' left'):''}</small></span><span aria-hidden="true">{expanded?'−':'+'}</span></button>
+            {expanded&&<div className="mail-body">{isQualityMail?<><strong>From: Construction Accounts</strong><p>We have reviewed your steel plate consignment and the finish is not consistent enough. Before our next precision order, please hire a Quality Assurance inspector to check production.</p><p>No fine or reputation loss. Hiring an inspector improves finished-goods output by 8% and costs 28 RVT/min in wages.</p><button className="primary-button" onClick={()=>{setPage('staff');setInboxOpen(false);setExpandedMail(null);}}>OPEN STAFF · QUALITY ASSURANCE</button></>:<><strong>Order details</strong><div className="mail-order-lines">{mail.items.map(line=><div className="mail-order-line" key={line.good}><ProductIcon id={line.good} size={25}/><b>{line.qty} × {goods.find(g=>g.id===line.good)?.name}</b><small>Available: {fmt(s[line.good])}/{line.qty}</small></div>)}</div>{order?<div className={'contract-terms difficulty-'+orderDifficulty(order)}><b>{CONTRACT_TERMS[orderDifficulty(order)].label} · {s.contractClock>order.due?'LATE DELIVERY':'ON-TIME WINDOW'}</b><strong>{fmt(orderPayout(order,s.contractClock))} RVT <small>{s.contractClock>order.due?'current reduced payout':'on-time payout'}</small></strong><span>{s.contractClock>order.due?'Late by '+boostClock(s.contractClock-order.due)+' · −2 REP total':boostClock(Math.max(0,order.due-s.contractClock))+' until deadline'}</span><span>Expires in {boostClock(Math.max(0,orderExpiry(order)-s.contractClock))}</span><small>Decline −1 REP · Late −2 REP · Expired −3 REP</small></div>:<small>No deadline</small>}<small>Reward: {fmt(order?orderPayout(order,s.contractClock):story?.reward??0)} RVT · +{order?.xp??story?.xp??0} XP · +{order?(s.contractClock>order.due?0:order.rep):story?.rep??0} REP</small>
               {story?.id==='first-ore'&&!s.acceptedContracts.includes('first-ore')&&<button className="secondary-button" onClick={()=>{setS(v=>v.acceptedContracts.includes('first-ore')?v:{...v,acceptedContracts:[...v.acceptedContracts,'first-ore'],cash:v.cash+65,drivers:Math.max(1,v.drivers),driverAssignments:{...v.driverAssignments,iron:Math.max(1,v.driverAssignments.iron)}});setNotice('Opening order accepted · 65 RVT equipment advance + starter delivery van and driver included.')}}>ACCEPT OPENING ORDER · +65 RVT</button>}
-              <button className="primary-button" disabled={!mail.items.every(line=>s[line.good]>=line.qty)||!!(story&&s.reputation<story.minRep)||!!(story?.id==='first-ore'&&!s.acceptedContracts.includes('first-ore'))} onClick={()=>{if(order)completeRepeatOrder(order);else if(story)completeContract(story);setExpandedMail(null)}}>{mail.items.every(line=>s[line.good]>=line.qty)?order&&s.contractClock>order.due?'DELIVER LATE · '+fmt(orderPayout(order,s.contractClock))+' RVT':'FULFIL ORDER':'AWAITING PRODUCTS'}</button>
-              {(order||(story&&story.id!=='first-ore'))&&<button className="decline-contract" onClick={()=>{if(order)declineRepeatOrder(order);else if(story)declineStoryOrder(story)}}>{order&&s.contractClock>order.due?'CLOSE LATE ORDER · −2 REP TOTAL':'DECLINE CONTRACT · −1 REP'}</button>}</div>}
+              <button className="primary-button" disabled={!mail.items.every(line=>s[line.good]>=line.qty)||!!(story?.id==='precision-order'&&qaComplaintPending(s))||!!(story&&s.reputation<story.minRep)||!!(story?.id==='first-ore'&&!s.acceptedContracts.includes('first-ore'))} onClick={()=>{if(order)completeRepeatOrder(order);else if(story)completeContract(story);setExpandedMail(null)}}>{mail.items.every(line=>s[line.good]>=line.qty)?order&&s.contractClock>order.due?'DELIVER LATE · '+fmt(orderPayout(order,s.contractClock))+' RVT':'FULFIL ORDER':'AWAITING PRODUCTS'}</button>
+              {(order||(story&&story.id!=='first-ore'))&&<button className="decline-contract" onClick={()=>{if(order)declineRepeatOrder(order);else if(story)declineStoryOrder(story)}}>{order&&s.contractClock>order.due?'CLOSE LATE ORDER · −2 REP TOTAL':'DECLINE CONTRACT · −1 REP'}</button>}</>}</div>}
           </div>})}
           {incomingMail.length===0&&<p className="mail-empty">No orders right now.</p>}
           {Number.isFinite(nextMailWait)&&<div className="mail-next">Next offer check in {boostClock(nextMailWait)}</div>}
@@ -1463,6 +1473,7 @@ export default function App(){
         <section className="staff-roles">
           <article className="role-card mechanic-role"><div className="role-top"><span className="role-icon"><Wrench size={24}/></span><span className="role-tag">MAINTENANCE</span></div><h2>Mechanic</h2><p>Repairs breakdowns and gets machines running again. Assign each mechanic to the machine you want them to look after.</p><div className="role-bottom"><div><b>{s.mechanics}</b><small>HIRED</small></div><button className="primary-button" disabled={s.cash<mechanicCost(s)} onClick={()=>hire('mechanic')}>HIRE · {fmt(mechanicCost(s))} RVT</button><button className="secondary-button" disabled={s.mechanics===0} onClick={()=>fire('mechanic')}>FIRE ONE</button><small>{WAGES.mechanic} RVT/min per mechanic</small></div></article>
           <article className="role-card sales-role"><div className="role-top"><span className="role-icon"><Store size={24}/></span><span className="role-tag">DISPATCH & SALES</span></div><h2>Sales representative</h2><p>Sells warehouse stock automatically and earns 1 bonus XP per minute per active salesperson, plus XP based on shipment value. Each can ship 21 units/min at normal speed before bonuses. Your first hire automatically sells your first installed product; contract stock is protected.</p><p>First hire: 150 RVT and 12 RVT/min wages. Additional staff: 36 RVT/min each. A basic mine can earn about 79 RVT/min after the first salesperson, driver and electricity, when all ore is available for sale.</p><div className="role-bottom"><div><b>{s.salespeople}</b><small>HIRED</small></div><button className="primary-button" disabled={s.cash<salesCost(s)} onClick={()=>hire('sales')}>HIRE · {fmt(salesCost(s))} RVT</button><button className="secondary-button" disabled={s.salespeople===0} onClick={()=>fire('sales')}>FIRE ONE</button><small>{salesWages(s.salespeople)} RVT/min team wages · next hire +{s.salespeople===0?FIRST_SALES_WAGE:WAGES.sales} RVT/min</small></div></article>
+          {s.contractsCompleted.includes(QA_TRIGGER_CONTRACT)&&<article className="role-card qa-role"><div className="role-top"><span className="role-icon"><ShieldCheck size={24}/></span><span className="role-tag">QUALITY ASSURANCE</span></div><h2>Quality inspector</h2><p>{qaComplaintPending(s)?'A customer has raised a complaint about your steel plates. Hire an inspector to unlock precision-order deliveries.':'Your quality team checks finished products before dispatch.'} Each inspector increases finished-goods production by 8%, up to two inspectors (+16%). No boost to mining, and no impact on the inspection mini-game.</p><div className="role-bottom"><div><b>{s.qualityInspectors}</b><small>HIRED · MAX 2</small></div><button className="primary-button" disabled={s.qualityInspectors>=2||s.cash<QA_HIRE_COST} onClick={hireQualityInspector}>{s.qualityInspectors>=2?'TEAM FULL':'HIRE · '+fmt(QA_HIRE_COST)+' RVT'}</button><button className="secondary-button" disabled={s.qualityInspectors===0} onClick={fireQualityInspector}>FIRE ONE</button><small>{WAGES.quality} RVT/min per inspector</small></div></article>}
           <article className="role-card cyber-role"><div className="role-top"><span className="role-icon"><ShieldCheck size={24}/></span><span className="role-tag">NETWORK SECURITY</span></div><h2>Cybersecurity specialist</h2><p>Monitors factory systems, contains digital intrusions and installs a permanent firewall against future cyber incidents.</p><div className="role-bottom"><div><b>{s.cybersecuritySpecialists}</b><small>HIRED</small></div><button className="primary-button" disabled={s.cash<cybersecurityCost(s)} onClick={hireCybersecuritySpecialist}>HIRE · {fmt(cybersecurityCost(s))} RVT</button><button className="secondary-button" disabled={s.cybersecuritySpecialists===0} onClick={()=>fire('cyber')}>FIRE ONE</button><small>{WAGES.cyber} RVT/min per specialist</small></div></article>
         </section>
         <section className="staff-desk"><div className="section-heading"><div><span className="eyebrow">DEPARTMENT DESK</span><h2>Staff assignments</h2><p>Switch between maintenance and dispatch to keep responsibilities clear.</p></div></div>
@@ -1542,9 +1553,9 @@ export default function App(){
         <section className="boost-store-grid">{BOOSTS.map(offer=>{const remaining=s.boostSeconds[offer.id];const active=remaining>0;return <article className={'boost-store-card '+(active?'boost-active':'')} key={offer.id}>
           <div className="boost-store-heading"><span className="boost-store-symbol">{offer.id==='production'?'⚙️':offer.id==='dispatch'?'🚚':'🛡️'}</span><span className="boost-store-tag">{active?'ACTIVE · '+boostClock(remaining):offer.subtitle}</span></div>
           <h2>{offer.name}</h2><p>{offer.description}</p><div className="boost-store-timer"><span>DURATION</span><b>{active?boostClock(remaining):boostClock(offer.duration)}</b></div>
-          <button className="primary-button" disabled={active||s.cash<offer.cost} onClick={()=>buyBoost(offer.id)}>{active?'BOOST RUNNING':s.cash<offer.cost?'NEED '+fmt(offer.cost-s.cash)+' MORE RVT':'ACTIVATE · '+fmt(offer.cost)+' RVT'}</button>
+          <button className="primary-button" disabled={remaining>360||s.cash<offer.cost} onClick={()=>buyBoost(offer.id)}>{remaining>360?'TIMER FULL · MAX 9 MIN':s.cash<offer.cost?'NEED '+fmt(offer.cost-s.cash)+' MORE RVT':(active?'ADD 3 MIN · ':'ACTIVATE · ')+fmt(offer.cost)+' RVT'}</button>
         </article>})}</section>
-        <div className="sales-note"><Zap size={18}/> Boosts do not stack with themselves. Production Overdrive multiplies production separately from the 2× speed control, but only the speed control increases breakdown risk. Timers tick down only while the factory is operating.</div>
+        <div className="sales-note"><Zap size={18}/> Buy the same boost up to three times to bank 9 minutes. Stacking extends duration only; it never multiplies the effect. Production +30%, dispatch +30%, insurance halves breakdown risk. Timers pause when the factory stops.</div>
       </div>}
       {page==='research'&&<div className="page-content">
         <section className="welcome-row"><div><span className="eyebrow">THE NEXT INDUSTRIAL REVOLUTION</span><h1>Research &amp; Technology</h1><p>Invest Gears into permanent factory-wide improvements. Every discovery stays unlocked, even when you leave the game.</p></div><div className="staff-summary research-summary"><b>{s.researched.filter(id=>technologies.some(t=>t.id===id)).length}/{technologies.length}</b><span>TECHNOLOGIES</span><small>{fmt(s.gears)} Gears available</small></div></section>
