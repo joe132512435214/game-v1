@@ -11,7 +11,7 @@ type GameState = {
   cash:number; gears:number; ore:number; ingot:number; plate:number; parts:number; copperOre:number; copperIngot:number; wire:number; circuits:number;
   miner:number; smelter:number; press:number; assembler:number; copperMiner:number; copperSmelter:number; wiremill:number; circuitpress:number;
   tier_miner:number; tier_smelter:number; tier_press:number; tier_assembler:number; tier_copperMiner:number; tier_copperSmelter:number; tier_wiremill:number; tier_circuitpress:number;
-  level:number; experience:number; sold:number; xpMigrationVersion:number; salesXpProgress:number; autoSalesXpProgress:number; mechanics:number; salespeople:number; reputation:number; acceptedContracts:string[]; contractsCompleted:string[];
+  level:number; experience:number; sold:number; xpMigrationVersion:number; salesXpProgress:number; autoSalesXpProgress:number; mechanics:number; salespeople:number; reputation:number; acceptedContracts:string[]; contractsCompleted:string[]; repeatContractRounds:number[];
   broken:Record<MachineId,number>; mechanicAssignments:Record<MachineId,number>; breakdownEvent:MachineId|null; powerCutEvent:boolean; powerCutSeen:boolean; cyberAttackEvent:boolean; cyberAttackSeen:boolean; cybersecuritySpecialists:number;
   salesTarget:StockId; autoSell:boolean; missionsClaimed:number[]; researched:string[];
 };
@@ -23,7 +23,7 @@ const fresh:GameState = {
   level:1,experience:0,sold:0,xpMigrationVersion:1,salesXpProgress:0,autoSalesXpProgress:0,mechanics:0,salespeople:0,
   broken:{miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0},
   mechanicAssignments:{miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0},breakdownEvent:null,powerCutEvent:false,powerCutSeen:false,cyberAttackEvent:false,cyberAttackSeen:false,cybersecuritySpecialists:0,
-  salesTarget:'parts',autoSell:false,missionsClaimed:[],researched:[],reputation:0,acceptedContracts:[],contractsCompleted:[]
+  salesTarget:'parts',autoSell:false,missionsClaimed:[],researched:[],reputation:0,acceptedContracts:[],contractsCompleted:[],repeatContractRounds:[0,0,0]
 };
 const machines:{id:MachineId;name:string;short:string;cost:number;desc:string;input:string;output:string;rate:number}[]=[
   {id:'miner',name:'Rockbreaker Mine',short:'EXTRACT',cost:50,desc:'Breaks rock into raw ore.',input:'Raw ore',output:'Raw ore',rate:.22},
@@ -55,6 +55,20 @@ const contracts:{id:string;name:string;detail:string;good:StockId;qty:number;rew
   {id:'circuit-contract',name:'Circuit Board Supply',detail:'A technology manufacturer needs circuits.',good:'circuits',qty:4,reward:1800,rep:30,xp:80,minRep:60}
 ];
 const contractProducer:Record<StockId,MachineId>={ore:'miner',ingot:'smelter',plate:'press',parts:'assembler',copperOre:'copperMiner',copperIngot:'copperSmelter',wire:'wiremill',circuits:'circuitpress'};
+type RepeatOrder = {slot:number;name:string;detail:string;good:StockId;qty:number;reward:number;rep:number;xp:number};
+const repeatClients=['Local Fabricators','Midtown Engineering','Northern Supply Co.','Pennyworth Industrial','The Extremely Urgent Depot','Regional Repairs'];
+function generateRepeatOrders(s:GameState):RepeatOrder[]{
+  // Only request materials the player can actually manufacture right now.
+  const available=goods.filter(g=>s[contractProducer[g.id]]>0);
+  if(!available.length)return [];
+  return [0,1,2].map(slot=>{
+    const round=s.repeatContractRounds[slot]||0;
+    const item=available[(slot+round)%available.length];
+    const qty=Math.max(3,Math.ceil((8+slot*4+Math.min(10,Math.floor(round/3)*2))*(item.price>=100?.45:item.price>=35?.65:1)));
+    const reward=Math.ceil(qty*item.price*1.2);
+    return {slot,name:repeatClients[(slot+round)%repeatClients.length],detail:'Repeat supply order · a new request arrives as soon as this one is delivered.',good:item.id,qty,reward,rep:1+(slot===2?1:0),xp:8+slot*5};
+  });
+}
 function loadGame():GameState{
   try{
     const saved=JSON.parse(localStorage.getItem(SAVE_KEY)||'{}');
@@ -66,7 +80,7 @@ function loadGame():GameState{
     const legacyXpFromMissions=(Array.isArray(saved.missionsClaimed)?saved.missionsClaimed:[]).reduce((total:number,id:number)=>total+(missionXp[id]||0),0);
     const migratedExperience=saved.experience!==undefined?Math.max(0,Number(saved.experience)||0):Math.max(legacyXpFromContracts+legacyXpFromMissions,Number(saved.assembler)>0?270:Number(saved.press)>0?165:Number(saved.smelter)>0?60:Number(saved.miner)>0?25:0);
     const legacyShipmentXp=saved.xpMigrationVersion===undefined?Math.floor(Math.max(0,Number(saved.sold)||0)/500):0;
-    return {...fresh,...saved,xpMigrationVersion:1,salesXpProgress:Math.max(0,Number(saved.salesXpProgress)||0)%25,autoSalesXpProgress:Math.max(0,Number(saved.autoSalesXpProgress)||0)%60,broken:{...fresh.broken,...saved.broken},mechanicAssignments:{...fresh.mechanicAssignments,...saved.mechanicAssignments},breakdownEvent:saved.breakdownEvent??null,powerCutEvent:shouldRecoverPowerCut?true:(saved.powerCutEvent??false),powerCutSeen:shouldRecoverPowerCut?true:(saved.powerCutSeen??false),cyberAttackEvent:shouldRecoverCyberAttack?true:(saved.cyberAttackEvent??false),cyberAttackSeen:shouldRecoverCyberAttack?true:(saved.cyberAttackSeen??false),cybersecuritySpecialists:Math.max(0,Number(saved.cybersecuritySpecialists)||0),researched:Array.isArray(saved.researched)?saved.researched:[],acceptedContracts:Array.isArray(saved.acceptedContracts)?saved.acceptedContracts:[],contractsCompleted:completed,experience:migratedExperience+legacyShipmentXp,reputation:Math.max(0,Number(saved.reputation)||0)};
+    return {...fresh,...saved,xpMigrationVersion:1,salesXpProgress:Math.max(0,Number(saved.salesXpProgress)||0)%25,autoSalesXpProgress:Math.max(0,Number(saved.autoSalesXpProgress)||0)%60,broken:{...fresh.broken,...saved.broken},mechanicAssignments:{...fresh.mechanicAssignments,...saved.mechanicAssignments},breakdownEvent:saved.breakdownEvent??null,powerCutEvent:shouldRecoverPowerCut?true:(saved.powerCutEvent??false),powerCutSeen:shouldRecoverPowerCut?true:(saved.powerCutSeen??false),cyberAttackEvent:shouldRecoverCyberAttack?true:(saved.cyberAttackEvent??false),cyberAttackSeen:shouldRecoverCyberAttack?true:(saved.cyberAttackSeen??false),cybersecuritySpecialists:Math.max(0,Number(saved.cybersecuritySpecialists)||0),researched:Array.isArray(saved.researched)?saved.researched:[],acceptedContracts:Array.isArray(saved.acceptedContracts)?saved.acceptedContracts:[],contractsCompleted:completed,repeatContractRounds:Array.from({length:3},(_,i)=>Math.max(0,Math.floor(Number(saved.repeatContractRounds?.[i])||0))),experience:migratedExperience+legacyShipmentXp,reputation:Math.max(0,Number(saved.reputation)||0)};
   }catch{return fresh;}
 }
 const fmt=(n:number)=>Math.floor(n).toLocaleString();
@@ -302,8 +316,9 @@ export default function App(){
   ];
   const activeMission=missions.find(m=>!s.missionsClaimed.includes(m.id));
   const visibleContracts=contracts.filter(c=>s[contractProducer[c.good]]>0||contractProducer[c.good]===nextMachine?.id);
-  const readyOrders=visibleContracts.filter(c=>!s.contractsCompleted.includes(c.id)&&s.reputation>=c.minRep&&s[c.good]>=c.qty).length;
-  const activeOrders=visibleContracts.filter(c=>!s.contractsCompleted.includes(c.id)&&s.reputation>=c.minRep&&s[c.good]<c.qty).length;
+  const repeatOrders=generateRepeatOrders(s);
+  const readyOrders=visibleContracts.filter(c=>!s.contractsCompleted.includes(c.id)&&s.reputation>=c.minRep&&s[c.good]>=c.qty).length+repeatOrders.filter(c=>s[c.good]>=c.qty).length;
+  const activeOrders=visibleContracts.filter(c=>!s.contractsCompleted.includes(c.id)&&s.reputation>=c.minRep&&s[c.good]<c.qty).length+repeatOrders.filter(c=>s[c.good]<c.qty).length;
   const completedOrders=visibleContracts.filter(c=>s.contractsCompleted.includes(c.id)).length;
   const noticeTitle=notice.toLowerCase().includes('contract fulfilled')||notice.toLowerCase().includes('delivery signed off')?'Order complete · lovely stuff':notice.toLowerCase().includes('contract accepted')||notice.toLowerCase().includes('order accepted')?'New order · no pressure (some pressure)':notice.toLowerCase().includes('not enough')||notice.toLowerCase().includes('need ')||notice.toLowerCase().includes('no full units')?'Small snag · the numbers say no':notice.toLowerCase().includes('repaired')?'Back in business':notice.toLowerCase().includes('shipped')?'Out the loading bay':notice.toLowerCase().includes('built')?'Fresh machinery':notice.toLowerCase().includes('mission complete')?'Milestone smashed':'Workshop update';
   const noticeKind=notice.toLowerCase().includes('contract')||notice.toLowerCase().includes('order accepted')||notice.toLowerCase().includes('delivery signed off')?'ORDER DESK':notice.toLowerCase().includes('not enough')||notice.toLowerCase().includes('need ')?'QUICK HEADS-UP':'FACTORY NOTICE';
@@ -374,6 +389,16 @@ export default function App(){
     if(s[contract.good]<contract.qty){setNotice('You need '+contract.qty+' units in stock.');return;}
     setS(v=>({...v,[contract.good]:v[contract.good]-contract.qty,cash:v.cash+contract.reward,reputation:v.reputation+contract.rep,experience:v.experience+contract.xp,contractsCompleted:[...v.contractsCompleted,contract.id],...(contract.id==='first-ore'&&!v.powerCutSeen?{powerCutSeen:true,powerCutEvent:true,broken:{...v.broken,miner:Math.max(v.broken.miner,30)}}:{})}));
     setNotice(contract.id==='first-ore'?'DELIVERY SIGNED OFF · +'+contract.xp+' XP — then the lights go out. The Rockbreaker Mine has lost power.':'Delivery signed off. +'+fmt(contract.reward)+' RVT · +'+contract.rep+' reputation · +'+contract.xp+' XP. The client says you are now their favourite supplier.');
+  };
+  const completeRepeatOrder=(order:RepeatOrder)=>{
+    setS(v=>{
+      // Re-check stock and slot generation to prevent double collection.
+      const current=generateRepeatOrders(v).find(c=>c.slot===order.slot);
+      if(!current||current.good!==order.good||current.qty!==order.qty||v[current.good]<current.qty)return v;
+      return {...v,[current.good]:v[current.good]-current.qty,cash:v.cash+current.reward,reputation:v.reputation+current.rep,experience:v.experience+current.xp,repeatContractRounds:v.repeatContractRounds.map((round,i)=>i===order.slot?round+1:round)};
+    });
+    if(s[order.good]<order.qty){setNotice('Not enough stock to deliver this repeat order.');return;}
+    setNotice('Repeat contract fulfilled · +'+order.xp+' XP · +'+order.rep+' reputation. A fresh order has landed on the desk.');
   };
   const hire=(role:'mechanic'|'sales')=>{
     const cost=role==='mechanic'?mechanicCost(s):salesCost(s);
@@ -474,6 +499,7 @@ export default function App(){
         <div className="gear-banner"><Cog size={21}/><span><b>{fmt(s.gears)} Gears</b><small>Earn 1 Gear for every Precision Part or Circuit Board you sell. Spend them on machine upgrades or permanent research in the Research tab.</small></span></div>
         <section className="warehouse-grid">{visibleGoods.map(g=><article className="stock-card" key={g.id}><span className="stock-emoji">{g.emoji}</span><div><h3>{g.name}</h3><p>{g.detail} · {g.price} RVT each</p><b>{fmt(s[g.id])} <small>IN STOCK</small></b></div><button disabled={s[g.id]<1} onClick={()=>sellStock(g.id)}>SHIP ALL · {fmt(Math.floor(s[g.id])*g.price)} RVT</button></article>)}</section>
         <section className="contracts-panel"><div className="section-heading"><div><span className="eyebrow">REPUTATION & REVENUE</span><h2>Customer orders</h2><p>Take an order, make the goods, then ship them for guaranteed Rivets and reputation. Delivery consumes the stock.</p></div><span className="machine-count">{s.contractsCompleted.length}/{contracts.length} DELIVERED</span></div><div className="contract-summary"><span><b>{readyOrders}</b> READY TO SHIP</span><span><b>{activeOrders}</b> BEING PREPARED</span><span><b>{completedOrders}</b> DELIVERED</span></div><div className="contract-filters" role="group" aria-label="Filter customer orders"><button className={contractFilter==='all'?'selected':''} onClick={()=>setContractFilter('all')}>ALL ({visibleContracts.length})</button><button className={contractFilter==='ready'?'selected':''} onClick={()=>setContractFilter('ready')}>READY ({readyOrders})</button><button className={contractFilter==='progress'?'selected':''} onClick={()=>setContractFilter('progress')}>IN PROGRESS ({activeOrders})</button><button className={contractFilter==='done'?'selected':''} onClick={()=>setContractFilter('done')}>DELIVERED ({completedOrders})</button></div><div className="contract-grid">{visibleContracts.filter(c=>{const done=s.contractsCompleted.includes(c.id);const unlocked=s.reputation>=c.minRep;const ready=unlocked&&s[c.good]>=c.qty&&!done;const progress=unlocked&&!done&&!ready;return contractFilter==='all'||(contractFilter==='ready'&&ready)||(contractFilter==='progress'&&progress)||(contractFilter==='done'&&done);}).map(c=>{const done=s.contractsCompleted.includes(c.id);const accepted=s.acceptedContracts.includes(c.id);const unlocked=s.reputation>=c.minRep;const stock=s[c.good];const ready=unlocked&&stock>=c.qty;const progress=Math.min(100,stock/c.qty*100);const status=done?'DELIVERED':!unlocked?'LOCKED · '+c.minRep+' REP':ready?'READY TO SHIP':c.id==='first-ore'&&!accepted?'WAITING FOR ACCEPTANCE':'IN PROGRESS';return <article className={'contract-card '+(done?'contract-done':ready?'contract-ready':'')} key={c.id}><div className="contract-card-top"><span className="contract-tag">{status}</span><span className="contract-number">ORDER #{String(contracts.indexOf(c)+1).padStart(2,'0')}</span></div><h3>{c.name}</h3><p>{c.detail}</p><div className="contract-requirement"><span>CUSTOMER REQUIREMENT</span><b>{c.qty} {goods.find(g=>g.id===c.good)?.name}</b><small>IN STOCK · {fmt(stock)} / {c.qty}</small><div className="order-progress"><i style={{width:progress+'%'}}/></div></div><div className="contract-reward"><b>+{fmt(c.reward)} RVT</b><span>+{c.rep} REP</span></div><button className="primary-button" disabled={done||!unlocked||stock<c.qty||(c.id==='first-ore'&&!accepted)} onClick={()=>completeContract(c)}>{done?'DELIVERED · PAID':!unlocked?'NEED '+c.minRep+' REP':stock<c.qty?'MAKE '+fmt(c.qty-stock)+' MORE':'SHIP ORDER · COLLECT REWARD'}</button></article>})}{visibleContracts.length>0&&contractFilter!=='all'&&!visibleContracts.some(c=>{const done=s.contractsCompleted.includes(c.id);const unlocked=s.reputation>=c.minRep;const ready=unlocked&&s[c.good]>=c.qty&&!done;const progress=unlocked&&!done&&!ready;return (contractFilter==='ready'&&ready)||(contractFilter==='progress'&&progress)||(contractFilter==='done'&&done);})&&<div className="contract-empty">Nothing in this pile yet. The paperwork is suspiciously under control.</div>}</div></section>
+        <section className="contracts-panel"><div className="section-heading"><div><span className="eyebrow">INCOMING WORK</span><h2>Repeat customer contracts</h2><p>Three live orders at a time. Deliver any order to receive XP, reputation and Rivets — then a new one arrives automatically. Only products you can make are requested.</p></div><span className="machine-count">{repeatOrders.length} LIVE ORDERS</span></div><div className="contract-grid">{repeatOrders.map(order=>{const stock=s[order.good];const ready=stock>=order.qty;const item=goods.find(g=>g.id===order.good)!;return <article className={'contract-card '+(ready?'contract-ready':'')} key={order.slot}><div className="contract-card-top"><span className="contract-tag">{ready?'READY TO SHIP':'IN PROGRESS'}</span><span className="contract-number">REPEAT #{order.slot+1}</span></div><h3>{order.name}</h3><p>{order.detail}</p><div className="contract-requirement"><span>CUSTOMER REQUIREMENT</span><b>{order.qty} {item.name}</b><small>IN STOCK · {fmt(stock)} / {order.qty}</small><div className="order-progress"><i style={{width:Math.min(100,stock/order.qty*100)+'%'}}/></div></div><div className="contract-reward"><b>+{fmt(order.reward)} RVT</b><span>+{order.xp} XP · +{order.rep} REP</span></div><button className="primary-button" disabled={!ready} onClick={()=>completeRepeatOrder(order)}>{ready?'SHIP ORDER · NEW ORDER ARRIVES':'MAKE '+fmt(Math.ceil(order.qty-stock))+' MORE'}</button></article>})}{repeatOrders.length===0&&<div className="contract-empty">Your customer order desk opens as soon as you buy your first machine.</div>}</div></section>
         <div className="sales-note"><CircleDollarSign size={18}/> {s.salespeople>0&&s.autoSell?'Your sales team is active and dispatching '+goods.find(g=>g.id===s.salesTarget)?.name+'.':'Hire sales staff and enable automatic sales from the Staff page to automate dispatch.'}</div>
       </div>}
     </main>
