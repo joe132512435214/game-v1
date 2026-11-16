@@ -229,14 +229,14 @@ export default function App(){
       const payrollFunded=n.cash+1e-8>=wages;
       if(payrollFunded)n.cash=Math.max(0,n.cash-wages);
       const multiplier=speed;
-      const reliabilityBonus=n.researched.includes('reinforced-bearings')?.35:0;
+      const reliabilityBonus=(n.researched.includes('reinforced-bearings')?.35:0)+(n.researched.includes('predictive-maintenance')?.2:0);
       machines.forEach(m=>{if(n[m.id]>0&&n.broken[m.id]===0&&Math.random()<.00065*(speed===2?4:1)*(1-reliabilityBonus)){n.broken[m.id]=24;if(!n.breakdownEvent)n.breakdownEvent=m.id;}});
       if(n.breakdownEvent)return n;
       machines.forEach(m=>{
         const assigned=n.mechanicAssignments[m.id]||0;
         if(payrollFunded&&n.broken[m.id]>0&&assigned>0)n.broken[m.id]=Math.max(0,n.broken[m.id]-assigned*multiplier);
       });
-      const researchOutput=(n.researched.includes('efficient-extraction')?1.15:1)*(n.researched.includes('precision-tooling')?1.3:1);
+      const researchOutput=(n.researched.includes('efficient-extraction')?1.15:1)*(n.researched.includes('precision-tooling')?1.3:1)*(n.researched.includes('smart-robotics')?1.2:1);
       const rate=(id:MachineId,base:number)=>n.broken[id]>0?0:n[id]*base*(1+n['tier_'+id]*.25)*researchOutput*multiplier;
       const oreMade=rate('miner',.35);
       const ingotsMade=Math.min(n.ore+oreMade,rate('smelter',.22));
@@ -260,7 +260,7 @@ export default function App(){
         goods.forEach(item=>{
           const count=Math.min(n.salespeople,Math.max(0,n.salesAssignments[item.id]||0));
           if(count<=0)return;
-          const amount=Math.min(n[item.id],count*.12*multiplier);
+          const amount=Math.min(n[item.id],count*.12*(n.researched.includes('dispatch-systems')?1.25:1)*multiplier);
           if(amount<=0)return;
           const revenue=amount*item.price*saleBonus;
           const total=n.salesXpProgress+revenue;
@@ -293,7 +293,7 @@ export default function App(){
   const autoIncomePerMinute=economyActive&&payrollFunded&&s.autoSell?goods.reduce((sum,item)=>{
     const assigned=Math.min(s.salespeople,Math.max(0,s.salesAssignments[item.id]||0));
     // Estimate the next minute from the current one-second dispatch rate.
-    const amount=Math.min(Math.max(0,s[item.id]),assigned*.12*speed);
+    const amount=Math.min(Math.max(0,s[item.id]),assigned*.12*(s.researched.includes('dispatch-systems')?1.25:1)*speed);
     return sum+amount*item.price*(s.researched.includes('market-intelligence')?1.2:1)*60;
   },0):0;
   const wagesPerMinute=economyActive&&payrollFunded?payroll:0;
@@ -355,7 +355,7 @@ export default function App(){
       setNotice('Mission complete: '+next.title+' · +'+next.rivets+' Rivets · +'+next.xp+' XP'+(next.gears?' · +'+next.gears+' Gears':''));
     }
   },[s]);
-  const researchOutput=(s.researched.includes('efficient-extraction')?1.15:1)*(s.researched.includes('precision-tooling')?1.3:1);
+  const researchOutput=(s.researched.includes('efficient-extraction')?1.15:1)*(s.researched.includes('precision-tooling')?1.3:1)*(s.researched.includes('smart-robotics')?1.2:1);
   const saleMultiplier=s.researched.includes('market-intelligence')?1.2:1;
   const rateFor=(m:typeof machines[number])=>s.broken[m.id]>0?0:s[m.id]*m.rate*(1+s['tier_'+m.id]*.25)*researchOutput;
   const resolvePowerCut=(hireMechanic:boolean)=>{
@@ -467,17 +467,23 @@ export default function App(){
     setS(v=>({...v,mechanicAssignments:{...v.mechanicAssignments,[id]:allowed}}));
   };
   const technologies=[
-    {id:'efficient-extraction',name:'Efficient Extraction',branch:'PRODUCTION',cost:2,icon:Zap,detail:'Optimised drills and furnace timing increase all machine output by 15%.',effect:'+15% production',requires:[] as string[]},
-    {id:'reinforced-bearings',name:'Reinforced Bearings',branch:'MAINTENANCE',cost:3,icon:ShieldCheck,detail:'Hard-wearing components reduce machine breakdown chance by 35%.',effect:'35% fewer breakdowns',requires:['efficient-extraction']},
-    {id:'market-intelligence',name:'Market Intelligence',branch:'COMMERCE',cost:4,icon:TrendingUp,detail:'Better pricing data and smarter contracts increase every sale value by 20%.',effect:'+20% sale value',requires:['efficient-extraction']},
-    {id:'precision-tooling',name:'Precision Tooling',branch:'ADVANCED PRODUCTION',cost:6,icon:Cpu,detail:'High-tolerance tooling pushes every production line another 30% faster.',effect:'+30% production',requires:['reinforced-bearings','market-intelligence']}
+    {id:'efficient-extraction',tier:1,name:'Efficient Extraction',branch:'PRODUCTION',cost:2,icon:Zap,detail:'Optimised drills and furnace timing increase all machine output by 15%.',effect:'+15% production',requires:[] as string[]},
+    {id:'reinforced-bearings',tier:1,name:'Reinforced Bearings',branch:'MAINTENANCE',cost:3,icon:ShieldCheck,detail:'Hard-wearing components reduce machine breakdown chance by 35%.',effect:'35% fewer breakdowns',requires:['efficient-extraction']},
+    {id:'market-intelligence',tier:1,name:'Market Intelligence',branch:'COMMERCE',cost:4,icon:TrendingUp,detail:'Better pricing data and smarter contracts increase every sale value by 20%.',effect:'+20% sale value',requires:['efficient-extraction']},
+    {id:'precision-tooling',tier:2,name:'Precision Tooling',branch:'ADVANCED PRODUCTION',cost:6,icon:Cpu,detail:'High-tolerance tooling pushes every production line another 30% faster.',effect:'+30% production',requires:['reinforced-bearings','market-intelligence']},
+    {id:'dispatch-systems',tier:2,name:'Dispatch Systems',branch:'LOGISTICS',cost:8,icon:Truck,detail:'Better routing and order handling allow sales representatives to sell goods 25% faster.',effect:'+25% automatic sales speed',requires:['market-intelligence']},
+    {id:'predictive-maintenance',tier:3,name:'Predictive Maintenance',branch:'INDUSTRIAL SYSTEMS',cost:12,icon:ShieldCheck,detail:'Condition monitoring further reduces breakdown risk by 20 percentage points.',effect:'Additional 20% fewer breakdowns',requires:['precision-tooling']},
+    {id:'smart-robotics',tier:3,name:'Smart Robotics',branch:'AUTOMATION',cost:15,icon:Factory,detail:'Factory-wide robotic control boosts all production by another 20%.',effect:'+20% production',requires:['precision-tooling','dispatch-systems']}
   ];
+  const researchTierNames:Record<number,string>={1:'Workshop Fundamentals',2:'Industrial Engineering',3:'Advanced Automation'};
+  const researchTierUnlocked=(tier:number,done:string[])=>tier===1||(tier===2?done.includes('efficient-extraction'):done.includes('precision-tooling'));
   const researchTech=(id:string,cost:number)=>{
     const tech=technologies.find(t=>t.id===id);
     if(!tech||s.researched.includes(id))return;
+    if(!researchTierUnlocked(tech.tier,s.researched)){setNotice('Research the preceding tier first.');return;}
     if(!tech.requires.every(req=>s.researched.includes(req))){setNotice('Complete the prerequisite research first.');return;}
-    if(s.gears<cost){setNotice('You need '+cost+' Gears to fund this research.');return;}
-    setS(v=>({...v,gears:v.gears-cost,researched:[...v.researched,id]}));
+    if(s.gears<tech.cost){setNotice('You need '+tech.cost+' Gears to fund this research.');return;}
+    setS(v=>v.researched.includes(id)?v:{...v,gears:v.gears-tech.cost,researched:[...v.researched,id]});
     setNotice(tech.name+' researched · '+tech.effect+'.');
   };
   const reset=()=>{setS(fresh);setRunning(true);setSpeed(1);setShowReset(false);setNotice('A fresh factory. Let’s get to work!');};
@@ -495,7 +501,7 @@ export default function App(){
         <button className={page==='factory'?'active':''} onClick={()=>setPage('factory')}><Factory size={16}/> Factory</button>
         <button className={page==='staff'?'active':''} onClick={()=>setPage('staff')}><Users size={16}/> Staff <span>{s.mechanics+s.salespeople+s.cybersecuritySpecialists}</span></button>
         <button className={page==='warehouse'?'active':''} onClick={()=>setPage('warehouse')}><Boxes size={16}/> Warehouse</button>
-        <button className={page==='research'?'active':''} onClick={()=>setPage('research')}><FlaskConical size={16}/> Research <span>{s.researched.length}/4</span></button>
+        <button className={page==='research'?'active':''} onClick={()=>setPage('research')}><FlaskConical size={16}/> Research <span>{s.researched.filter(id=>technologies.some(t=>t.id===id)).length}/{technologies.length}</span></button>
       </nav>
       <section className="cashflow-strip" aria-label="Estimated factory cash flow per minute">
         <div className="cashflow-stat cashflow-income"><small>+ AUTOMATIC INCOME / MIN</small><b>+{moneyPerMinute(autoIncomePerMinute)} <i>RVT</i></b></div>
@@ -550,10 +556,10 @@ export default function App(){
         <section className="sales-setup"><div className="sales-setup-title"><span className="role-icon"><Truck size={22}/></span><div><span className="eyebrow">DISPATCH SETTINGS</span><h2>Sales team assignments</h2><p>Assign your sales representatives to different goods. Each sells their assigned product independently.</p></div></div><div className="contract-summary"><span><b>{assignedSales}</b> ASSIGNED</span><span><b>{unassignedSales}</b> AVAILABLE</span><span><b>{s.salespeople}</b> TOTAL SALESPEOPLE</span></div><div className="assignment-list">{goods.filter(g=>s[contractProducer[g.id]]>0).map(g=><div className="assignment-row" key={g.id}><span className="assignment-machine">{g.emoji}</span><div className="assignment-copy"><b>{g.name}</b><small>{((s.salesAssignments[g.id]||0)*.12).toFixed(2)} units/sec when automatic sales are on</small></div><label><span>SALES STAFF</span><select value={s.salesAssignments[g.id]||0} onChange={e=>assignSales(g.id,Number(e.target.value))} disabled={s.salespeople===0}>{Array.from({length:s.salespeople+1},(_,i)=>i).map(i=><option key={i} value={i}>{i===0?'None':i+' assigned'}</option>)}</select></label></div>)}</div><div className="sales-controls"><label className="toggle-row"><input type="checkbox" checked={s.autoSell} disabled={s.salespeople===0} onChange={e=>setS(v=>({...v,autoSell:e.target.checked}))}/><span><b>Automatic sales</b><small>Each active salesperson sells 0.12 units/sec and earns bonus XP while shipping stock.</small></span></label></div></section>
       </div>}
       {page==='research'&&<div className="page-content">
-        <section className="welcome-row"><div><span className="eyebrow">THE NEXT INDUSTRIAL REVOLUTION</span><h1>Research &amp; Technology</h1><p>Invest Gears into permanent factory-wide improvements. Every discovery stays unlocked, even when you leave the game.</p></div><div className="staff-summary research-summary"><b>{s.researched.length}/4</b><span>TECHNOLOGIES</span><small>{fmt(s.gears)} Gears available</small></div></section>
+        <section className="welcome-row"><div><span className="eyebrow">THE NEXT INDUSTRIAL REVOLUTION</span><h1>Research &amp; Technology</h1><p>Invest Gears into permanent factory-wide improvements. Every discovery stays unlocked, even when you leave the game.</p></div><div className="staff-summary research-summary"><b>{s.researched.filter(id=>technologies.some(t=>t.id===id)).length}/{technologies.length}</b><span>TECHNOLOGIES</span><small>{fmt(s.gears)} Gears available</small></div></section>
         <section className="research-overview"><div><FlaskConical size={22}/><span><b>Research department</b><small>Turn precision parts into permanent competitive advantages.</small></span></div><div className="research-active-effects">{s.researched.length===0?'No technologies researched yet':s.researched.map(id=>technologies.find(t=>t.id===id)?.effect).filter(Boolean).join(' · ')}</div></section>
-        <section className="technology-tree"><div className="technology-heading"><div><span className="eyebrow">TECHNOLOGY TREE</span><h2>Choose your next breakthrough</h2><p>Research costs Gears. Unlock the first discovery to open both specialist branches.</p></div><span className="machine-count">{s.researched.length} / 4 UNLOCKED</span></div>
-          <div className="technology-grid">{technologies.map(tech=>{const done=s.researched.includes(tech.id);const unlocked=tech.requires.every(req=>s.researched.includes(req));const Icon=tech.icon;return <article className={'technology-card '+(done?'researched':unlocked?'available':'locked-tech')} key={tech.id}><div className="technology-top"><span className="technology-icon"><Icon size={21}/></span><span className="technology-branch">{tech.branch}</span></div><h3>{tech.name}</h3><p>{tech.detail}</p><div className="technology-effect">{tech.effect}</div>{done?<div className="technology-complete"><CheckCircle2 size={16}/> RESEARCH COMPLETE</div>:<><small className="technology-cost">COST · {tech.cost} GEARS</small><button className="primary-button" disabled={!unlocked||s.gears<tech.cost} onClick={()=>researchTech(tech.id,tech.cost)}>{!unlocked?'LOCKED · PREREQUISITES':s.gears<tech.cost?'NEED MORE GEARS':'RESEARCH · '+tech.cost+' GEARS'}</button></>}</article>;})}</div>
+        <section className="technology-tree"><div className="technology-heading"><div><span className="eyebrow">TIERED TECHNOLOGY TREE</span><h2>Research progression</h2><p>Start with workshop fundamentals, then unlock industrial engineering and advanced automation. Earlier discoveries are kept.</p></div><span className="machine-count">{technologies.filter(t=>s.researched.includes(t.id)).length} / {technologies.length} UNLOCKED</span></div>
+          {[1,2,3].map(tier=>{const tierTech=technologies.filter(t=>t.tier===tier);const tierOpen=researchTierUnlocked(tier,s.researched);const tierDone=tierTech.filter(t=>s.researched.includes(t.id)).length;return <div className={'research-tier '+(tierOpen?'tier-open':'tier-locked')} key={tier}><div className="research-tier-heading"><div><span className="eyebrow">TIER {tier}</span><h3>{researchTierNames[tier]}</h3><small>{tier===1?'Available from the start':tier===2?'Unlocks after Efficient Extraction':'Unlocks after Precision Tooling'}</small></div><span className="research-tier-count">{tierOpen?'OPEN':'LOCKED'} · {tierDone}/{tierTech.length}</span></div><div className="technology-grid">{tierTech.map(tech=>{const done=s.researched.includes(tech.id);const unlocked=tierOpen&&tech.requires.every(req=>s.researched.includes(req));const Icon=tech.icon;return <article className={'technology-card '+(done?'researched':unlocked?'available':'locked-tech')} key={tech.id}><div className="technology-top"><span className="technology-icon"><Icon size={21}/></span><span className="technology-branch">{tech.branch}</span></div><h3>{tech.name}</h3><p>{tech.detail}</p><div className="technology-effect">{tech.effect}</div>{done?<div className="technology-complete"><CheckCircle2 size={16}/> RESEARCH COMPLETE</div>:<><small className="technology-cost">COST · {tech.cost} GEARS</small><button className="primary-button" disabled={!unlocked||s.gears<tech.cost} onClick={()=>researchTech(tech.id,tech.cost)}>{!tierOpen?'TIER '+tier+' LOCKED':!unlocked?'LOCKED · PREREQUISITES':s.gears<tech.cost?'NEED MORE GEARS':'RESEARCH · '+tech.cost+' GEARS'}</button></>}</article>})}</div></div>})}
         </section>
         <div className="research-footnote"><Cog size={16}/> Research effects apply automatically across every machine and sale. Your discoveries are saved with your factory.</div>
       </div>}
