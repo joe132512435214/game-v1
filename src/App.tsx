@@ -447,6 +447,15 @@ export default function App(){
   const [running,setRunning]=useState(true);
   const [speed,setSpeed]=useState(1);
   const [notice,setNotice]=useState('');
+  const [rewardSplash,setRewardSplash]=useState<{id:number;title:string;detail:string;cash?:number;xp?:number;rep?:number;kind:'shipment'|'contract'|'upgrade'}|null>(null);
+  const celebrate=(title:string,detail:string,kind:'shipment'|'contract'|'upgrade',values:{cash?:number;xp?:number;rep?:number}={})=>{
+    setRewardSplash({id:Date.now()+Math.random(),title,detail,kind,...values});
+  };
+  useEffect(()=>{
+    if(!rewardSplash)return;
+    const dismiss=window.setTimeout(()=>setRewardSplash(current=>current?.id===rewardSplash.id?null:current),3800);
+    return()=>window.clearTimeout(dismiss);
+  },[rewardSplash]);
   const [showReset,setShowReset]=useState(false);
   const [contractFilter,setContractFilter]=useState<'all'|'ready'|'progress'>('all');
   const [inboxOpen,setInboxOpen]=useState(false);
@@ -768,12 +777,14 @@ export default function App(){
         ...(m.id==='assembler'&&!v.cyberAttackSeen?{cyberAttackSeen:true,cyberAttackEvent:true}:{})};
     });
     setNotice(m.id==='assembler'&&!s.cyberAttackSeen?'Mech Assembly commissioned. Security breach detected — the factory network is locked down.':m.name+' unit '+(s[m.id]+1)+' built'+((s.pendingReplacement[m.id]||0)>0?' as a replacement at up to 5 levels below the old equipment.':'.'));
+    celebrate('New machine online!',m.name+' · unit '+(s[m.id]+1),'upgrade');
   };
   const upgradeMachine=(m:typeof machines[number])=>{
     const cost=(s['tier_'+m.id]+1)*3;
     if(s.gears<cost){setNotice('You need '+cost+' Gears for this upgrade.');return;}
     setS(v=>({...v,gears:v.gears-cost,['tier_'+m.id]:v['tier_'+m.id]+1}));
     setNotice(m.name+' upgraded. Output increased by 25%.');
+    celebrate('Production upgraded!',m.name+' · +25% output','upgrade');
   };
   const sellStock=(id:StockId)=>{
     const item=goods.find(g=>g.id===id)!;const amount=Math.floor(s[id]);
@@ -782,6 +793,7 @@ export default function App(){
     setS(v=>{const total=v.salesXpProgress+revenue;const shipmentXp=Math.floor((total+1e-8)/25);return {...v,[id]:v[id]-amount,cash:v.cash+revenue,sold:v.sold+revenue,salesXpProgress:total-shipmentXp*25,experience:v.experience+shipmentXp,gears:v.gears+shipmentGearGain(v,finishedGearUnits(id,amount)).earned,gearShipmentProgress:shipmentGearGain(v,finishedGearUnits(id,amount)).remainder};});
     const shipmentXp=Math.floor((s.salesXpProgress+revenue+1e-8)/25);
     setNotice('Shipped '+fmt(amount)+' '+item.name+' for '+fmt(revenue)+' Rivets.'+(shipmentXp>0?' · +'+shipmentXp+' XP from shipments.':''));
+    celebrate('Shipment dispatched!',fmt(amount)+' '+item.name,'shipment',{cash:revenue,xp:shipmentXp});
   };
   const shipAllStock=()=>{
     const items=goods.map(g=>({item:g,amount:Math.max(0,Math.floor(s[g.id]))})).filter(x=>x.amount>0);
@@ -800,6 +812,7 @@ export default function App(){
       return next;
     });
     setNotice('Shipped '+fmt(totalUnits)+' units across '+items.length+' products for '+fmt(revenue)+' Rivets · +'+earnedXp+' XP.');
+    celebrate('Warehouse cleared!',fmt(totalUnits)+' units · '+items.length+' product types','shipment',{cash:revenue,xp:earnedXp});
   };
   const completeContract=(contract:typeof contracts[number])=>{
     if(s.contractsCompleted.includes(contract.id))return;
@@ -808,6 +821,7 @@ export default function App(){
     if(s[contract.good]<contract.qty){setNotice('You need '+contract.qty+' units in stock.');return;}
     setS(v=>({...v,[contract.good]:v[contract.good]-contract.qty,cash:v.cash+contract.reward,reputation:v.reputation+contract.rep,experience:v.experience+contract.xp,contractsCompleted:[...v.contractsCompleted,contract.id],...(contract.id==='first-ore'&&!v.powerCutSeen?{powerCutSeen:true,powerCutEvent:true,broken:{...v.broken,miner:Math.max(v.broken.miner,30)},unitFaults:{...v.unitFaults,miner:v.unitFaults.miner.map((fault,i)=>i===0?Math.max(fault,30):fault)}}:{})}));
     setNotice(contract.id==='first-ore'?'DELIVERY SIGNED OFF · +'+contract.xp+' XP — then the lights go out. The Rockbreaker Mine has lost power.':'Delivery signed off. +'+fmt(contract.reward)+' RVT · +'+contract.rep+' reputation · +'+contract.xp+' XP. The client says you are now their favourite supplier.');
+    celebrate('Contract completed!',contract.name,'contract',{cash:contract.reward,xp:contract.xp,rep:contract.rep});
   };
   const completeRepeatOrder=(order:RepeatOrder)=>{
     setS(v=>{
@@ -823,6 +837,7 @@ export default function App(){
     });
     if(!orderReady(s,order)){setNotice('Not enough stock to complete all items on this order.');return;}
     setNotice('Repeat contract fulfilled · +'+order.xp+' XP · +'+order.rep+' reputation. Another order will arrive after a short customer cooldown.');
+    celebrate('Order delivered!',order.name+' · '+order.items.length+' product '+(order.items.length===1?'type':'types'),'contract',{cash:order.reward,xp:order.xp,rep:order.rep});
   };
   const declineRepeatOrder=(order:RepeatOrder)=>{
     if(!generateRepeatOrders(s).some(o=>o.id===order.id))return;
@@ -1158,6 +1173,7 @@ export default function App(){
     {s.cyberAttackEvent&&<div className="cyberattack-backdrop" role="dialog" aria-modal="true" aria-labelledby="cyberattack-title"><section className="cyberattack-panel"><div className="powercut-topline"><span>ORE &amp; ORDER · INCIDENT 002</span><span className="cyberattack-live"><i/> NETWORK BREACH</span></div><h2 id="cyberattack-title">Someone's in the system.</h2><p className="powercut-intro">The new Mech Assembly has just joined the line when every terminal flashes red. An unknown process has seized the factory network, locked the control systems and frozen production. This isn't a blown fuse — someone has got inside.</p><img className="powercut-storyboard" src="/resources/Factory Lockdown_ Cyberattack Alert.png" alt="Six-panel comic storyboard showing a factory network breach, warning terminal, frozen machinery and red emergency lighting"/><div className="powercut-choice-heading"><b>TAKE BACK CONTROL</b><span>Production stays paused until recovery</span></div><div className="powercut-actions"><button className="primary-button" disabled={s.cash<cybersecurityCost(s)} onClick={hireCybersecuritySpecialist}>HIRE CYBERSECURITY SPECIALIST · {fmt(cybersecurityCost(s))} RVT <small>Contains the breach and installs permanent protection</small></button><button className="secondary-button" disabled={s.cash<120} onClick={emergencyCyberRecovery}>EXTERNAL SYSTEM RESTORE · 120 RVT <small>Restores production without an in-house specialist</small></button></div><small className="powercut-footnote">The incident is one-time. A specialist stays on your team and protects the factory network.</small></section></div>}
     {s.powerCutEvent&&<div className="powercut-backdrop" role="dialog" aria-modal="true" aria-labelledby="powercut-title"><section className="powercut-panel"><div className="powercut-topline"><span>ORE &amp; ORDER · INCIDENT 001</span><span className="powercut-live"><i/> POWER FAILURE</span></div><h2 id="powercut-title">Well, that's put a stop to things.</h2><p className="powercut-intro">The lights flicker. The Rockbreaker Mine gives one last shudder, then everything goes quiet. Your first proper factory problem has arrived.</p><img className="powercut-storyboard" src="/resources/Factory Power Cut_ A Comic Storyboard.png" alt="Comic storyboard showing the factory lights flickering, a machine sparking, the factory going dark and emergency red lights coming on"/><div className="powercut-choice-heading"><b>GET THE MINE BACK ONLINE</b><span>Choose how to recover</span></div><div className="powercut-actions"><button className="primary-button" disabled={s.cash<60} onClick={()=>resolvePowerCut(true)}>HIRE A MECHANIC · 60 RVT <small>First-day discount · keeps them on your team</small></button><button className="secondary-button" disabled={s.cash<40} onClick={()=>resolvePowerCut(false)}>ONE-OFF REPAIR · 40 RVT <small>Fix the mine without hiring staff</small></button></div><small className="powercut-footnote">Your factory is paused until the mine is repaired. This incident only happens once.</small></section></div>}
     {s.breakdownEvent&&<div className="incident-backdrop" role="dialog" aria-modal="true" aria-labelledby="incident-title"><section className="incident-panel"><div className="incident-siren"><AlertTriangle size={28}/><span>EMERGENCY STOP · 01</span></div><p className="incident-kicker">FACTORY INCIDENT REPORT</p><h2 id="incident-title">Critical machine failure</h2><p className="incident-copy"><b>{machines.find(m=>m.id===s.breakdownEvent)?.name}</b> has suffered a mechanical failure. The line has been stopped while the fault is isolated. Production and automatic dispatch are temporarily suspended.</p><div className="incident-readout"><span>FAULT DETECTED</span><b>DRIVE ASSEMBLY OVERHEATING</b><span>REQUIRED ACTION</span><b>REPAIR THE AFFECTED MACHINE</b></div><div className="incident-actions">{s.mechanicAssignments[s.breakdownEvent]>0&&<button className="primary-button" onClick={()=>resolveBreakdown(true)}>USE ASSIGNED MECHANIC · FREE</button>}<button className="primary-button" disabled={s.cash<repairCostFor(s.breakdownEvent,s['tier_'+s.breakdownEvent])} onClick={()=>resolveBreakdown(false)}>EMERGENCY REPAIR · {fmt(repairCostFor(s.breakdownEvent,s['tier_'+s.breakdownEvent]))} RVT</button><button className="secondary-button" onClick={()=>{setS(v=>({...v,breakdownEvent:null}));setNotice('Emergency stop cleared. '+machines.find(m=>m.id===s.breakdownEvent)?.name+' still needs repair.')}}>CONTINUE · REPAIR LATER</button></div><small className="incident-footnote">Tip: assign a mechanic in Staff to handle future breakdowns. You can also repair the machine from its factory card.</small></section></div>}
+    {rewardSplash&&<div className={'reward-splash reward-'+rewardSplash.kind} key={rewardSplash.id} role="status" aria-live="polite"><div className="reward-splash-mark">{rewardSplash.kind==='contract'?<CheckCircle2 size={26}/>:rewardSplash.kind==='upgrade'?<Cog size={26}/>:<Truck size={26}/>}</div><div className="reward-splash-content"><small>{rewardSplash.kind==='contract'?'CUSTOMER DELIGHTED':rewardSplash.kind==='upgrade'?'FACTORY IMPROVED':'DISPATCH COMPLETE'}</small><h3>{rewardSplash.title}</h3><p>{rewardSplash.detail}</p><div className="reward-splash-values">{rewardSplash.cash!==undefined&&<b>+{fmt(rewardSplash.cash)} RVT</b>}{rewardSplash.xp!==undefined&&rewardSplash.xp>0&&<b>+{fmt(rewardSplash.xp)} XP</b>}{rewardSplash.rep!==undefined&&rewardSplash.rep>0&&<b>+{fmt(rewardSplash.rep)} REP</b>}</div></div><button type="button" aria-label="Close celebration" onClick={()=>setRewardSplash(null)}>×</button></div>}
     {notice&&<div className="toast" role="status" aria-live="polite"><span className="toast-icon">{noticeKind==='ORDER DESK'?'📦':noticeKind==='QUICK HEADS-UP'?'🛠️':'🏭'}</span><div className="toast-copy"><small>{noticeKind}</small><b>{noticeTitle}</b><p>{notice}</p></div><button className="toast-close" aria-label="Dismiss notification" onClick={()=>setNotice('')}>×</button></div>
     }{showReset&&<div className="modal-backdrop"><div className="reset-modal"><h2>Reset your factory?</h2><p>This clears machines, Rivets, Gears and staff saved on this device.</p><div><button onClick={()=>setShowReset(false)}>CANCEL</button><button className="danger" onClick={reset}>RESET FACTORY</button></div></div></div>}
   </div>;
