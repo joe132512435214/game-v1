@@ -72,19 +72,19 @@ test('late payments fall gradually and expired orders pay nothing',()=>{
   assert.ok(mid<o.reward&&mid>0);
   assert.ok(game.orderPayout(o,expiry-1)<=mid);assert.equal(game.orderPayout(o,expiry),0);
 });
-test('late costs 4 REP once, expiry removes the order and costs 6 in total',()=>{
+test('late costs 2 REP once, expiry removes the order and costs 3 in total',()=>{
   let s=factory();const o=offer(s);s.repeatOffers=[o,null,null];s.nextContractOfferAt=999999;
-  s.contractClock=o.due+1;s=game.updateContractOffers(s);assert.equal(s.reputation,96);
-  s=game.updateContractOffers(s);assert.equal(s.reputation,96);
+  s.contractClock=o.due+1;s=game.updateContractOffers(s);assert.equal(s.reputation,98);
+  s=game.updateContractOffers(s);assert.equal(s.reputation,98);
   s.contractClock=game.orderExpiry(o);s=game.updateContractOffers(s);
-  assert.equal(s.reputation,94);assert.equal(s.repeatOffers[0],null);
-  s=game.updateContractOffers(s);assert.equal(s.reputation,94);
+  assert.equal(s.reputation,97);assert.equal(s.repeatOffers[0],null);
+  s=game.updateContractOffers(s);assert.equal(s.reputation,97);
 });
 test('delivery awards the actual late payout without restoring lost REP or paying twice',()=>{
   let s=factory();const o=offer(s);s.repeatOffers=[o,null,null];s.ore=o.qty;
   s.contractClock=o.due+20;s=game.updateContractOffers(s);const before=s.cash;
   const paid=game.deliverRepeatOrder(s,o);
-  assert.equal(paid.cash-before,game.orderPayout(o,s.contractClock));assert.equal(paid.reputation,96);
+  assert.equal(paid.cash-before,game.orderPayout(o,s.contractClock));assert.equal(paid.reputation,98);
   assert.equal(paid.ore,0);assert.equal(paid.repeatOffers[0],null);
   assert.strictEqual(game.deliverRepeatOrder(paid,o),paid);
 });
@@ -111,13 +111,13 @@ test('existing saves retain legacy orders and receive cooldown defaults',()=>{
 
 test('declining costs less reputation than being late; late decline does not double-charge',()=>{
   const s=factory();const o=offer(s);s.repeatOffers=[o,null,null];
-  const declined=game.closeRepeatOrder(s,o);assert.equal(declined.reputation,98);
+  const declined=game.closeRepeatOrder(s,o);assert.equal(declined.reputation,99);
   assert.strictEqual(game.closeRepeatOrder(declined,o),declined);
   s.contractClock=o.due+1;
-  assert.equal(game.closeRepeatOrder(s,o).reputation,96);
-  const late=game.updateContractOffers(s);assert.equal(game.closeRepeatOrder(late,o).reputation,96);
-  s.contractClock=game.orderExpiry(o);assert.equal(game.closeRepeatOrder(s,o).reputation,94);
-  late.contractClock=game.orderExpiry(o);assert.equal(game.closeRepeatOrder(late,o).reputation,94);
+  assert.equal(game.closeRepeatOrder(s,o).reputation,98);
+  const late=game.updateContractOffers(s);assert.equal(game.closeRepeatOrder(late,o).reputation,98);
+  s.contractClock=game.orderExpiry(o);assert.equal(game.closeRepeatOrder(s,o).reputation,97);
+  late.contractClock=game.orderExpiry(o);assert.equal(game.closeRepeatOrder(late,o).reputation,97);
 });
 
 test('complete factories receive varied, product-specific and feasible requests',()=>{

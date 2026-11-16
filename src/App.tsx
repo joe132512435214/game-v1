@@ -210,10 +210,10 @@ function updateContractOffers(s:GameState):GameState{
     const active=n.repeatOffers[slot];
     if(active){
       if(n.contractClock>active.due&&!active.latePenalized){
-        n.repeatOffers[slot]={...active,latePenalized:true};n.reputation=Math.max(0,n.reputation-4);lateCount++;
+        n.repeatOffers[slot]={...active,latePenalized:true};n.reputation=Math.max(0,n.reputation-2);lateCount++;
       }
       if(n.contractClock>=orderExpiry(active)){
-        n.repeatOffers[slot]=null;n.reputation=Math.max(0,n.reputation-2);expiredCount++;
+        n.repeatOffers[slot]=null;n.reputation=Math.max(0,n.reputation-1);expiredCount++;
         n.repeatContractRounds[slot]++;n.repeatNextAt[slot]=n.contractClock+contractWait(slot,n.repeatContractRounds[slot]);
       }
     }else if(slot<slots&&n.contractClock>=n.repeatNextAt[slot]&&n.contractClock>=n.nextContractOfferAt){
@@ -222,17 +222,17 @@ function updateContractOffers(s:GameState):GameState{
       else n.repeatNextAt[slot]=n.contractClock+45;
     }
   }
-  if(expiredCount||lateCount)n.contractAlert={id:'deadline-'+n.contractClock,tone:'bad',message:expiredCount?expiredCount+' order'+(expiredCount>1?'s':'')+' expired · −6 REP total each':lateCount+' order'+(lateCount>1?'s':'')+' late · −4 REP each; payout falling'};
+  if(expiredCount||lateCount)n.contractAlert={id:'deadline-'+n.contractClock,tone:'bad',message:expiredCount?expiredCount+' order'+(expiredCount>1?'s':'')+' expired · −3 REP total each':lateCount+' order'+(lateCount>1?'s':'')+' late · −2 REP each; payout falling'};
   return n;
 }
 function deliverRepeatOrder(s:GameState,order:RepeatOrder):GameState{
   const current=s.repeatOffers[order.slot];
   if(!current||current.id!==order.id||s.contractClock>=orderExpiry(current)||!orderReady(s,current))return s;
   const late=s.contractClock>current.due;const payout=orderPayout(current,s.contractClock);
-  const n={...s,cash:s.cash+payout,reputation:Math.max(0,s.reputation+(late?(current.latePenalized?0:-4):current.rep)),experience:s.experience+current.xp,
+  const n={...s,cash:s.cash+payout,reputation:Math.max(0,s.reputation+(late?(current.latePenalized?0:-2):current.rep)),experience:s.experience+current.xp,
     repeatOffers:s.repeatOffers.map((o,i)=>i===order.slot?null:o),repeatContractRounds:s.repeatContractRounds.map((r,i)=>i===order.slot?r+1:r),
     repeatNextAt:s.repeatNextAt.map((at,i)=>i===order.slot?s.contractClock+contractWait(i,s.repeatContractRounds[i]):at),
-    contractAlert:{id:'delivered-'+current.id+'-'+s.contractClock,tone:late?'bad' as const:'good' as const,message:late?'Late delivery · '+payout+' RVT; −4 REP total':'Delivered · +'+payout+' RVT · +'+current.rep+' REP'}};
+    contractAlert:{id:'delivered-'+current.id+'-'+s.contractClock,tone:late?'bad' as const:'good' as const,message:late?'Late delivery · '+payout+' RVT; −2 REP total':'Delivered · +'+payout+' RVT · +'+current.rep+' REP'}};
   for(const line of current.items)n[line.good]-=line.qty;
   return n;
 }
@@ -241,11 +241,11 @@ function closeRepeatOrder(s:GameState,order:RepeatOrder):GameState{
   const current=s.repeatOffers[order.slot];if(!current||current.id!==order.id)return s;
   const late=s.contractClock>current.due;
   const expired=s.contractClock>=orderExpiry(current);
-  const penalty=expired?(current.latePenalized?2:6):late?(current.latePenalized?0:4):2;
+  const penalty=expired?(current.latePenalized?1:3):late?(current.latePenalized?0:2):1;
   return {...s,reputation:Math.max(0,s.reputation-penalty),repeatOffers:s.repeatOffers.map((o,i)=>i===order.slot?null:o),
     repeatContractRounds:s.repeatContractRounds.map((r,i)=>i===order.slot?r+1:r),
     repeatNextAt:s.repeatNextAt.map((at,i)=>i===order.slot?s.contractClock+contractWait(i,s.repeatContractRounds[i]):at),
-    contractAlert:{id:'declined-'+current.id+'-'+s.contractClock,tone:'bad',message:expired?'Expired order closed · −6 REP total':late?'Late order closed · −4 REP total':'Order declined · −2 REP'}};
+    contractAlert:{id:'declined-'+current.id+'-'+s.contractClock,tone:'bad',message:expired?'Expired order closed · −3 REP total':late?'Late order closed · −2 REP total':'Order declined · −1 REP'}};
 }
 const contractStockTarget=(state:GameState,id:StockId)=>{
   const repeat=(state.repeatOffers||[]).filter((o):o is RepeatOrder=>!!o&&state.contractClock<orderExpiry(o))
@@ -1106,8 +1106,8 @@ export default function App(){
   };
   const declineStoryOrder=(contract:typeof contracts[number])=>{
     if(contract.id==='first-ore'){setNotice('The opening order starts your factory and cannot be declined.');return;}
-    setS(v=>v.contractsCompleted.includes(contract.id)?v:{...v,reputation:Math.max(0,v.reputation-2),
-      storyNextAt:{...v.storyNextAt,[contract.id]:v.contractClock+300},contractAlert:{id:'declined-story-'+contract.id+'-'+v.contractClock,tone:'bad',message:'Order declined · −2 REP'}});
+    setS(v=>v.contractsCompleted.includes(contract.id)?v:{...v,reputation:Math.max(0,v.reputation-1),
+      storyNextAt:{...v.storyNextAt,[contract.id]:v.contractClock+300},contractAlert:{id:'declined-story-'+contract.id+'-'+v.contractClock,tone:'bad',message:'Order declined · −1 REP'}});
     setExpandedMail(null);
   };
   const hire=(role:'mechanic'|'sales')=>{
@@ -1230,10 +1230,10 @@ export default function App(){
         {inboxOpen&&<div className="mail-dropdown"><div className="mail-heading"><strong>INCOMING MAIL</strong><small>{incomingMail.length} open · {s.experience>=500?3:s.experience>=150?2:1} repeat slot(s) unlocked</small></div>
           {incomingMail.map(mail=>{const expanded=expandedMail===mail.key;const order=repeatOrders.find(o=>'repeat-'+o.id===mail.key);const story=contracts.find(c=>'story-'+c.id===mail.key);return <div className="mail-message" key={mail.key}>
             <button className="mail-subject" onClick={()=>setExpandedMail(expanded?null:mail.key)}><span>✉</span><span><b>{mail.from}</b><small>{mail.kind} · {goods.find(g=>g.id===mail.good)?.name}</small>{order&&<small className={'contract-difficulty difficulty-'+orderDifficulty(order)}>{s.contractClock>order.due?'LATE · ':''}{fmt(orderPayout(order,s.contractClock))} RVT · {s.contractClock>order.due?'expires in '+boostClock(Math.max(0,orderExpiry(order)-s.contractClock)):boostClock(Math.max(0,order.due-s.contractClock))+' to deadline'}</small>}<small>{mail.detail}</small></span><span>{expanded?'−':'+'}</span></button>
-            {expanded&&<div className="mail-body"><strong>RE: {mail.title}</strong><p>{mail.detail}</p><div className="mail-order-lines">{mail.items.map(line=><div className="mail-order-line" key={line.good}><ProductIcon id={line.good} size={25}/><b>{line.qty} × {goods.find(g=>g.id===line.good)?.name}</b><small>Available: {fmt(s[line.good])}/{line.qty}</small></div>)}</div>{order?<div className={'contract-terms difficulty-'+orderDifficulty(order)}><b>{CONTRACT_TERMS[orderDifficulty(order)].label} · {s.contractClock>order.due?'LATE DELIVERY':'ON-TIME WINDOW'}</b><strong>{fmt(orderPayout(order,s.contractClock))} RVT <small>{s.contractClock>order.due?'current reduced payout':'on-time payout'}</small></strong><span>{s.contractClock>order.due?'Late by '+boostClock(s.contractClock-order.due)+' · −4 REP total':boostClock(Math.max(0,order.due-s.contractClock))+' until deadline'}</span><span>Removed in {boostClock(Math.max(0,orderExpiry(order)-s.contractClock))}</span>{order.estimatedSeconds!==undefined&&<span>Production estimate at offer: ~{boostClock(order.estimatedSeconds)} at 1×</span>}<small>Late payment falls to {Math.round(CONTRACT_TERMS[orderDifficulty(order)].floor*100)}% before expiry. Decline: −2 REP · Late: −4 REP · Expired: −6 REP total. Late deliveries earn no reputation.</small><small>Timers pause with the game and during factory incidents. Estimates assume funded production and the current supply setup.</small></div>:<small>STORY ORDER · No deadline or expiry</small>}<small>Reward: {fmt(order?orderPayout(order,s.contractClock):story?.reward??0)} RVT · +{order?.xp??story?.xp??0} XP · +{order?(s.contractClock>order.due?0:order.rep):story?.rep??0} REP</small>
+            {expanded&&<div className="mail-body"><strong>RE: {mail.title}</strong><p>{mail.detail}</p><div className="mail-order-lines">{mail.items.map(line=><div className="mail-order-line" key={line.good}><ProductIcon id={line.good} size={25}/><b>{line.qty} × {goods.find(g=>g.id===line.good)?.name}</b><small>Available: {fmt(s[line.good])}/{line.qty}</small></div>)}</div>{order?<div className={'contract-terms difficulty-'+orderDifficulty(order)}><b>{CONTRACT_TERMS[orderDifficulty(order)].label} · {s.contractClock>order.due?'LATE DELIVERY':'ON-TIME WINDOW'}</b><strong>{fmt(orderPayout(order,s.contractClock))} RVT <small>{s.contractClock>order.due?'current reduced payout':'on-time payout'}</small></strong><span>{s.contractClock>order.due?'Late by '+boostClock(s.contractClock-order.due)+' · −2 REP total':boostClock(Math.max(0,order.due-s.contractClock))+' until deadline'}</span><span>Removed in {boostClock(Math.max(0,orderExpiry(order)-s.contractClock))}</span>{order.estimatedSeconds!==undefined&&<span>Production estimate at offer: ~{boostClock(order.estimatedSeconds)} at 1×</span>}<small>Late payment falls to {Math.round(CONTRACT_TERMS[orderDifficulty(order)].floor*100)}% before expiry. Decline: −1 REP · Late: −2 REP · Expired: −3 REP total. Late deliveries earn no reputation.</small><small>Timers pause with the game and during factory incidents. Estimates assume funded production and the current supply setup.</small></div>:<small>STORY ORDER · No deadline or expiry</small>}<small>Reward: {fmt(order?orderPayout(order,s.contractClock):story?.reward??0)} RVT · +{order?.xp??story?.xp??0} XP · +{order?(s.contractClock>order.due?0:order.rep):story?.rep??0} REP</small>
               {story?.id==='first-ore'&&!s.acceptedContracts.includes('first-ore')&&<button className="secondary-button" onClick={()=>{setS(v=>v.acceptedContracts.includes('first-ore')?v:{...v,acceptedContracts:[...v.acceptedContracts,'first-ore'],cash:v.cash+65,drivers:Math.max(1,v.drivers),driverAssignments:{...v.driverAssignments,iron:Math.max(1,v.driverAssignments.iron)}});setNotice('Opening order accepted · 65 RVT equipment advance + starter delivery van and driver included.')}}>ACCEPT OPENING ORDER · +65 RVT</button>}
               <button className="primary-button" disabled={!mail.items.every(line=>s[line.good]>=line.qty)||!!(story&&s.reputation<story.minRep)||!!(story?.id==='first-ore'&&!s.acceptedContracts.includes('first-ore'))} onClick={()=>{if(order)completeRepeatOrder(order);else if(story)completeContract(story);setExpandedMail(null)}}>{mail.items.every(line=>s[line.good]>=line.qty)?order&&s.contractClock>order.due?'DELIVER LATE · '+fmt(orderPayout(order,s.contractClock))+' RVT':'FULFIL ORDER':'AWAITING PRODUCTS'}</button>
-              {(order||(story&&story.id!=='first-ore'))&&<button className="decline-contract" onClick={()=>{if(order)declineRepeatOrder(order);else if(story)declineStoryOrder(story)}}>{order&&s.contractClock>order.due?'CLOSE LATE ORDER · −4 REP TOTAL':'DECLINE CONTRACT · −2 REP'}</button>}</div>}
+              {(order||(story&&story.id!=='first-ore'))&&<button className="decline-contract" onClick={()=>{if(order)declineRepeatOrder(order);else if(story)declineStoryOrder(story)}}>{order&&s.contractClock>order.due?'CLOSE LATE ORDER · −2 REP TOTAL':'DECLINE CONTRACT · −1 REP'}</button>}</div>}
           </div>})}
           {incomingMail.length===0&&<p className="mail-empty">Inbox clear. New offers arrive when your current factory can supply them.</p>}
           {Number.isFinite(nextMailWait)&&<div className="mail-next">Next offer check in {boostClock(nextMailWait)} · needs a working supply chain</div>}
@@ -1465,7 +1465,7 @@ export default function App(){
         <div className="gear-banner"><Cog size={21}/><span><b>{fmt(s.gears)} Gears</b><small>Earn 1 Gear per 12 total finished goods shipped (Precision Parts, Circuit Boards, Steel Beams or Copper Coils). Current progress: {s.gearShipmentProgress.toFixed(1)}/12. Mission rewards also grant Gears.</small></span></div>
         {(s.miner>0||s.copperMiner>0)&&<section className="freight-inventory-note"><div><Truck size={19}/><span><strong>ORE WAITING AT THE MINES</strong><small>Drivers collect this ore. Mines slow down if the queue gets too large; add drivers or upgrade the fleet to restore full output.</small></span></div><div className="freight-inventory-values">{s.miner>0&&<span>IRON <b>{s.oreAtMine.toFixed(1)}</b></span>}{s.copperMiner>0&&<span>COPPER <b>{s.copperAtMine.toFixed(1)}</b></span>}</div><button type="button" className="secondary-button" onClick={()=>{setPage('staff');setStaffTab('haulage')}}>MANAGE DRIVERS</button></section>}
         <section className="warehouse-grid">{visibleGoods.map(g=><article className="stock-card" key={g.id}><span className="stock-emoji"><ProductIcon id={g.id} size={43}/></span><div><h3>{g.name}</h3><p>{g.detail} · {g.price} RVT each</p><b>{fmt(s[g.id])} <small>IN STOCK</small></b>{(g.id==='ingot'||g.id==='wire')&&<div className="stock-flow-control"><div className="stock-flow-head"><span>WHERE SHOULD IT GO?</span><b>{s.flowMode[g.id as IntermediateStock]==='stockpile'?'STOCKPILE':s.flowMode[g.id as IntermediateStock]==='feed'?'PRODUCTION':'BALANCED'}</b></div><div className="stock-flow-switch" role="group" aria-label={g.name+' material routing'}>{([{id:'stockpile',label:'Store',hint:'Keep everything for orders'},{id:'balanced',label:'Split',hint:'Protect orders and feed machines'},{id:'feed',label:'Use',hint:'Send it to production'}] as const).map(option=><button key={option.id} type="button" aria-pressed={s.flowMode[g.id as IntermediateStock]===option.id} title={option.hint} className={s.flowMode[g.id as IntermediateStock]===option.id?'is-selected':''} onClick={()=>setS(v=>({...v,flowMode:{...v.flowMode,[g.id]:option.id}}))}>{option.label}</button>)}</div><small>{s.flowMode[g.id as IntermediateStock]==='stockpile'?'Save all new stock for shipping or contracts.':s.flowMode[g.id as IntermediateStock]==='feed'?'Other machines can use all available stock.':'Reserve contract quantities and keep production flowing.'}</small></div>}</div><button disabled={s[g.id]<1} onClick={()=>sellStock(g.id)}>SHIP ALL · {fmt(Math.floor(s[g.id])*g.price)} RVT</button></article>)}</section>
-        <section className="contracts-panel"><div className="section-heading"><div><span className="eyebrow">CUSTOMER EMAILS</span><h2>Order Desk</h2><p>Easy, Standard, Hard and Rush orders arrive in the Order Inbox. Late orders pay less and cost 4 reputation; expired orders disappear and cost 6 in total. New offers are spaced at least 2½ minutes apart.</p></div><button className="primary-button" onClick={()=>setInboxOpen(true)}>OPEN INBOX · {incomingMail.length}</button></div><div className="contract-summary"><span><b>{readyOrders}</b> READY</span><span><b>{activeOrders}</b> PREPARING</span><span><b>{completedOrders}</b> STORY DELIVERIES</span></div></section>
+        <section className="contracts-panel"><div className="section-heading"><div><span className="eyebrow">CUSTOMER EMAILS</span><h2>Order Desk</h2><p>Easy, Standard, Hard and Rush orders arrive in the Order Inbox. Late orders pay less and cost 2 reputation; expired orders disappear and cost 3 in total. New offers are spaced at least 2½ minutes apart.</p></div><button className="primary-button" onClick={()=>setInboxOpen(true)}>OPEN INBOX · {incomingMail.length}</button></div><div className="contract-summary"><span><b>{readyOrders}</b> READY</span><span><b>{activeOrders}</b> PREPARING</span><span><b>{completedOrders}</b> STORY DELIVERIES</span></div></section>
         <div className="sales-note"><CircleDollarSign size={18}/> {s.salespeople>0&&s.autoSell?'Your assigned sales team is automatically dispatching stock.':'Hire sales staff and enable automatic sales from the Staff page to automate dispatch.'}</div>
       </div>}
     </main>
