@@ -1620,3 +1620,15 @@ body:has(.game[data-theme="copper"]){background:#2b1c18!important}
 @keyframes livingBelt{to{background-position:17px 0}}
 @keyframes livingProduct{from{left:-28px}to{left:100%}}
 @media(prefers-reduced-motion:reduce){.living-conveyor.is-moving .living-conveyor-belt,.living-conveyor-product{animation:none}.living-conveyor-product{left:42%}}
+
+
+/* Factory dashboard: restrained breathing room without redundant gaps. */
+.factory-view-toolbar{margin-bottom:12px}
+.home-hero{padding-bottom:12px}
+.home-factory-machines{gap:10px}
+.home-machine{min-width:0}
+.home-stats{gap:10px}
+.home-next{margin-top:12px}
+.home-delivery{margin-top:12px}
+.home-secondary{margin-top:10px;padding-top:10px}
+@media(max-width:600px){.factory-view-toolbar{margin-bottom:9px}.home-factory-machines{gap:7px}.home-stats{gap:7px}.home-next{margin-top:10px}}
