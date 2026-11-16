@@ -1,0 +1,470 @@
+import { useEffect, useState } from 'react';
+import {
+  Factory, Cog, Pause, Play, RotateCcw, Wrench, Store, Truck, Users, AlertTriangle,
+  CheckCircle2, ArrowUpRight, Zap, Boxes, CircleDollarSign, FlaskConical, ShieldCheck, TrendingUp, Cpu
+} from 'lucide-react';
+
+type MachineId = 'miner' | 'smelter' | 'press' | 'assembler' | 'copperMiner' | 'copperSmelter' | 'wiremill' | 'circuitpress';
+type StockId = 'ore' | 'ingot' | 'plate' | 'parts' | 'copperOre' | 'copperIngot' | 'wire' | 'circuits';
+type Page = 'factory' | 'staff' | 'warehouse' | 'research';
+type GameState = {
+  cash:number; gears:number; ore:number; ingot:number; plate:number; parts:number; copperOre:number; copperIngot:number; wire:number; circuits:number;
+  miner:number; smelter:number; press:number; assembler:number; copperMiner:number; copperSmelter:number; wiremill:number; circuitpress:number;
+  tier_miner:number; tier_smelter:number; tier_press:number; tier_assembler:number; tier_copperMiner:number; tier_copperSmelter:number; tier_wiremill:number; tier_circuitpress:number;
+  level:number; sold:number; mechanics:number; salespeople:number; reputation:number; acceptedContracts:string[]; contractsCompleted:string[];
+  broken:Record<MachineId,number>; mechanicAssignments:Record<MachineId,number>; breakdownEvent:MachineId|null; powerCutEvent:boolean; powerCutSeen:boolean; cyberAttackEvent:boolean; cyberAttackSeen:boolean; cybersecuritySpecialists:number;
+  salesTarget:StockId; autoSell:boolean; missionsClaimed:number[]; researched:string[];
+};
+const SAVE_KEY = 'ironworks-tycoon-save-v2';
+const fresh:GameState = {
+  cash:0,gears:0,ore:0,ingot:0,plate:0,parts:0,copperOre:0,copperIngot:0,wire:0,circuits:0,
+  miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0,
+  tier_miner:0,tier_smelter:0,tier_press:0,tier_assembler:0,tier_copperMiner:0,tier_copperSmelter:0,tier_wiremill:0,tier_circuitpress:0,
+  level:1,sold:0,mechanics:0,salespeople:0,
+  broken:{miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0},
+  mechanicAssignments:{miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0},breakdownEvent:null,powerCutEvent:false,powerCutSeen:false,cyberAttackEvent:false,cyberAttackSeen:false,cybersecuritySpecialists:0,
+  salesTarget:'parts',autoSell:false,missionsClaimed:[],researched:[],reputation:0,acceptedContracts:[],contractsCompleted:[]
+};
+const machines:{id:MachineId;name:string;short:string;cost:number;desc:string;input:string;output:string;rate:number}[]=[
+  {id:'miner',name:'Rockbreaker Mine',short:'EXTRACT',cost:50,desc:'Breaks rock into raw ore.',input:'Raw ore',output:'Raw ore',rate:.22},
+  {id:'smelter',name:'Blast Furnace',short:'SMELT',cost:180,desc:'Melts ore into iron ingots.',input:'Raw ore',output:'Iron ingots',rate:.16},
+  {id:'press',name:'Stamping Press',short:'PRESS',cost:600,desc:'Shapes ingots into metal plates.',input:'Iron ingots',output:'Metal plates',rate:.09},
+  {id:'assembler',name:'Mech Assembly',short:'ASSEMBLE',cost:1600,desc:'Builds finished precision parts.',input:'Metal plates',output:'Precision parts',rate:.055},
+  {id:'copperMiner',name:'Copper Excavator',short:'COPPER MINE',cost:1800,desc:'Extracts copper ore for the electrical production line.',input:'Copper seam',output:'Copper ore',rate:.26},
+  {id:'copperSmelter',name:'Copper Foundry',short:'COPPER SMELT',cost:5500,desc:'Refines copper ore into conductive ingots.',input:'Copper ore',output:'Copper ingots',rate:.18},
+  {id:'wiremill',name:'Wire Drawing Mill',short:'WIRE DRAW',cost:14000,desc:'Draws copper ingots into fine electrical wire.',input:'Copper ingots',output:'Copper wire',rate:.12},
+  {id:'circuitpress',name:'Circuit Board Line',short:'CIRCUITS',cost:30000,desc:'Builds circuit boards from precision electrical wire.',input:'Copper wire',output:'Circuit boards',rate:.07}
+];
+const goods:{id:StockId;name:string;emoji:string;price:number;detail:string}[]=[
+  {id:'ore',name:'Raw Ore',emoji:'🪨',price:5,detail:'Fresh from the mine'},
+  {id:'ingot',name:'Iron Ingots',emoji:'🧱',price:14,detail:'Smelted and ready'},
+  {id:'plate',name:'Metal Plates',emoji:'🔩',price:36,detail:'Pressed steel stock'},
+  {id:'parts',name:'Precision Parts',emoji:'🧰',price:105,detail:'Premium finished goods'},
+  {id:'copperOre',name:'Copper Ore',emoji:'🟠',price:6,detail:'Raw copper from the new excavation line'},
+  {id:'copperIngot',name:'Copper Ingots',emoji:'🟤',price:18,detail:'Refined conductive metal'},
+  {id:'wire',name:'Copper Wire',emoji:'🧵',price:48,detail:'Drawn wire for electrical manufacturing'},
+  {id:'circuits',name:'Circuit Boards',emoji:'🟩',price:140,detail:'High-value electrical components'}
+];
+const contracts:{id:string;name:string;detail:string;good:StockId;qty:number;reward:number;rep:number;minRep:number}[]=[
+  {id:'first-ore',name:'First Ore Delivery',detail:'A nearby foundry advances your first machine purchase, then pays the balance when you deliver five raw ore.',good:'ore',qty:5,reward:85,rep:5,minRep:0},
+  {id:'foundry-batch',name:'Foundry Batch',detail:'Supply a run of iron ingots.',good:'ingot',qty:8,reward:320,rep:7,minRep:5},
+  {id:'steel-plates',name:'Steel Plate Consignment',detail:'A construction firm needs steel plates.',good:'plate',qty:6,reward:720,rep:10,minRep:12},
+  {id:'precision-order',name:'Precision Components',detail:'A machinery customer wants precision parts.',good:'parts',qty:4,reward:1500,rep:15,minRep:22},
+  {id:'copper-delivery',name:'Copper Ore Delivery',detail:'An electrical foundry needs copper.',good:'copperOre',qty:10,reward:1100,rep:12,minRep:30},
+  {id:'wire-contract',name:'Electrical Wire Contract',detail:'Wire for a regional infrastructure project.',good:'wire',qty:6,reward:2400,rep:20,minRep:48},
+  {id:'circuit-contract',name:'Circuit Board Supply',detail:'A technology manufacturer needs circuits.',good:'circuits',qty:4,reward:5200,rep:30,minRep:75}
+];
+const contractProducer:Record<StockId,MachineId>={ore:'miner',ingot:'smelter',plate:'press',parts:'assembler',copperOre:'copperMiner',copperIngot:'copperSmelter',wire:'wiremill',circuits:'circuitpress'};
+function loadGame():GameState{
+  try{
+    const saved=JSON.parse(localStorage.getItem(SAVE_KEY)||'{}');
+    const completed=Array.isArray(saved.contractsCompleted)?saved.contractsCompleted:[];
+    const shouldRecoverPowerCut=completed.includes('first-ore')&&!saved.powerCutSeen&&!saved.powerCutEvent;
+    const shouldRecoverCyberAttack=Number(saved.assembler)>0&&!saved.cyberAttackSeen&&!saved.cyberAttackEvent;
+    return {...fresh,...saved,broken:{...fresh.broken,...saved.broken},mechanicAssignments:{...fresh.mechanicAssignments,...saved.mechanicAssignments},breakdownEvent:saved.breakdownEvent??null,powerCutEvent:shouldRecoverPowerCut?true:(saved.powerCutEvent??false),powerCutSeen:shouldRecoverPowerCut?true:(saved.powerCutSeen??false),cyberAttackEvent:shouldRecoverCyberAttack?true:(saved.cyberAttackEvent??false),cyberAttackSeen:shouldRecoverCyberAttack?true:(saved.cyberAttackSeen??false),cybersecuritySpecialists:Math.max(0,Number(saved.cybersecuritySpecialists)||0),researched:Array.isArray(saved.researched)?saved.researched:[],acceptedContracts:Array.isArray(saved.acceptedContracts)?saved.acceptedContracts:[],contractsCompleted:completed,reputation:Math.max(0,Number(saved.reputation)||0)};
+  }catch{return fresh;}
+}
+const fmt=(n:number)=>Math.floor(n).toLocaleString();
+const machineCost=(m:typeof machines[number],s:GameState)=>Math.floor(m.cost*Math.pow(1.48,s[m.id]));
+const mechanicCost=(s:GameState)=>Math.floor(180*Math.pow(1.65,s.mechanics));
+const salesCost=(s:GameState)=>Math.floor(240*Math.pow(1.65,s.salespeople));
+
+function MachineArt({id,active,broken,cycle}:{id:MachineId;active:boolean;broken:boolean;cycle:number}){
+ const beat=cycle%2?'cycle-b':'cycle-a';
+ const electrical=['copperMiner','copperSmelter','wiremill','circuitpress'].includes(id);
+ const copper=electrical?'#bd8054':'#bd985e';
+ const steel=electrical?'#78877e':'#819187';
+ const dark=electrical?'#39453d':'#35453d';
+ const glass=electrical?'#d8a16d':'#d5c18b';
+ const bolt=(x:number,y:number)=><circle cx={x} cy={y} r="2.3" fill="#d7c9a8" stroke="#39453b" strokeWidth="1"/>;
+ return <div className={'machine-art art-'+id+(electrical?' art-electrical':'')+(active?' running '+beat:'')+(broken?' broken':'')}>
+  <div className="art-backdrop"/>
+  <svg viewBox="0 0 320 210" role="img" aria-label={machines.find(m=>m.id===id)?.name+' detailed industrial machine illustration'}>
+   <defs>
+    <linearGradient id={'body-'+id} x1="0" y1="0" x2="1" y2="1"><stop stopColor="#d3d9c9"/><stop offset=".42" stopColor={steel}/><stop offset="1" stopColor="#303d36"/></linearGradient>
+    <linearGradient id={'copper-'+id} x1="0" y1="0" x2="0" y2="1"><stop stopColor="#f0c28a"/><stop offset=".5" stopColor={copper}/><stop offset="1" stopColor="#704a35"/></linearGradient>
+    <linearGradient id={'dark-'+id} x1="0" y1="0" x2="1" y2="1"><stop stopColor="#59685d"/><stop offset="1" stopColor="#202a25"/></linearGradient>
+    <linearGradient id={'glass-'+id} x1="0" y1="0" x2="0" y2="1"><stop stopColor="#f4e3b5"/><stop offset="1" stopColor="#b4b18b"/></linearGradient>
+    <radialGradient id={'glow-'+id}><stop stopColor="#f3c879" stopOpacity=".8"/><stop offset="1" stopColor="#f3c879" stopOpacity="0"/></radialGradient>
+    <filter id={'shadow-'+id} x="-30%" y="-30%" width="160%" height="170%"><feGaussianBlur in="SourceAlpha" stdDeviation="3"/><feOffset dy="4"/><feComponentTransfer><feFuncA type="linear" slope=".45"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   </defs>
+   <ellipse cx="160" cy="184" rx="122" ry="14" fill="#08110d" opacity=".72"/>
+   <path d="M35 164l25-12h199l27 12-24 15H58z" fill="#26332c" stroke="#101a14" strokeWidth="3"/>
+   <path d="M48 161h224v13H48z" fill="#59685a" stroke="#26372e" strokeWidth="3"/>
+   <path d="M57 174h206" stroke="#b4a17a" strokeWidth="2" strokeDasharray="10 8" opacity=".7"/>
+   <g filter={'url(#shadow-'+id+')'} stroke="#26372e" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round">
+    {id==='miner'&&<g>
+      <path d="M68 87l18-37 103-8 35 30v82H68z" fill={'url(#body-'+id+')'}/>
+      <path d="M86 51l14-23 80-4 27 24-18 14-91 5z" fill="#d0b477"/>
+      <path d="M94 69l92-8 22 17v58H94z" fill={'url(#dark-'+id+')'}/>
+      <path d="M109 82h79v42h-79z" fill="#1d2b24" stroke="#9caa91"/>
+      <path d="M117 89h63v29h-63z" fill="#82917d"/><path d="M124 95h49v17h-49z" fill="#394d40"/>
+      <path d="M74 84L44 65l-18 17 31 27 18-8z" fill="#a6b19a"/><g className="moving-part"><path d="M35 76l-13 22 20 17 17-22z" fill="#d2a66f"/><path d="M28 98l-13 21 21 16 17-22z" fill="#748579"/><path d="M21 119l-7 15 18 11 11-16z" fill="#c0a06d"/></g>
+      <path d="M205 87h26v67h-26z" fill="#68796e"/><path d="M211 97h14v42h-14z" fill="#28372e"/>
+      <path d="M84 139h116v13H84z" fill="#c08b57"/><path d="M98 151h86v7H98z" fill="#303d34"/>
+      {bolt(83,91)}{bolt(194,77)}{bolt(83,145)}{bolt(217,145)}
+      <path d="M116 31l12-12h43l13 11" fill="none" stroke="#d9c18b" strokeWidth="6"/>
+      <path d="M235 91l19 8v42l-19 8" fill="none" stroke="#a0ad96" strokeWidth="7"/>
+    </g>}
+    {id==='smelter'&&<g>
+      <path d="M79 62h163v99H79z" fill="#985d45"/><path d="M91 73h139v78H91z" fill="#4b3a31"/>
+      <path d="M104 87h113v62H104z" fill="#1d2520"/><path d="M116 100h89v49h-89z" fill="#a95e3d"/>
+      <path d="M129 139q-19-28 2-49 4 17 16 22 3-24 19-34 24 36-1 61z" fill="#e8753f" stroke="#f6c17c" strokeWidth="3" className="furnace-flame"/>
+      <path d="M144 141q-8-15 6-27 1 11 9 13 8-12 11-18 11 24-3 32z" fill="#ffe29a" stroke="#fff0bd" strokeWidth="2" className="furnace-flame"/>
+      <path d="M95 62V34h31v28m74 0V27h32v35" fill="#b17b57"/><path d="M102 35h17M201 29h18" stroke="#d9b184" strokeWidth="5"/>
+      <path d="M71 82h10v68H71zm160 0h10v68h-10z" fill="#d0a06f"/>
+      <path d="M82 156h160v9H82z" fill="#d7b179"/>
+      <path d="M111 73h92" stroke="#d7b179" strokeWidth="4"/>{bolt(88,77)}{bolt(232,77)}{bolt(88,145)}{bolt(232,145)}
+      <path d="M245 70h17v28h-17" fill="none" stroke="#8d9b8c" strokeWidth="6"/>
+    </g>}
+    {id==='press'&&<g>
+      <path d="M73 42h174v121H73z" fill={'url(#body-'+id+')'}/><path d="M88 54h145v15H88z" fill="#d7d9c9"/>
+      <path d="M93 69h20v79H93zm115 0h20v79h-20z" fill="#43574b"/>
+      <path d="M115 73h92v17h-92z" fill="#25362d"/><g className="press-ram"><path d="M132 85h59v53h-59z" fill={'url(#copper-'+id+')'}/><path d="M121 134h81v12h-81z" fill="#d8bd81"/><path d="M139 94h45v29h-45z" fill="#8e6849"/></g>
+      <path d="M85 150h150v12H85z" fill="#8a9a8a"/><path d="M103 160h113v6H103z" fill="#25352d"/>
+      <path d="M75 37h170v12H75z" fill="#bdc5b4"/><path d="M87 27h146v10H87z" fill="#b17d50"/>
+      <path d="M122 20h70v9h-70z" fill="#d2b67e"/><path d="M150 18v10" stroke="#34453a" strokeWidth="5"/>
+      <path d="M111 91h-16m130 0h-16" stroke="#e2c68e" strokeWidth="4"/>
+      {bolt(83,48)}{bolt(237,48)}{bolt(83,153)}{bolt(237,153)}
+      <path d="M65 78h9v62h-9zm174 0h9v62h-9z" fill="#d09a64"/>
+    </g>}
+    {id==='assembler'&&<g>
+      <path d="M59 128h198v27H59z" fill="#53685b"/><path d="M72 119h171v10H72z" fill="#c49b64"/>
+      <path d="M88 110V74h76v36z" fill="#44594b"/><path d="M98 82h57v23H98z" fill="#202c25"/>
+      <path d="M111 88h31v12h-31z" fill="#d1b27a"/><circle cx="127" cy="94" r="6" fill="#536e5a"/>
+      <path d="M163 66l21-23 19 8-10 26-19 13z" fill="#9aa99a"/><g className="robot-arm"><path d="M187 54l16-31 22 8-7 34-19 8z" fill="#d0a36a"/><circle cx="200" cy="53" r="11" fill="#e2c68e"/><path d="M214 34l15-11 15 11-12 18z" fill="#8e9e90"/><path d="M229 49l10 10-10 12-11-9z" fill="#d0a36a"/></g>
+      <path d="M69 65h29v12H69z" fill="#c08a57"/><path d="M81 76v41" stroke="#b9c5b3" strokeWidth="6"/>
+      <path d="M105 119h8v-9h12v9h8v-9h12v9h8" fill="none" stroke="#d6b87e" strokeWidth="4"/>
+      <path d="M62 155v-26h12v26m162 0v-26h12v26" fill="#29382f"/>
+      {bolt(76,136)}{bolt(242,136)}{bolt(92,116)}{bolt(157,116)}
+    </g>}
+    {id==='copperMiner'&&<g>
+      <path d="M67 88l18-35 104-6 36 31v79H67z" fill={'url(#copper-'+id+')'}/>
+      <path d="M88 54l14-23 80-4 27 24-18 14-91 5z" fill="#e1b17c"/>
+      <path d="M94 73l92-8 22 17v57H94z" fill={'url(#dark-'+id+')'}/>
+      <path d="M109 85h79v41h-79z" fill="#28352d" stroke="#d5a16c"/><path d="M119 94h58v24h-58z" fill="#bd8054"/>
+      <g className="moving-part"><path d="M68 76L42 58 24 80l31 27 18-8z" fill="#d49a68"/><path d="M35 94l-17 23 20 16 18-23z" fill="#8f674a"/></g>
+      <path d="M204 91h28v63h-28z" fill="#7f7760"/><circle cx="218" cy="110" r="13" fill="#dba16c"/><circle cx="218" cy="110" r="6" fill="#614735"/>
+      <path d="M83 140h116v13H83z" fill="#c18456"/>{bolt(84,92)}{bolt(194,79)}{bolt(84,145)}{bolt(218,145)}
+      <path d="M112 35h64" stroke="#f0c18c" strokeWidth="5"/>
+    </g>}
+    {id==='copperSmelter'&&<g>
+      <path d="M79 62h163v99H79z" fill="#986349"/><path d="M91 73h139v78H91z" fill="#48372e"/>
+      <path d="M104 87h113v62H104z" fill="#1d2520"/><path d="M116 100h89v49h-89z" fill="#ad613f"/>
+      <path d="M129 139q-19-28 2-49 4 17 16 22 3-24 19-34 24 36-1 61z" fill="#e78c4c" stroke="#f5ca8a" strokeWidth="3" className="furnace-flame"/>
+      <path d="M144 141q-8-15 6-27 1 11 9 13 8-12 11-18 11 24-3 32z" fill="#ffe1a0" className="furnace-flame"/>
+      <path d="M95 62V34h31v28m74 0V27h32v35" fill="#c18a60"/><path d="M102 35h17m82-6h18" stroke="#e2b789" strokeWidth="5"/>
+      <path d="M71 82h10v68H71zm160 0h10v68h-10z" fill="#d4a071"/><path d="M82 156h160v9H82z" fill="#d7b179"/>
+      {bolt(88,77)}{bolt(232,77)}{bolt(88,145)}{bolt(232,145)}
+    </g>}
+    {id==='wiremill'&&<g>
+      <path d="M53 76h216v84H53z" fill="#66776c"/><path d="M65 87h192v59H65z" fill="#26352d"/>
+      <path d="M71 95h48v43H71z" fill="#9b7653"/><path d="M203 95h48v43h-48z" fill="#9b7653"/>
+      <circle cx="94" cy="116" r="26" fill="#26342d" stroke="#d0a06e" strokeWidth="8"/><circle cx="94" cy="116" r="10" fill="#d9c08d"/>
+      <circle cx="226" cy="116" r="26" fill="#26342d" stroke="#d0a06e" strokeWidth="8"/><circle cx="226" cy="116" r="10" fill="#d9c08d"/>
+      <g className="wire-spool"><path d="M119 107Q160 58 201 107M119 124Q160 171 201 124" fill="none" stroke="#e3b77f" strokeWidth="5"/><path d="M119 115h82" stroke="#c6d0b8" strokeWidth="3"/></g>
+      <path d="M74 151h174" stroke="#c1c9b9" strokeWidth="5"/><path d="M78 75h166" stroke="#d6b486" strokeWidth="5"/>
+      {bolt(63,84)}{bolt(260,84)}{bolt(63,152)}{bolt(260,152)}
+    </g>}
+    {id==='circuitpress'&&<g>
+      <path d="M58 39h204v122H58z" fill="#617267"/><path d="M72 53h176v91H72z" fill="#27352d"/>
+      <path d="M85 66h150v63H85z" fill="#355d47" stroke="#a0b194"/>
+      <path d="M98 79h124v38H98z" fill="#172b22"/>
+      <path d="M108 87h20v20h-20zm35 0h20v20h-20zm35 0h20v20h-20z" fill="#d0bd87" stroke="#283a30" strokeWidth="2"/>
+      <path d="M118 77v-8m35 8v-8m35 8v-8M118 109v11m35-11v11m35-11v11" stroke="#d0a16c" strokeWidth="3"/>
+      <path d="M98 126h124" stroke="#d0a16c" strokeWidth="3" strokeDasharray="5 4"/>
+      <path d="M73 42h175v9H73z" fill="#c5cbbb"/><path d="M91 31h138v11H91z" fill="#b97c52"/>
+      <path d="M87 150h146v10H87z" fill="#c18b5f"/>{bolt(67,48)}{bolt(251,48)}{bolt(67,151)}{bolt(251,151)}
+      <path d="M263 66h15v47h-15" fill="none" stroke="#d2a36f" strokeWidth="6"/>
+    </g>}
+    <g fill="#d5c18b" stroke="#29372f" strokeWidth="1.5"><circle cx="48" cy="167" r="5"/><circle cx="272" cy="167" r="5"/></g>
+   </g>
+   {active&&<g className="sparkles" fill="#f4d28f" stroke="#f4d28f"><path d="M42 39v-12m-6 6h12"/><path d="M279 83V71m-6 6h12"/><circle cx="291" cy="126" r="2.5"/></g>}
+   {broken&&<path d="M151 27l-10 20h12l-7 18 22-26h-13l8-12z" fill="#d47b55" stroke="#ffe0aa" strokeWidth="2"/>}
+  </svg>
+  <div className="machine-art-floor"/><span className="art-lamp"><i/><i/><i/></span>
+  {broken&&<span className="broken-stamp"><AlertTriangle size={14}/> BROKEN</span>}{active&&<span className="art-status-dot"/>}
+ </div>;
+}
+
+export default function App(){
+  const [s,setS]=useState<GameState>(loadGame);
+  const [page,setPage]=useState<Page>('factory');
+  const [running,setRunning]=useState(true);
+  const [speed,setSpeed]=useState(1);
+  const [notice,setNotice]=useState('');
+  const [showReset,setShowReset]=useState(false);
+  const [contractFilter,setContractFilter]=useState<'all'|'ready'|'progress'|'done'>('all');
+  const [cycle,setCycle]=useState(0);
+  useEffect(()=>{localStorage.setItem(SAVE_KEY,JSON.stringify(s));},[s]);
+  useEffect(()=>{
+    if(!running)return;
+    const timer=window.setInterval(()=>{setCycle(c=>c+1);setS(v=>{
+      const n={...v,broken:{...v.broken}};
+      if(n.breakdownEvent||n.powerCutEvent||n.cyberAttackEvent)return n;
+      const multiplier=speed;
+      const reliabilityBonus=n.researched.includes('reinforced-bearings')?.35:0;
+      machines.forEach(m=>{if(n[m.id]>0&&n.broken[m.id]===0&&Math.random()<.00065*(1-reliabilityBonus)){n.broken[m.id]=24;if(!n.breakdownEvent)n.breakdownEvent=m.id;}});
+      if(n.breakdownEvent)return n;
+      machines.forEach(m=>{
+        const assigned=n.mechanicAssignments[m.id]||0;
+        if(n.broken[m.id]>0&&assigned>0)n.broken[m.id]=Math.max(0,n.broken[m.id]-assigned*multiplier);
+      });
+      const researchOutput=(n.researched.includes('efficient-extraction')?1.15:1)*(n.researched.includes('precision-tooling')?1.3:1);
+      const rate=(id:MachineId,base:number)=>n.broken[id]>0?0:n[id]*base*(1+n['tier_'+id]*.25)*researchOutput*multiplier;
+      const oreMade=rate('miner',.35);
+      const ingotsMade=Math.min(n.ore+oreMade,rate('smelter',.22));
+      const platesMade=Math.min(n.ingot+ingotsMade,rate('press',.12));
+      const partsMade=Math.min(n.plate+platesMade,rate('assembler',.07));
+      const copperOreMade=rate('copperMiner',.26);
+      const copperIngotsMade=Math.min(n.copperOre+copperOreMade,rate('copperSmelter',.18));
+      const wireMade=Math.min(n.copperIngot+copperIngotsMade,rate('wiremill',.12));
+      const circuitsMade=Math.min(n.wire+wireMade,rate('circuitpress',.07));
+      n.ore=Math.max(0,n.ore+oreMade-ingotsMade);
+      n.ingot=Math.max(0,n.ingot+ingotsMade-platesMade);
+      n.plate=Math.max(0,n.plate+platesMade-partsMade);
+      n.parts+=partsMade;
+      n.copperOre=Math.max(0,n.copperOre+copperOreMade-copperIngotsMade);
+      n.copperIngot=Math.max(0,n.copperIngot+copperIngotsMade-wireMade);
+      n.wire=Math.max(0,n.wire+wireMade-circuitsMade);
+      n.circuits+=circuitsMade;
+      if(n.autoSell&&n.salespeople>0){
+        const id=n.salesTarget;
+        const amount=Math.min(n[id],n.salespeople*.12*multiplier);
+        const item=goods.find(g=>g.id===id)!;
+        const saleBonus=n.researched.includes('market-intelligence')?1.2:1;
+        n[id]-=amount;n.cash+=amount*item.price*saleBonus;n.sold+=amount*item.price*saleBonus;
+        if(id==='parts'||id==='circuits')n.gears+=amount;
+      }
+      return n;
+    });},1000);
+    return()=>window.clearInterval(timer);
+  },[running,speed]);
+  const machineCount=machines.reduce((sum,m)=>sum+s[m.id],0);
+  const stockValue=goods.reduce((sum,g)=>sum+s[g.id]*g.price,0);
+  const brokenCount=machines.filter(m=>s.broken[m.id]>0).length;
+  const assignedTotal=machines.reduce((sum,m)=>sum+s.mechanicAssignments[m.id],0);
+  const unassigned=s.mechanics-assignedTotal;
+  const progressionLevel=1+Math.floor(s.sold/1000);
+  const reputationUnlock:Record<MachineId,number>={miner:0,smelter:2,press:8,assembler:18,copperMiner:25,copperSmelter:40,wiremill:60,circuitpress:90};
+  const companyRank=s.reputation>=90?'GLOBAL MANUFACTURER':s.reputation>=50?'INDUSTRIAL CORPORATION':s.reputation>=25?'REGIONAL SUPPLIER':s.reputation>=10?'LOCAL MANUFACTURER':'WORKSHOP';
+  const nextRep=s.reputation<10?10:s.reputation<25?25:s.reputation<50?50:s.reputation<90?90:120;
+  const repProgress=Math.min(100,s.reputation>=90?100:s.reputation/nextRep*100);
+  const nextGoal=progressionLevel*1000;
+  const goalProgress=Math.min(100,(s.sold-(progressionLevel-1)*1000)/1000*100);
+  const unlockAt:Record<MachineId,number>={miner:0,smelter:150,press:1200,assembler:5000,copperMiner:3000,copperSmelter:6000,wiremill:12000,circuitpress:25000};
+  // Keep the floor focused: show every machine already owned and just the next milestone.
+  const nextMachine=machines.filter(m=>s[m.id]===0).sort((a,b)=>unlockAt[a.id]-unlockAt[b.id])[0];
+  const visibleMachines=machines.filter(m=>s[m.id]>0||m.id===nextMachine?.id);
+  const visibleGoods=goods.filter((g)=>{
+    const producer:Record<StockId,MachineId>={ore:'miner',ingot:'smelter',plate:'press',parts:'assembler',copperOre:'copperMiner',copperIngot:'copperSmelter',wire:'wiremill',circuits:'circuitpress'};
+    return s[producer[g.id]]>0||producer[g.id]===nextMachine?.id;
+  });
+  const achievements=[
+    {name:'First Foundations',detail:'Build your first machine',done:machineCount>=1,icon:'🏗️'},
+    {name:'Hot Metal',detail:'Unlock the Blast Furnace',done:s.sold>=150,icon:'🔥'},
+    {name:'Precision Work',detail:'Build the Stamping Press',done:s.press>0,icon:'🔩'},
+    {name:'Full Production',detail:'Build the Mech Assembly',done:s.assembler>0,icon:'🦾'},
+    {name:'First Shipment',detail:'Ship 1,000 Rivets worth of goods',done:s.sold>=1000,icon:'🚚'},
+    {name:'Growing Crew',detail:'Hire your first team member',done:s.mechanics+s.salespeople>0,icon:'👷'},
+    {name:'A New Metal',detail:'Build the Copper Excavator',done:s.copperMiner>0,icon:'🟠'},
+    {name:'Going Electric',detail:'Build the Circuit Board Line',done:s.circuitpress>0,icon:'🟩'}
+  ];
+  const missions=[
+    {id:1,title:'Make your first shipment',detail:'Ship any goods from the Warehouse.',progress:Math.min(1,s.sold),target:1,done:s.sold>=1,rivets:100,gears:0},
+    {id:2,title:'Bring the heat',detail:'Build your first Blast Furnace.',progress:s.smelter>0?1:0,target:1,done:s.smelter>0,rivets:160,gears:0},
+    {id:3,title:'Build your maintenance crew',detail:'Hire your first mechanic in Staff.',progress:Math.min(1,s.mechanics),target:1,done:s.mechanics>0,rivets:180,gears:0},
+    {id:4,title:'Become a serious supplier',detail:'Ship 1,000 Rivets worth of goods in total.',progress:Math.min(1000,s.sold),target:1000,done:s.sold>=1000,rivets:250,gears:2},
+    {id:5,title:'Shape the steel',detail:'Build your first Stamping Press.',progress:s.press>0?1:0,target:1,done:s.press>0,rivets:420,gears:0},
+    {id:6,title:'Assemble the future',detail:'Build your first Mech Assembly.',progress:s.assembler>0?1:0,target:1,done:s.assembler>0,rivets:650,gears:3},
+    {id:7,title:'Double your extraction',detail:'Build a second Rockbreaker Mine.',progress:Math.min(2,s.miner),target:2,done:s.miner>=2,rivets:900,gears:2},
+    {id:8,title:'Take sales off the floor',detail:'Hire your first sales representative.',progress:Math.min(1,s.salespeople),target:1,done:s.salespeople>0,rivets:1200,gears:2},
+    {id:9,title:'Work smarter, not harder',detail:'Research Efficient Extraction.',progress:s.researched.includes('efficient-extraction')?1:0,target:1,done:s.researched.includes('efficient-extraction'),rivets:1800,gears:3},
+    {id:10,title:'Become a regional supplier',detail:'Reach 10,000 Rivets in lifetime shipments.',progress:Math.min(10000,s.sold),target:10000,done:s.sold>=10000,rivets:3500,gears:5},
+    {id:11,title:'Scale up the press room',detail:'Build a second Stamping Press.',progress:Math.min(2,s.press),target:2,done:s.press>=2,rivets:6500,gears:6},
+    {id:12,title:'A new metal to master',detail:'Build your first Copper Excavator.',progress:s.copperMiner>0?1:0,target:1,done:s.copperMiner>0,rivets:8000,gears:5},
+    {id:13,title:'Power the future',detail:'Build your first Wire Drawing Mill.',progress:s.wiremill>0?1:0,target:1,done:s.wiremill>0,rivets:14000,gears:8},
+    {id:14,title:'Electronics manufacturer',detail:'Build your first Circuit Board Line.',progress:s.circuitpress>0?1:0,target:1,done:s.circuitpress>0,rivets:24000,gears:12}
+  ];
+  const activeMission=missions.find(m=>!s.missionsClaimed.includes(m.id));
+  const visibleContracts=contracts.filter(c=>s[contractProducer[c.good]]>0||contractProducer[c.good]===nextMachine?.id);
+  const readyOrders=visibleContracts.filter(c=>!s.contractsCompleted.includes(c.id)&&s.reputation>=c.minRep&&s[c.good]>=c.qty).length;
+  const activeOrders=visibleContracts.filter(c=>!s.contractsCompleted.includes(c.id)&&s.reputation>=c.minRep&&s[c.good]<c.qty).length;
+  const completedOrders=visibleContracts.filter(c=>s.contractsCompleted.includes(c.id)).length;
+  const noticeTitle=notice.toLowerCase().includes('contract fulfilled')||notice.toLowerCase().includes('delivery signed off')?'Order complete · lovely stuff':notice.toLowerCase().includes('contract accepted')||notice.toLowerCase().includes('order accepted')?'New order · no pressure (some pressure)':notice.toLowerCase().includes('not enough')||notice.toLowerCase().includes('need ')||notice.toLowerCase().includes('no full units')?'Small snag · the numbers say no':notice.toLowerCase().includes('repaired')?'Back in business':notice.toLowerCase().includes('shipped')?'Out the loading bay':notice.toLowerCase().includes('built')?'Fresh machinery':notice.toLowerCase().includes('mission complete')?'Milestone smashed':'Workshop update';
+  const noticeKind=notice.toLowerCase().includes('contract')||notice.toLowerCase().includes('order accepted')||notice.toLowerCase().includes('delivery signed off')?'ORDER DESK':notice.toLowerCase().includes('not enough')||notice.toLowerCase().includes('need ')?'QUICK HEADS-UP':'FACTORY NOTICE';
+  useEffect(()=>{
+    const next=missions.find(m=>!s.missionsClaimed.includes(m.id));
+    if(next&&next.done){
+      setS(v=>v.missionsClaimed.includes(next.id)?v:{...v,missionsClaimed:[...v.missionsClaimed,next.id],cash:v.cash+next.rivets,gears:v.gears+next.gears});
+      setNotice('Mission complete: '+next.title+' · +'+next.rivets+' Rivets'+(next.gears?' · +'+next.gears+' Gears':''));
+    }
+  },[s]);
+  const researchOutput=(s.researched.includes('efficient-extraction')?1.15:1)*(s.researched.includes('precision-tooling')?1.3:1);
+  const saleMultiplier=s.researched.includes('market-intelligence')?1.2:1;
+  const rateFor=(m:typeof machines[number])=>s.broken[m.id]>0?0:s[m.id]*m.rate*(1+s['tier_'+m.id]*.25)*researchOutput;
+  const resolvePowerCut=(hireMechanic:boolean)=>{
+    if(!s.powerCutEvent)return;
+    if(hireMechanic){
+      setS(v=>({...v,cash:v.cash-60,mechanics:v.mechanics+1,mechanicAssignments:{...v.mechanicAssignments,miner:v.mechanicAssignments.miner+1},broken:{...v.broken,miner:0},powerCutEvent:false}));
+      setNotice('Mechanic hired on a first-day discount. The Rockbreaker Mine is repaired and back online.');
+      return;
+    }
+    setS(v=>({...v,cash:v.cash-40,broken:{...v.broken,miner:0},powerCutEvent:false}));
+    setNotice('One-off emergency repair complete. The Rockbreaker Mine is back online.');
+  };
+  const cybersecurityCost=(state:GameState)=>Math.floor(350*Math.pow(1.7,state.cybersecuritySpecialists));
+  const hireCybersecuritySpecialist=()=>{
+    const cost=cybersecurityCost(s);
+    if(s.cash<cost){setNotice('Not enough Rivets. Ship existing stock from the Warehouse to fund the security hire.');return;}
+    setS(v=>({...v,cash:v.cash-cost,cybersecuritySpecialists:v.cybersecuritySpecialists+1,cyberAttackEvent:false}));
+    setNotice('Cybersecurity specialist hired. The breach is contained and a permanent factory firewall is now active.');
+  };
+  const emergencyCyberRecovery=()=>{
+    if(s.cash<120){setNotice('Emergency system recovery costs 120 RVT. Ship available warehouse stock to raise the funds.');return;}
+    setS(v=>({...v,cash:v.cash-120,cyberAttackEvent:false}));
+    setNotice('External response team restored the production network. The breach is contained, but you have no in-house cyber protection.');
+  };
+  const resolveBreakdown=(useMechanic:boolean)=>{
+    const id=s.breakdownEvent;
+    if(!id)return;
+    if(useMechanic&&s.mechanicAssignments[id]>0){setS(v=>({...v,broken:{...v.broken,[id]:0},breakdownEvent:null}));setNotice(machines.find(m=>m.id===id)!.name+' repaired by your assigned mechanic. Production is back online.');return;}
+    if(s.cash>=40){setS(v=>({...v,cash:v.cash-40,broken:{...v.broken,[id]:0},breakdownEvent:null}));setNotice('Emergency repair complete · 40 RVT spent. Production is back online.');return;}
+    setS(v=>({...v,breakdownEvent:null}));setNotice('Emergency stop cleared. The machine remains broken until you assign a mechanic or save 40 RVT for repairs.');
+  };
+  const buyMachine=(m:typeof machines[number])=>{
+    if(m.id==='miner'&&s.miner===0&&!s.acceptedContracts.includes('first-ore')){setNotice('Accept your First Ore Delivery contract to receive the machine advance.');return;}
+    const cost=machineCost(m,s);
+    if(s.cash<cost){setNotice('Not enough Rivets. Ship some stock to raise funds.');return;}
+    setS(v=>({...v,cash:v.cash-cost,[m.id]:v[m.id]+1,...(m.id==='assembler'&&!v.cyberAttackSeen?{cyberAttackSeen:true,cyberAttackEvent:true}:{})}));
+    setNotice(m.id==='assembler'&&!s.cyberAttackSeen?'Mech Assembly commissioned. Security breach detected — the factory network is locked down.':m.name+' built and added to the factory.');
+  };
+  const upgradeMachine=(m:typeof machines[number])=>{
+    const cost=(s['tier_'+m.id]+1)*3;
+    if(s.gears<cost){setNotice('You need '+cost+' Gears for this upgrade.');return;}
+    setS(v=>({...v,gears:v.gears-cost,['tier_'+m.id]:v['tier_'+m.id]+1}));
+    setNotice(m.name+' upgraded. Output increased by 25%.');
+  };
+  const sellStock=(id:StockId)=>{
+    const item=goods.find(g=>g.id===id)!;const amount=Math.floor(s[id]);
+    if(amount<1){setNotice('There are no full units ready to ship.');return;}
+    setS(v=>({...v,[id]:v[id]-amount,cash:v.cash+amount*item.price*saleMultiplier,sold:v.sold+amount*item.price*saleMultiplier,gears:v.gears+((id==='parts'||id==='circuits')?amount:0)}));
+    setNotice('Shipped '+fmt(amount)+' '+item.name+' for '+fmt(amount*item.price)+' Rivets.');
+  };
+  const completeContract=(contract:typeof contracts[number])=>{
+    if(s.contractsCompleted.includes(contract.id))return;
+    if(contract.id==='first-ore'&&!s.acceptedContracts.includes('first-ore')){setNotice('Accept the opening contract before delivering goods.');return;}
+    if(s.reputation<contract.minRep){setNotice('Your company needs '+contract.minRep+' reputation.');return;}
+    if(s[contract.good]<contract.qty){setNotice('You need '+contract.qty+' units in stock.');return;}
+    setS(v=>({...v,[contract.good]:v[contract.good]-contract.qty,cash:v.cash+contract.reward,reputation:v.reputation+contract.rep,contractsCompleted:[...v.contractsCompleted,contract.id],...(contract.id==='first-ore'&&!v.powerCutSeen?{powerCutSeen:true,powerCutEvent:true,broken:{...v.broken,miner:Math.max(v.broken.miner,30)}}:{})}));
+    setNotice(contract.id==='first-ore'?'DELIVERY SIGNED OFF — then the lights go out. The Rockbreaker Mine has lost power.':'Delivery signed off. +'+fmt(contract.reward)+' RVT and +'+contract.rep+' reputation. The client says you are now their favourite supplier.');
+  };
+  const hire=(role:'mechanic'|'sales')=>{
+    const cost=role==='mechanic'?mechanicCost(s):salesCost(s);
+    if(s.cash<cost){setNotice('You need '+fmt(cost)+' Rivets to hire this person.');return;}
+    setS(v=>({...v,cash:v.cash-cost,[role==='mechanic'?'mechanics':'salespeople']:v[role==='mechanic'?'mechanics':'salespeople']+1}));
+    setNotice(role==='mechanic'?'Mechanic hired. Assign them to a machine below.':'Sales representative hired. Set their product target below.');
+  };
+  const assignMechanic=(id:MachineId,count:number)=>{
+    const used=machines.reduce((sum,m)=>sum+(m.id===id?0:s.mechanicAssignments[m.id]),0);
+    const allowed=Math.max(0,Math.min(s.mechanics-used,count));
+    setS(v=>({...v,mechanicAssignments:{...v.mechanicAssignments,[id]:allowed}}));
+  };
+  const technologies=[
+    {id:'efficient-extraction',name:'Efficient Extraction',branch:'PRODUCTION',cost:2,icon:Zap,detail:'Optimised drills and furnace timing increase all machine output by 15%.',effect:'+15% production',requires:[] as string[]},
+    {id:'reinforced-bearings',name:'Reinforced Bearings',branch:'MAINTENANCE',cost:3,icon:ShieldCheck,detail:'Hard-wearing components reduce machine breakdown chance by 35%.',effect:'35% fewer breakdowns',requires:['efficient-extraction']},
+    {id:'market-intelligence',name:'Market Intelligence',branch:'COMMERCE',cost:4,icon:TrendingUp,detail:'Better pricing data and smarter contracts increase every sale value by 20%.',effect:'+20% sale value',requires:['efficient-extraction']},
+    {id:'precision-tooling',name:'Precision Tooling',branch:'ADVANCED PRODUCTION',cost:6,icon:Cpu,detail:'High-tolerance tooling pushes every production line another 30% faster.',effect:'+30% production',requires:['reinforced-bearings','market-intelligence']}
+  ];
+  const researchTech=(id:string,cost:number)=>{
+    const tech=technologies.find(t=>t.id===id);
+    if(!tech||s.researched.includes(id))return;
+    if(!tech.requires.every(req=>s.researched.includes(req))){setNotice('Complete the prerequisite research first.');return;}
+    if(s.gears<cost){setNotice('You need '+cost+' Gears to fund this research.');return;}
+    setS(v=>({...v,gears:v.gears-cost,researched:[...v.researched,id]}));
+    setNotice(tech.name+' researched · '+tech.effect+'.');
+  };
+  const reset=()=>{setS(fresh);setRunning(true);setSpeed(1);setShowReset(false);setNotice('A fresh factory. Let’s get to work!');};
+  return <div className="game">
+    <header className="topbar">
+      <div className="brand"><span className="brand-mark"><Factory size={23}/></span><span><b>ORE &amp; ORDER</b><small>FACTORY TYCOON</small></span></div>
+      <div className="wallet">
+        <div className="wallet-cash"><span className="coin-symbol">R</span><span><small>RIVETS</small><b>{fmt(s.cash)} <i>RVT</i></b></span></div>
+        <div className="wallet-gears"><Cog size={18}/><span><small>GEARS</small><b>{fmt(s.gears)}</b></span></div>
+      </div>
+      <div className="top-controls"><span className="online"><i/> {s.cyberAttackEvent?'SECURITY LOCKDOWN':running?'RUNNING':'PAUSED'}</span><button className="round-btn" onClick={()=>setRunning(!running)} aria-label={running?'Pause':'Resume'}>{running?<Pause size={16}/>:<Play size={16}/>}</button><button className="round-btn" onClick={()=>setShowReset(true)} aria-label="Reset game"><RotateCcw size={16}/></button></div>
+    </header>
+    <main>
+      <nav className="main-nav" aria-label="Main menu">
+        <button className={page==='factory'?'active':''} onClick={()=>setPage('factory')}><Factory size={16}/> Factory</button>
+        <button className={page==='staff'?'active':''} onClick={()=>setPage('staff')}><Users size={16}/> Staff <span>{s.mechanics+s.salespeople+s.cybersecuritySpecialists}</span></button>
+        <button className={page==='warehouse'?'active':''} onClick={()=>setPage('warehouse')}><Boxes size={16}/> Warehouse</button>
+        <button className={page==='research'?'active':''} onClick={()=>setPage('research')}><FlaskConical size={16}/> Research <span>{s.researched.length}/4</span></button>
+      </nav>
+      {page==='factory'&&<div className="page-content">
+        <section className="welcome-row"><div><span className="eyebrow">{companyRank} · LEVEL {progressionLevel}</span><h1>Factory floor</h1><p>Build machines, keep production moving and ship what you make.</p><div className="level-progress"><span>LEVEL {progressionLevel} PROGRESS</span><div><i style={{width:goalProgress+'%'}}/></div><small>{fmt(Math.max(0,nextGoal-s.sold))} RVT to level {progressionLevel+1}</small></div><div className="reputation-meter"><span>COMPANY REPUTATION · {s.reputation}</span><div><i style={{width:repProgress+'%'}}/></div><small>{companyRank} · {s.reputation>=90?'Top rank reached':(nextRep-s.reputation)+' reputation to next rank'}</small></div></div><div className="quick-stats"><div><small>MACHINES</small><b>{machineCount}/8</b></div><div><small>THROUGHPUT</small><b>{machines.reduce((sum,m)=>sum+rateFor(m),0).toFixed(2)}<i>/s</i></b></div><div><small>STAFF</small><b>{s.mechanics+s.salespeople}</b></div></div></section>
+        <section className="mission-panel"><div className="mission-heading"><div><span className="eyebrow">YOUR NEXT OBJECTIVE</span><h2>{activeMission?activeMission.title:'All missions complete!'}</h2><p>{activeMission?activeMission.detail:'You have completed the starter mission line. Keep expanding your factory.'}</p></div><span className="mission-count">{s.missionsClaimed.length}/{missions.length} COMPLETE</span></div>{activeMission?<><div className="mission-progress"><i style={{width:(activeMission.progress/activeMission.target*100)+'%'}}/></div><div className="mission-footer"><span>{activeMission.target>1?fmt(activeMission.progress)+' / '+fmt(activeMission.target):activeMission.progress>=1?'Objective complete':'Not complete yet'}</span><b>REWARD · {fmt(activeMission.rivets)} RVT{activeMission.gears?' + '+activeMission.gears+' GEARS':''}</b></div></>:<div className="mission-finished">Starter campaign finished. Your next challenge is to grow the factory your way.</div>}</section>
+        {brokenCount>0&&<div className="alert-banner"><AlertTriangle size={18}/><span><b>{brokenCount} machine{brokenCount>1?'s':''} broken.</b> Visit Staff to assign a mechanic, or repair them here.</span><button onClick={()=>setPage('staff')}>MANAGE STAFF</button></div>}
+        <section className="line-panel"><div className="line-heading"><div><span className="eyebrow">LIVE PRODUCTION</span><h2>Assembly line</h2></div><span className="line-live"><i/> {running?'RUNNING':'PAUSED'}</span></div>
+          <div className={'production-route '+(!running?'is-paused':'')}>
+            {visibleMachines.map((m,i)=>{const owned=s[m.id]>0;const stageGoods=goods.find(g=>g.id===({miner:'ore',smelter:'ingot',press:'plate',assembler:'parts',copperMiner:'copperOre',copperSmelter:'copperIngot',wiremill:'wire',circuitpress:'circuits'} as Record<MachineId,StockId>)[m.id]);return <div className={'route-stage '+(owned?'stage-owned':'stage-next')} key={m.id}>
+              <span className="route-index">{String(i+1).padStart(2,'0')}</span><span className="route-symbol">{stageGoods?.emoji||'⚙'}</span><b>{m.name}</b><small>{owned?'INSTALLED':'NEXT STAGE'}</small>
+              {i<visibleMachines.length-1&&<span className="route-link"><i/></span>}
+            </div>;})}
+          </div>
+          <div className="line-caption"><span>YOUR CURRENT PRODUCTION ROUTE</span><span>{visibleMachines.length} STAGE{visibleMachines.length===1?'':'S'} SHOWN</span></div>
+        </section>
+        <section className="machines-heading"><div><span className="eyebrow">YOUR EQUIPMENT</span><h2>Machines</h2><p>Each machine has its own job. Build the next stage when you're ready.</p></div><span className="machine-count">{machineCount} BUILT</span></section>
+        {s.miner===0&&<section className="starter-contract"><div><span className="eyebrow">YOUR FIRST COMMISSION</span><h2>First Ore Delivery</h2><p>A local foundry has placed a small order for five raw ore. Accept it to receive a 50 RVT equipment advance, buy your first Rockbreaker Mine, produce the ore and deliver it for the final payment.</p><div className="starter-contract-reward"><b>50 RVT ADVANCE</b><span>+85 RVT · +5 REP ON DELIVERY</span></div></div><button className="primary-button" disabled={s.acceptedContracts.includes('first-ore')} onClick={()=>{setS(v=>({...v,acceptedContracts:[...v.acceptedContracts,'first-ore'],cash:v.cash+50}));setNotice('Order accepted. The foundry has advanced 50 RVT. Now buy your first Rockbreaker Mine — try not to spend it all on snacks.')}}>{s.acceptedContracts.includes('first-ore')?'ORDER ACCEPTED · ADVANCE PAID':'ACCEPT ORDER · GET 50 RVT'}</button></section>}
+        <section className="machine-grid">{visibleMachines.map(m=>{
+          const owned=s[m.id];const hasInput=m.id==='miner'||m.id==='copperMiner'||(m.id==='smelter'?s.ore>0:m.id==='press'?s.ingot>0:m.id==='assembler'?s.plate>0:m.id==='copperSmelter'?s.copperOre>0:m.id==='wiremill'?s.copperIngot>0:s.wire>0);const active=running&&owned>0&&s.broken[m.id]===0&&hasInput;const cost=machineCost(m,s);const tier=s['tier_'+m.id];const repairCost=40;
+          return <article className={'machine-card '+(owned?'owned':'locked')+(s.broken[m.id]>0?' is-broken':'')} key={m.id}>
+            <div className="machine-card-head"><span className="machine-number">0{machines.indexOf(m)+1} · {m.short}</span><span className={'status '+(s.broken[m.id]>0?'bad':active?'good':'idle')}>{s.broken[m.id]>0?'BROKEN':active?'WORKING':owned?'IDLE':'NOT BUILT'}</span></div>
+            <MachineArt id={m.id} active={active} broken={s.broken[m.id]>0} cycle={cycle}/>
+            <div className="machine-info"><div><h3>{m.name}</h3><p>{m.desc}</p></div><span className="machine-level">LV {tier+1}</span></div>
+            <div className="machine-details"><span>OUTPUT</span><b>{rateFor(m).toFixed(2)} / sec</b><span>OWNED</span><b>{owned}</b></div>
+            {s.broken[m.id]>0&&<div className="machine-repair"><span>{s.mechanicAssignments[m.id]>0?'Mechanic assigned · repairing':'No mechanic assigned'}</span><button onClick={()=>{if(s.cash<repairCost){setNotice('Emergency repair costs 40 Rivets.');return;}setS(v=>({...v,cash:v.cash-repairCost,broken:{...v.broken,[m.id]:0}}));setNotice(m.name+' repaired.')}}>REPAIR · 40 RVT</button></div>}
+            <div className="machine-buttons">{owned===0?(s.sold<unlockAt[m.id]||s.reputation<reputationUnlock[m.id]?<div className="machine-locked-note">🔒 {fmt(unlockAt[m.id])} RVT sales + {reputationUnlock[m.id]} reputation required</div>:<button className="primary-button" disabled={s.cash<cost} onClick={()=>buyMachine(m)}>BUILD MACHINE · {fmt(cost)} RVT</button>):<button className="secondary-button" disabled={s.gears<(tier+1)*3} onClick={()=>upgradeMachine(m)}><ArrowUpRight size={15}/> UPGRADE · {(tier+1)*3} GEARS</button>}</div>
+            {owned>0&&<small className="machine-footnote">+25% output per upgrade · {m.output}</small>}
+          </article>;
+        })}</section>
+        <section className="achievement-panel"><div className="achievement-heading"><div><span className="eyebrow">MILESTONES</span><h2>Factory achievements</h2></div><span>{achievements.filter(a=>a.done).length}/{achievements.length} UNLOCKED</span></div><div className="achievement-grid">{achievements.map(a=><div className={'achievement '+(a.done?'earned':'')} key={a.name}><span>{a.icon}</span><div><b>{a.name}</b><small>{a.detail}</small></div><strong>{a.done?'✓':'LOCKED'}</strong></div>)}</div></section>
+        <section className="factory-footer"><div><Zap size={16}/><span>Production speed</span>{[1,2,3].map(x=><button key={x} className={speed===x?'selected':''} onClick={()=>setSpeed(x)}>{x}×</button>)}</div><span className="saved"><CheckCircle2 size={14}/> Progress auto-saves</span></section>
+      </div>}
+      {page==='staff'&&<div className="page-content">
+        <section className="welcome-row"><div><span className="eyebrow">PEOPLE MAKE THE FACTORY</span><h1>Staff room</h1><p>Hire your crew, give them a clear job and keep every department covered.</p></div><div className="staff-summary"><b>{s.mechanics+s.salespeople+s.cybersecuritySpecialists}</b><span>TEAM MEMBERS</span><small>{unassigned} mechanic{unassigned===1?'':'s'} unassigned</small></div></section>
+        <section className="staff-roles">
+          <article className="role-card mechanic-role"><div className="role-top"><span className="role-icon"><Wrench size={24}/></span><span className="role-tag">MAINTENANCE</span></div><h2>Mechanic</h2><p>Repairs breakdowns and gets machines running again. Assign each mechanic to the machine you want them to look after.</p><div className="role-bottom"><div><b>{s.mechanics}</b><small>HIRED</small></div><button className="primary-button" disabled={s.cash<mechanicCost(s)} onClick={()=>hire('mechanic')}>HIRE · {fmt(mechanicCost(s))} RVT</button></div></article>
+          <article className="role-card sales-role"><div className="role-top"><span className="role-icon"><Store size={24}/></span><span className="role-tag">DISPATCH & SALES</span></div><h2>Sales representative</h2><p>Sells stock from your warehouse automatically. Choose which product they focus on and switch automatic sales on.</p><div className="role-bottom"><div><b>{s.salespeople}</b><small>HIRED</small></div><button className="primary-button" disabled={s.cash<salesCost(s)} onClick={()=>hire('sales')}>HIRE · {fmt(salesCost(s))} RVT</button></div></article>
+          <article className="role-card cyber-role"><div className="role-top"><span className="role-icon"><ShieldCheck size={24}/></span><span className="role-tag">NETWORK SECURITY</span></div><h2>Cybersecurity specialist</h2><p>Monitors factory systems, contains digital intrusions and installs a permanent firewall against future cyber incidents.</p><div className="role-bottom"><div><b>{s.cybersecuritySpecialists}</b><small>HIRED</small></div><button className="primary-button" disabled={s.cash<cybersecurityCost(s)} onClick={hireCybersecuritySpecialist}>HIRE · {fmt(cybersecurityCost(s))} RVT</button></div></article>
+        </section>
+        <section className="staff-assignments">
+          <div className="section-heading"><div><span className="eyebrow">TEAM SETUP</span><h2>Assign your staff</h2><p>Choose where each mechanic works. One mechanic repairs one machine at a time.</p></div><div className="available-staff"><b>{unassigned}</b><span>AVAILABLE MECHANICS</span></div></div>
+          <div className="assignment-list">{machines.filter(m=>s[m.id]>0).map(m=><div className="assignment-row" key={m.id}><span className="assignment-machine"><Cog size={19}/></span><div className="assignment-copy"><b>{m.name}</b><small>{s.broken[m.id]>0?'Breakdown · '+(s.mechanicAssignments[m.id]>0?'being repaired':'awaiting mechanic'):s[m.id]>0?'Machine operational':'Not built yet'}</small></div><label><span>MECHANICS</span><select value={s.mechanicAssignments[m.id]} onChange={e=>assignMechanic(m.id,Number(e.target.value))} disabled={s.mechanics===0||s[m.id]===0}>{Array.from({length:s.mechanics+1},(_,i)=>i).map(i=><option key={i} value={i}>{i===0?'Unassigned':i+' assigned'}</option>)}</select></label></div>)}</div>
+          {s.mechanics===0&&<div className="empty-hint"><Wrench size={17}/> Hire a mechanic above to unlock machine assignments.</div>}
+        </section>
+        <section className="sales-setup"><div className="sales-setup-title"><span className="role-icon"><Truck size={22}/></span><div><span className="eyebrow">DISPATCH SETTINGS</span><h2>Sales team instructions</h2></div></div><div className="sales-controls"><label>PRODUCT TO SELL<select value={s.salesTarget} onChange={e=>setS(v=>({...v,salesTarget:e.target.value as StockId}))}>{visibleGoods.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></label><label className="toggle-row"><input type="checkbox" checked={s.autoSell} disabled={s.salespeople===0} onChange={e=>setS(v=>({...v,autoSell:e.target.checked}))}/><span><b>Automatic sales</b><small>{s.salespeople>0?'Your sales team ships '+(s.salespeople*.12).toFixed(2)+' units per second.':'Hire a sales representative to activate this.'}</small></span></label></div></section>
+      </div>}
+      {page==='research'&&<div className="page-content">
+        <section className="welcome-row"><div><span className="eyebrow">THE NEXT INDUSTRIAL REVOLUTION</span><h1>Research &amp; Technology</h1><p>Invest Gears into permanent factory-wide improvements. Every discovery stays unlocked, even when you leave the game.</p></div><div className="staff-summary research-summary"><b>{s.researched.length}/4</b><span>TECHNOLOGIES</span><small>{fmt(s.gears)} Gears available</small></div></section>
+        <section className="research-overview"><div><FlaskConical size={22}/><span><b>Research department</b><small>Turn precision parts into permanent competitive advantages.</small></span></div><div className="research-active-effects">{s.researched.length===0?'No technologies researched yet':s.researched.map(id=>technologies.find(t=>t.id===id)?.effect).filter(Boolean).join(' · ')}</div></section>
+        <section className="technology-tree"><div className="technology-heading"><div><span className="eyebrow">TECHNOLOGY TREE</span><h2>Choose your next breakthrough</h2><p>Research costs Gears. Unlock the first discovery to open both specialist branches.</p></div><span className="machine-count">{s.researched.length} / 4 UNLOCKED</span></div>
+          <div className="technology-grid">{technologies.map(tech=>{const done=s.researched.includes(tech.id);const unlocked=tech.requires.every(req=>s.researched.includes(req));const Icon=tech.icon;return <article className={'technology-card '+(done?'researched':unlocked?'available':'locked-tech')} key={tech.id}><div className="technology-top"><span className="technology-icon"><Icon size={21}/></span><span className="technology-branch">{tech.branch}</span></div><h3>{tech.name}</h3><p>{tech.detail}</p><div className="technology-effect">{tech.effect}</div>{done?<div className="technology-complete"><CheckCircle2 size={16}/> RESEARCH COMPLETE</div>:<><small className="technology-cost">COST · {tech.cost} GEARS</small><button className="primary-button" disabled={!unlocked||s.gears<tech.cost} onClick={()=>researchTech(tech.id,tech.cost)}>{!unlocked?'LOCKED · PREREQUISITES':s.gears<tech.cost?'NEED MORE GEARS':'RESEARCH · '+tech.cost+' GEARS'}</button></>}</article>;})}</div>
+        </section>
+        <div className="research-footnote"><Cog size={16}/> Research effects apply automatically across every machine and sale. Your discoveries are saved with your factory.</div>
+      </div>}
+      {page==='warehouse'&&<div className="page-content">
+        <section className="welcome-row"><div><span className="eyebrow">STORAGE & DISPATCH</span><h1>Warehouse</h1><p>Keep an eye on your stock and decide when to turn it into Rivets.</p></div><div className="warehouse-total"><small>TOTAL STOCK VALUE</small><b>{fmt(stockValue)} RVT</b></div></section>
+        <div className="gear-banner"><Cog size={21}/><span><b>{fmt(s.gears)} Gears</b><small>Earn 1 Gear for every Precision Part or Circuit Board you sell. Spend them on machine upgrades or permanent research in the Research tab.</small></span></div>
+        <section className="warehouse-grid">{visibleGoods.map(g=><article className="stock-card" key={g.id}><span className="stock-emoji">{g.emoji}</span><div><h3>{g.name}</h3><p>{g.detail} · {g.price} RVT each</p><b>{fmt(s[g.id])} <small>IN STOCK</small></b></div><button disabled={s[g.id]<1} onClick={()=>sellStock(g.id)}>SHIP ALL · {fmt(Math.floor(s[g.id])*g.price)} RVT</button></article>)}</section>
+        <section className="contracts-panel"><div className="section-heading"><div><span className="eyebrow">REPUTATION & REVENUE</span><h2>Customer orders</h2><p>Take an order, make the goods, then ship them for guaranteed Rivets and reputation. Delivery consumes the stock.</p></div><span className="machine-count">{s.contractsCompleted.length}/{contracts.length} DELIVERED</span></div><div className="contract-summary"><span><b>{readyOrders}</b> READY TO SHIP</span><span><b>{activeOrders}</b> BEING PREPARED</span><span><b>{completedOrders}</b> DELIVERED</span></div><div className="contract-filters" role="group" aria-label="Filter customer orders"><button className={contractFilter==='all'?'selected':''} onClick={()=>setContractFilter('all')}>ALL ({visibleContracts.length})</button><button className={contractFilter==='ready'?'selected':''} onClick={()=>setContractFilter('ready')}>READY ({readyOrders})</button><button className={contractFilter==='progress'?'selected':''} onClick={()=>setContractFilter('progress')}>IN PROGRESS ({activeOrders})</button><button className={contractFilter==='done'?'selected':''} onClick={()=>setContractFilter('done')}>DELIVERED ({completedOrders})</button></div><div className="contract-grid">{visibleContracts.filter(c=>{const done=s.contractsCompleted.includes(c.id);const unlocked=s.reputation>=c.minRep;const ready=unlocked&&s[c.good]>=c.qty&&!done;const progress=unlocked&&!done&&!ready;return contractFilter==='all'||(contractFilter==='ready'&&ready)||(contractFilter==='progress'&&progress)||(contractFilter==='done'&&done);}).map(c=>{const done=s.contractsCompleted.includes(c.id);const accepted=s.acceptedContracts.includes(c.id);const unlocked=s.reputation>=c.minRep;const stock=s[c.good];const ready=unlocked&&stock>=c.qty;const progress=Math.min(100,stock/c.qty*100);const status=done?'DELIVERED':!unlocked?'LOCKED · '+c.minRep+' REP':ready?'READY TO SHIP':c.id==='first-ore'&&!accepted?'WAITING FOR ACCEPTANCE':'IN PROGRESS';return <article className={'contract-card '+(done?'contract-done':ready?'contract-ready':'')} key={c.id}><div className="contract-card-top"><span className="contract-tag">{status}</span><span className="contract-number">ORDER #{String(contracts.indexOf(c)+1).padStart(2,'0')}</span></div><h3>{c.name}</h3><p>{c.detail}</p><div className="contract-requirement"><span>CUSTOMER REQUIREMENT</span><b>{c.qty} {goods.find(g=>g.id===c.good)?.name}</b><small>IN STOCK · {fmt(stock)} / {c.qty}</small><div className="order-progress"><i style={{width:progress+'%'}}/></div></div><div className="contract-reward"><b>+{fmt(c.reward)} RVT</b><span>+{c.rep} REP</span></div><button className="primary-button" disabled={done||!unlocked||stock<c.qty||(c.id==='first-ore'&&!accepted)} onClick={()=>completeContract(c)}>{done?'DELIVERED · PAID':!unlocked?'NEED '+c.minRep+' REP':stock<c.qty?'MAKE '+fmt(c.qty-stock)+' MORE':'SHIP ORDER · COLLECT REWARD'}</button></article>})}{visibleContracts.length>0&&contractFilter!=='all'&&!visibleContracts.some(c=>{const done=s.contractsCompleted.includes(c.id);const unlocked=s.reputation>=c.minRep;const ready=unlocked&&s[c.good]>=c.qty&&!done;const progress=unlocked&&!done&&!ready;return (contractFilter==='ready'&&ready)||(contractFilter==='progress'&&progress)||(contractFilter==='done'&&done);})&&<div className="contract-empty">Nothing in this pile yet. The paperwork is suspiciously under control.</div>}</div></section>
+        <div className="sales-note"><CircleDollarSign size={18}/> {s.salespeople>0&&s.autoSell?'Your sales team is active and dispatching '+goods.find(g=>g.id===s.salesTarget)?.name+'.':'Hire sales staff and enable automatic sales from the Staff page to automate dispatch.'}</div>
+      </div>}
+    </main>
+    {s.cyberAttackEvent&&<div className="cyberattack-backdrop" role="dialog" aria-modal="true" aria-labelledby="cyberattack-title"><section className="cyberattack-panel"><div className="powercut-topline"><span>ORE &amp; ORDER · INCIDENT 002</span><span className="cyberattack-live"><i/> NETWORK BREACH</span></div><h2 id="cyberattack-title">Someone's in the system.</h2><p className="powercut-intro">The new Mech Assembly has just joined the line when every terminal flashes red. An unknown process has seized the factory network, locked the control systems and frozen production. This isn't a blown fuse — someone has got inside.</p><img className="powercut-storyboard" src="/resources/cyberattack-storyboard.png" alt="Six-panel comic storyboard showing a factory network breach, warning terminal, frozen machinery and red emergency lighting"/><div className="powercut-choice-heading"><b>TAKE BACK CONTROL</b><span>Production stays paused until recovery</span></div><div className="powercut-actions"><button className="primary-button" disabled={s.cash<cybersecurityCost(s)} onClick={hireCybersecuritySpecialist}>HIRE CYBERSECURITY SPECIALIST · {fmt(cybersecurityCost(s))} RVT <small>Contains the breach and installs permanent protection</small></button><button className="secondary-button" disabled={s.cash<120} onClick={emergencyCyberRecovery}>EXTERNAL SYSTEM RESTORE · 120 RVT <small>Restores production without an in-house specialist</small></button></div><small className="powercut-footnote">The incident is one-time. A specialist stays on your team and protects the factory network.</small></section></div>}
+    {s.powerCutEvent&&<div className="powercut-backdrop" role="dialog" aria-modal="true" aria-labelledby="powercut-title"><section className="powercut-panel"><div className="powercut-topline"><span>ORE &amp; ORDER · INCIDENT 001</span><span className="powercut-live"><i/> POWER FAILURE</span></div><h2 id="powercut-title">Well, that's put a stop to things.</h2><p className="powercut-intro">The lights flicker. The Rockbreaker Mine gives one last shudder, then everything goes quiet. Your first proper factory problem has arrived.</p><img className="powercut-storyboard" src="/resources/power-cut-storyboard.png" alt="Comic storyboard showing the factory lights flickering, a machine sparking, the factory going dark and emergency red lights coming on"/><div className="powercut-choice-heading"><b>GET THE MINE BACK ONLINE</b><span>Choose how to recover</span></div><div className="powercut-actions"><button className="primary-button" disabled={s.cash<60} onClick={()=>resolvePowerCut(true)}>HIRE A MECHANIC · 60 RVT <small>First-day discount · keeps them on your team</small></button><button className="secondary-button" disabled={s.cash<40} onClick={()=>resolvePowerCut(false)}>ONE-OFF REPAIR · 40 RVT <small>Fix the mine without hiring staff</small></button></div><small className="powercut-footnote">Your factory is paused until the mine is repaired. This incident only happens once.</small></section></div>}
+    {s.breakdownEvent&&<div className="incident-backdrop" role="dialog" aria-modal="true" aria-labelledby="incident-title"><section className="incident-panel"><div className="incident-siren"><AlertTriangle size={28}/><span>EMERGENCY STOP · 01</span></div><p className="incident-kicker">FACTORY INCIDENT REPORT</p><h2 id="incident-title">Critical machine failure</h2><p className="incident-copy"><b>{machines.find(m=>m.id===s.breakdownEvent)?.name}</b> has suffered a mechanical failure. The line has been stopped while the fault is isolated. Production and automatic dispatch are temporarily suspended.</p><div className="incident-readout"><span>FAULT DETECTED</span><b>DRIVE ASSEMBLY OVERHEATING</b><span>REQUIRED ACTION</span><b>REPAIR THE AFFECTED MACHINE</b></div><div className="incident-actions">{s.mechanicAssignments[s.breakdownEvent]>0&&<button className="primary-button" onClick={()=>resolveBreakdown(true)}>USE ASSIGNED MECHANIC · FREE</button>}<button className="primary-button" disabled={s.cash<40} onClick={()=>resolveBreakdown(false)}>EMERGENCY REPAIR · 40 RVT</button><button className="secondary-button" onClick={()=>{setS(v=>({...v,breakdownEvent:null}));setNotice('Emergency stop cleared. '+machines.find(m=>m.id===s.breakdownEvent)?.name+' still needs repair.')}}>CONTINUE · REPAIR LATER</button></div><small className="incident-footnote">Tip: assign a mechanic in Staff to handle future breakdowns. You can also repair the machine from its factory card.</small></section></div>}
+    {notice&&<div className="toast" role="status" aria-live="polite"><span className="toast-icon">{noticeKind==='ORDER DESK'?'📦':noticeKind==='QUICK HEADS-UP'?'🛠️':'🏭'}</span><div className="toast-copy"><small>{noticeKind}</small><b>{noticeTitle}</b><p>{notice}</p></div><button className="toast-close" aria-label="Dismiss notification" onClick={()=>setNotice('')}>×</button></div>
+    }{showReset&&<div className="modal-backdrop"><div className="reset-modal"><h2>Reset your factory?</h2><p>This clears machines, Rivets, Gears and staff saved on this device.</p><div><button onClick={()=>setShowReset(false)}>CANCEL</button><button className="danger" onClick={reset}>RESET FACTORY</button></div></div></div>}
+  </div>;
+}
