@@ -279,3 +279,21 @@ body{background:#171b19}.game{max-width:1240px}
 .mail-message{border-bottom:1px solid #3d4b41}.mail-subject{display:grid;grid-template-columns:22px 1fr 13px;gap:7px;align-items:start;text-align:left;width:100%;padding:12px;background:transparent;border:0;color:#e8e4d7;cursor:pointer}.mail-subject:hover{background:#30382e}.mail-subject>span:nth-child(2){display:flex;flex-direction:column;gap:4px;min-width:0}.mail-subject b{font-size:12px}.mail-subject small{font-size:10px;color:#b0bba9;line-height:1.45}
 .mail-body{display:flex;flex-direction:column;gap:9px;padding:13px 15px 15px;background:#253027;border-top:1px solid #465344}.mail-body strong{font:600 12px 'IBM Plex Mono',monospace;color:#efd4a3}.mail-body p{font-size:12px;color:#c5cbbd;line-height:1.5;margin:0}.mail-body>b{font-size:13px;color:#f0e4cc}.mail-body small{color:#b5bfaa;font-size:11px}.mail-body .mail-urgent{color:#f0a482}.mail-body button{width:100%}.mail-empty,.mail-next{padding:13px;margin:0;color:#b4bbab;font:10px 'IBM Plex Mono',monospace}.mail-next{border-top:1px solid #465344;color:#e0bb83}
 @media(max-width:620px){.mail-dock{right:9px;top:106px;width:min(340px,calc(100vw - 18px))}.mail-dropdown{max-height:55vh}}
+
+
+/* Four-step factory progression roadmap */
+.factory-stages{padding:17px;margin:14px 0 20px;border:1px solid #54604b;background:linear-gradient(135deg,#222d25,#1a251f);border-radius:6px}
+.factory-stages .section-heading{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:0 0 13px}
+.factory-stages .section-heading h2{margin:4px 0 5px;font-size:20px;color:#f0dfbd}
+.factory-stages .section-heading p{margin:0;color:#bbc5b5;font-size:11px}
+.factory-stages-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+.factory-stage{display:flex;flex-direction:column;gap:6px;min-height:116px;padding:13px;background:#17231d;border:1px solid #405046;border-radius:4px}
+.factory-stage.current{background:#38402a;border-color:#bd945e;box-shadow:inset 0 0 0 1px #8c7946}
+.factory-stage.complete{border-color:#568968}
+.factory-stage.locked{opacity:.66}
+.factory-stage-num{font:10px 'IBM Plex Mono',monospace;color:#d7b682;letter-spacing:.4px}
+.factory-stage b{font-size:13px;color:#e7e7d4}
+.factory-stage small{font-size:10px;color:#b4bdb0;line-height:1.4}
+.stage-upcoming{margin:13px 0 0;color:#d6b982;font:10px 'IBM Plex Mono',monospace}
+@media(max-width:780px){.factory-stages-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:480px){.factory-stages{padding:12px}.factory-stages .section-heading h2{font-size:17px}.factory-stage{padding:10px}}
