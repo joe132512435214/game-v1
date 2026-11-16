@@ -192,8 +192,8 @@ function loadGame():GameState{
 }
 const fmt=(n:number)=>Math.floor(n).toLocaleString();
 const machineCost=(m:typeof machines[number],s:GameState)=>Math.floor(m.cost*Math.pow(1.48,s[m.id]));
-const mechanicCost=(s:GameState)=>Math.floor(600*Math.pow(2,s.mechanics));
-const salesCost=(s:GameState)=>Math.floor(900*Math.pow(2,s.salespeople));
+const mechanicCost=(s:GameState)=>Math.floor(900*Math.pow(2,s.mechanics));
+const salesCost=(s:GameState)=>Math.floor(1350*Math.pow(2,s.salespeople));
 const CAPITAL_PROJECTS:{id:CapitalId;name:string;subtitle:string;description:string;effect:string;base:number;growth:number;max:number;icon:string}[]=[
   {id:'powerGrid',name:'Modernise the Power Grid',subtitle:'ENERGY INFRASTRUCTURE',description:'Install transformers, waste-heat recovery and more efficient electrical systems.',effect:'8% less electricity per level',base:900,growth:2.35,max:6,icon:'⚡'},
   {id:'miningNetwork',name:'Expand Mining Operations',subtitle:'RESOURCE SECURITY',description:'Upgrade drilling systems and secure new iron and copper extraction sites.',effect:'6% faster ore extraction per level',base:1800,growth:2.4,max:6,icon:'⛏️'},
@@ -216,12 +216,12 @@ const CHARITY_MILESTONE_REP=200;
 const charityMilestoneReward=(currentTotal:number,amount:number)=>
   (Math.floor((currentTotal+amount)/CHARITY_MILESTONE_RVT)-Math.floor(currentTotal/CHARITY_MILESTONE_RVT))*CHARITY_MILESTONE_REP;
 const powerCostMultiplier=(v:GameState)=>Math.max(.52,1-v.capitalLevels.powerGrid*.08);
-const WAGES={mechanic:12,sales:18,cyber:30} as const;
+const WAGES={mechanic:24,sales:36,cyber:60} as const;
 const payrollPerMinute=(v:GameState)=>v.mechanics*WAGES.mechanic+v.salespeople*WAGES.sales+v.cybersecuritySpecialists*WAGES.cyber;
 const ELECTRICITY_PER_MINUTE:Record<MachineId,number>={
-  miner:3,smelter:6,press:8,assembler:11,
-  copperMiner:4,copperSmelter:7,wiremill:9,circuitpress:14,
-  beamMill:10,coilWinder:12,motorworks:300
+  miner:6,smelter:12,press:16,assembler:22,
+  copperMiner:8,copperSmelter:14,wiremill:18,circuitpress:28,
+  beamMill:20,coilWinder:24,motorworks:600
 };
 const electricitySpeedFactor=(speed:number)=>speed===2?1.5:1;
 const machinePowerFactor=(v:GameState,id:MachineId)=>v.overclocked[id]?OVERCLOCK_ELECTRICITY:1;
@@ -812,7 +812,7 @@ export default function App(){
     setS(v=>({...v,cash:v.cash-40,broken:{...v.broken,miner:0},powerCutEvent:false}));
     setNotice('One-off emergency repair complete. The Rockbreaker Mine is back online.');
   };
-  const cybersecurityCost=(state:GameState)=>Math.floor(1500*Math.pow(2.1,state.cybersecuritySpecialists));
+  const cybersecurityCost=(state:GameState)=>Math.floor(2250*Math.pow(2.1,state.cybersecuritySpecialists));
   const hireCybersecuritySpecialist=()=>{
     const cost=cybersecurityCost(s);
     if(s.cash<cost){setNotice('Not enough Rivets. Ship existing stock from the Warehouse to fund the security hire.');return;}
@@ -1129,7 +1129,7 @@ export default function App(){
           </div>
           <div className="line-caption"><span>YOUR CURRENT PRODUCTION ROUTE</span><span>{visibleMachines.length} STAGE{visibleMachines.length===1?'':'S'} SHOWN</span></div>
         </section>
-        <section className="machines-heading"><div><span className="eyebrow">YOUR EQUIPMENT</span><h2>Machines</h2><p>Plan your supply chain: too many downstream machines compete for materials. Overclock specific machines for +50% output at 3× electricity.</p></div><span className="machine-count">{machineCount} BUILT</span></section>
+        <section className="machines-heading"><div><span className="eyebrow">YOUR EQUIPMENT</span><h2>Machines</h2><p>Plan your supply chain: extra machines and overclocking can cost more power than they earn. Overclock specific machines for +50% output at 3× electricity.</p></div><span className="machine-count">{machineCount} BUILT</span></section>
         {s.miner===0&&<section className="starter-contract"><div><span className="eyebrow">YOUR FIRST COMMISSION</span><h2>First Ore Delivery</h2><p>A local foundry has placed a small order for five raw ore. Accept it to receive a 50 RVT equipment advance, buy your first Rockbreaker Mine, produce the ore and deliver it for the final payment.</p><div className="starter-contract-reward"><b>50 RVT ADVANCE</b><span>+85 RVT · +5 REP ON DELIVERY</span></div></div><button className="primary-button" disabled={s.acceptedContracts.includes('first-ore')} onClick={()=>{setS(v=>({...v,acceptedContracts:[...v.acceptedContracts,'first-ore'],cash:v.cash+50}));setNotice('Order accepted. The foundry has advanced 50 RVT. Now buy your first Rockbreaker Mine — try not to spend it all on snacks.')}}>{s.acceptedContracts.includes('first-ore')?'ORDER ACCEPTED · ADVANCE PAID':'ACCEPT ORDER · GET 50 RVT'}</button></section>}
         <section className="machine-grid">{visibleMachines.map(m=>{
           const owned=s[m.id];
@@ -1172,7 +1172,7 @@ export default function App(){
         </>}
       </div>}
       {page==='staff'&&<div className="page-content">
-        <section className="welcome-row"><div><span className="eyebrow">PEOPLE MAKE THE FACTORY</span><h1>Workforce HQ</h1><p>Build a team that earns its wages. Hire deliberately, track payroll and assign each employee to a useful job.</p></div><div className="staff-summary"><b>{s.mechanics+s.salespeople+s.cybersecuritySpecialists}</b><span>TEAM MEMBERS</span><small>{unassigned} mechanic{unassigned===1?'':'s'} unassigned</small></div></section>
+        <section className="welcome-row"><div><span className="eyebrow">PEOPLE MAKE THE FACTORY</span><h1>Workforce HQ</h1><p>Staff are a serious recurring expense. Recruit only when your sales and factory output can support payroll.</p></div><div className="staff-summary"><b>{s.mechanics+s.salespeople+s.cybersecuritySpecialists}</b><span>TEAM MEMBERS</span><small>{unassigned} mechanic{unassigned===1?'':'s'} unassigned</small></div></section>
         <section className="staff-command-overview">
           <div><small>STAFF WAGES</small><b>{payroll.toFixed(1)} RVT/min</b><span>Recurring cost, charged while running</span></div>
           <div><small>STAFF + POWER</small><b>{(payroll+powerPerMinute).toFixed(1)} RVT/min</b><span>Current combined operating expenses</span></div>
