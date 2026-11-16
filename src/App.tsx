@@ -186,9 +186,9 @@ function loadGame():GameState{
     const legacyShipmentXp=saved.xpMigrationVersion===undefined?Math.floor(Math.max(0,Number(saved.sold)||0)/500):0;
     return {...fresh,...saved,
       freightTier:Math.max(0,Math.min(3,Math.floor(Number(saved.freightTier)||0))) as VehicleTier,
-      drivers:saved.drivers!==undefined?Math.max(0,Math.floor(Number(saved.drivers)||0)):(Number(saved.copperMiner)>0?2:Number(saved.miner)>0||completed.includes('first-ore')?1:0),
+      drivers:saved.drivers!==undefined?Math.max(0,Math.floor(Number(saved.drivers)||0)):(Number(saved.copperMiner)>0?2:Number(saved.miner)>0||(completed.includes('first-ore')||saved.acceptedContracts?.includes('first-ore'))?1:0),
       driverAssignments:{
-        iron:saved.driverAssignments?Math.max(0,Math.floor(Number(saved.driverAssignments.iron)||0)):(Number(saved.miner)>0||completed.includes('first-ore')?1:0),
+        iron:saved.driverAssignments?Math.max(0,Math.floor(Number(saved.driverAssignments.iron)||0)):(Number(saved.miner)>0||(completed.includes('first-ore')||saved.acceptedContracts?.includes('first-ore'))?1:0),
         copper:saved.driverAssignments?Math.max(0,Math.floor(Number(saved.driverAssignments.copper)||0)):(Number(saved.copperMiner)>0?1:0)
       },
       oreAtMine:Math.max(0,Number(saved.oreAtMine)||0),
@@ -513,7 +513,7 @@ function MachineArt({id,active,broken,lights,cycleSeconds,progress}:{id:MachineI
 export default function App(){
   const [s,setS]=useState<GameState>(loadGame);
   const [page,setPage]=useState<Page>('factory');
-  const [staffTab,setStaffTab]=useState<'maintenance'|'dispatch'>('maintenance');
+  const [staffTab,setStaffTab]=useState<'maintenance'|'dispatch'|'haulage'>('maintenance');
   const [factoryView,setFactoryView]=useState<'overview'|'equipment'>('overview');
   const [running,setRunning]=useState(true);
   const [speed,setSpeed]=useState(1);
@@ -709,6 +709,38 @@ export default function App(){
   const unassigned=s.mechanics-assignedTotal;
   const assignedSales=goods.reduce((sum,g)=>sum+(s.salesAssignments[g.id]||0),0);
   const unassignedSales=Math.max(0,s.salespeople-assignedSales);
+  const availableDrivers=Math.max(0,s.drivers-s.driverAssignments.iron-s.driverAssignments.copper);
+  const currentFreight=FREIGHT_TIERS[s.freightTier];
+  const hireDriver=()=>{
+    const price=driverHireCost(s);
+    if(s.cash<price){setNotice('Hire a driver requires '+fmt(price)+' RVT. Ship a small load first.');return;}
+    setS(v=>v.cash<driverHireCost(v)?v:{...v,cash:v.cash-driverHireCost(v),drivers:v.drivers+1});
+    setNotice('Driver recruited · +'+WAGES.driver+' RVT/min payroll. Assign them to iron or copper haulage.');
+  };
+  const fireDriver=()=>{
+    if(s.drivers<=0)return;
+    setS(v=>{
+      if(v.drivers<=0)return v;
+      const drivers=v.drivers-1,iron=Math.min(v.driverAssignments.iron,drivers);
+      return {...v,drivers,driverAssignments:{iron,copper:Math.min(v.driverAssignments.copper,drivers-iron)}};
+    });
+    setNotice('Driver dismissed. Freight capacity and payroll have been updated.');
+  };
+  const assignDriver=(route:FreightRoute,amount:number)=>{
+    setS(v=>{
+      const other=v.driverAssignments[route==='iron'?'copper':'iron'];
+      return {...v,driverAssignments:{...v.driverAssignments,[route]:Math.max(0,Math.min(amount,v.drivers-other))}};
+    });
+  };
+  const upgradeFreight=()=>{
+    if(s.freightTier>=3)return;
+    const next=(s.freightTier+1) as VehicleTier,upgrade=FREIGHT_TIERS[next];
+    if(s.cash<upgrade.cost){setNotice('Vehicle fleet upgrade needs '+fmt(upgrade.cost)+' RVT.');return;}
+    setS(v=>v.freightTier>=3||v.cash<FREIGHT_TIERS[v.freightTier+1].cost?v:{
+      ...v,cash:v.cash-FREIGHT_TIERS[v.freightTier+1].cost,freightTier:(v.freightTier+1) as VehicleTier
+    });
+    setNotice('Fleet upgraded to '+upgrade.name+' · '+upgrade.capacity.toFixed(1)+' ore/sec per driver.');
+  };
   const payroll=payrollPerMinute(s);
   const payrollFunded=s.cash+1e-8>=payroll/60;
   const economyActive=running&&!s.breakdownEvent&&!s.powerCutEvent&&!s.cyberAttackEvent&&!s.writeOffEvent;
@@ -1064,7 +1096,7 @@ export default function App(){
     <main>
       <nav className="main-nav" aria-label="Main menu">
         <button className={page==='factory'?'active':''} onClick={()=>setPage('factory')}><Factory size={16}/> Factory</button>
-        <button className={page==='staff'?'active':''} onClick={()=>setPage('staff')}><Users size={16}/> Staff <span>{s.mechanics+s.salespeople+s.cybersecuritySpecialists}</span></button>
+        <button className={page==='staff'?'active':''} onClick={()=>setPage('staff')}><Users size={16}/> Staff <span>{s.mechanics+s.salespeople+s.cybersecuritySpecialists+s.drivers}</span></button>
         <button className={page==='warehouse'?'active':''} onClick={()=>setPage('warehouse')}><Boxes size={16}/> Warehouse</button>
         <button className={page==='research'?'active':''} onClick={()=>setPage('research')}><FlaskConical size={16}/> Research <span>{s.researched.filter(id=>technologies.some(t=>t.id===id)).length}/{technologies.length}</span></button>
         <button className={page==='store'?'active':''} onClick={()=>setPage('store')}><Zap size={16}/> Boost Store</button>
@@ -1200,22 +1232,36 @@ export default function App(){
         </>}
       </div>}
       {page==='staff'&&<div className="page-content">
-        <section className="welcome-row"><div><span className="eyebrow">PEOPLE MAKE THE FACTORY</span><h1>Workforce HQ</h1><p>Staff are a serious recurring expense. Recruit only when your sales and factory output can support payroll.</p></div><div className="staff-summary"><b>{s.mechanics+s.salespeople+s.cybersecuritySpecialists}</b><span>TEAM MEMBERS</span><small>{unassigned} mechanic{unassigned===1?'':'s'} unassigned</small></div></section>
+        <section className="welcome-row"><div><span className="eyebrow">PEOPLE MAKE THE FACTORY</span><h1>Workforce HQ</h1><p>Staff are a serious recurring expense. Recruit only when your sales and factory output can support payroll.</p></div><div className="staff-summary"><b>{s.mechanics+s.salespeople+s.cybersecuritySpecialists+s.drivers}</b><span>TEAM MEMBERS</span><small>{unassigned} mechanic{unassigned===1?'':'s'} unassigned</small></div></section>
         <section className="staff-command-overview">
           <div><small>STAFF WAGES</small><b>{payroll.toFixed(1)} RVT/min</b><span>Recurring cost, charged while running</span></div>
           <div><small>STAFF + POWER</small><b>{(payroll+powerPerMinute).toFixed(1)} RVT/min</b><span>Current combined operating expenses</span></div>
           <div><small>CASH COVERAGE</small><b>{payroll+powerPerMinute>0?(s.cash/(payroll+powerPerMinute)).toFixed(1)+' min':'NO COSTS'}</b><span>Before sales and contract income</span></div>
-          <div><small>TEAM ASSIGNMENTS</small><b>{assignedTotal+assignedSales} / {s.mechanics+s.salespeople}</b><span>{unassigned} mechanic and {unassignedSales} sales staff unassigned</span></div>
+          <div><small>TEAM ASSIGNMENTS</small><b>{assignedTotal+assignedSales+s.driverAssignments.iron+s.driverAssignments.copper} / {s.mechanics+s.salespeople+s.drivers}</b><span>{unassigned} mechanics, {unassignedSales} sales, {availableDrivers} drivers unassigned</span></div>
         </section>
-        <div className="staff-help-note"><CircleDollarSign size={17}/> Staff cost money to recruit and every minute they remain employed. Production speed does not multiply wages. A pause or active incident pauses staff wages; unpaid staff cannot repair machines or dispatch stock.</div>
+        <div className="staff-help-note"><CircleDollarSign size={17}/> Staff and drivers cost wages each minute the factory operates. Unpaid drivers stop hauling ore, which can starve every downstream production line. Production speed does not multiply wages.</div>
         <section className="staff-roles">
           <article className="role-card mechanic-role"><div className="role-top"><span className="role-icon"><Wrench size={24}/></span><span className="role-tag">MAINTENANCE</span></div><h2>Mechanic</h2><p>Repairs breakdowns and gets machines running again. Assign each mechanic to the machine you want them to look after.</p><div className="role-bottom"><div><b>{s.mechanics}</b><small>HIRED</small></div><button className="primary-button" disabled={s.cash<mechanicCost(s)} onClick={()=>hire('mechanic')}>HIRE · {fmt(mechanicCost(s))} RVT</button><button className="secondary-button" disabled={s.mechanics===0} onClick={()=>fire('mechanic')}>FIRE ONE</button><small>{WAGES.mechanic} RVT/min per mechanic</small></div></article>
           <article className="role-card sales-role"><div className="role-top"><span className="role-icon"><Store size={24}/></span><span className="role-tag">DISPATCH & SALES</span></div><h2>Sales representative</h2><p>Sells warehouse stock automatically and earns 1 bonus XP per minute per active salesperson, plus XP based on shipment value. Choose a product and enable automatic sales.</p><div className="role-bottom"><div><b>{s.salespeople}</b><small>HIRED</small></div><button className="primary-button" disabled={s.cash<salesCost(s)} onClick={()=>hire('sales')}>HIRE · {fmt(salesCost(s))} RVT</button><button className="secondary-button" disabled={s.salespeople===0} onClick={()=>fire('sales')}>FIRE ONE</button><small>{WAGES.sales} RVT/min per salesperson</small></div></article>
           <article className="role-card cyber-role"><div className="role-top"><span className="role-icon"><ShieldCheck size={24}/></span><span className="role-tag">NETWORK SECURITY</span></div><h2>Cybersecurity specialist</h2><p>Monitors factory systems, contains digital intrusions and installs a permanent firewall against future cyber incidents.</p><div className="role-bottom"><div><b>{s.cybersecuritySpecialists}</b><small>HIRED</small></div><button className="primary-button" disabled={s.cash<cybersecurityCost(s)} onClick={hireCybersecuritySpecialist}>HIRE · {fmt(cybersecurityCost(s))} RVT</button><button className="secondary-button" disabled={s.cybersecuritySpecialists===0} onClick={()=>fire('cyber')}>FIRE ONE</button><small>{WAGES.cyber} RVT/min per specialist</small></div></article>
         </section>
         <section className="staff-desk"><div className="section-heading"><div><span className="eyebrow">DEPARTMENT DESK</span><h2>Staff assignments</h2><p>Switch between maintenance and dispatch to keep responsibilities clear.</p></div></div>
-          <div className="staff-tab-bar" role="tablist" aria-label="Staff departments"><button type="button" role="tab" aria-selected={staffTab==='maintenance'} className={staffTab==='maintenance'?'selected':''} onClick={()=>setStaffTab('maintenance')}><Wrench size={16}/> MAINTENANCE · {assignedTotal}/{s.mechanics}</button><button type="button" role="tab" aria-selected={staffTab==='dispatch'} className={staffTab==='dispatch'?'selected':''} onClick={()=>setStaffTab('dispatch')}><Truck size={16}/> DISPATCH · {assignedSales}/{s.salespeople}</button></div>
+          <div className="staff-tab-bar" role="tablist" aria-label="Staff departments"><button type="button" role="tab" aria-selected={staffTab==='maintenance'} className={staffTab==='maintenance'?'selected':''} onClick={()=>setStaffTab('maintenance')}><Wrench size={16}/> MAINTENANCE · {assignedTotal}/{s.mechanics}</button><button type="button" role="tab" aria-selected={staffTab==='dispatch'} className={staffTab==='dispatch'?'selected':''} onClick={()=>setStaffTab('dispatch')}><Truck size={16}/> DISPATCH · {assignedSales}/{s.salespeople}</button><button type="button" role="tab" aria-selected={staffTab==='haulage'} className={staffTab==='haulage'?'selected':''} onClick={()=>setStaffTab('haulage')}><Truck size={16}/> HAULAGE · {s.driverAssignments.iron+s.driverAssignments.copper}/{s.drivers}</button></div>
         </section>
+        {staffTab==='haulage'&&<section className="freight-workshop">
+          <div className="freight-heading"><div><span className="eyebrow">MINE TO FACTORY</span><h2>Freight & Delivery Fleet</h2><p>Mining produces ore at the mine site. Drivers move iron and copper to your factory before furnaces can use it. Upgrade the vehicles when the mines are filling faster than you can collect.</p></div><div className="freight-driver-kpi"><span>ON PAYROLL</span><b>{s.drivers} DRIVERS</b><small>{s.drivers*WAGES.driver} RVT/min</small></div></div>
+          <div className="freight-current"><div className="freight-current-symbol"><Truck size={31}/></div><div><span className="eyebrow">CURRENT VEHICLE</span><h3>{currentFreight.name}</h3><p>{currentFreight.description}</p></div><b>{currentFreight.capacity.toFixed(1)} <small>ORE/SEC PER DRIVER</small></b></div>
+          <div className="freight-route-list">
+            {([{route:'iron' as FreightRoute,name:'IRON MINE',stock:s.oreAtMine,owned:s.miner},{route:'copper' as FreightRoute,name:'COPPER MINE',stock:s.copperAtMine,owned:s.copperMiner}] as const).map(item=><div className="freight-route" key={item.route}>
+              <div className="freight-route-title"><span className={item.route==='iron'?'freight-route-emblem':'freight-route-emblem copper'}><Truck size={19}/></span><div><b>{item.name}</b><small>{item.stock.toFixed(1)} ore waiting at the mine · {item.owned} mining machines</small></div></div>
+              <div className="freight-route-stats"><span><b>{freightThroughput(s,item.route).toFixed(1)}/sec</b><small>MAX DELIVERY</small></span><span><b>{s.driverAssignments[item.route]}</b><small>DRIVERS</small></span></div>
+              <div className="assignment-stepper" role="group" aria-label={item.name+' driver allocation'}><button type="button" aria-label={'Remove driver from '+item.name} disabled={s.driverAssignments[item.route]===0} onClick={()=>assignDriver(item.route,s.driverAssignments[item.route]-1)}>−</button><output>{s.driverAssignments[item.route]}</output><button type="button" aria-label={'Assign driver to '+item.name} disabled={availableDrivers===0} onClick={()=>assignDriver(item.route,s.driverAssignments[item.route]+1)}>+</button></div>
+            </div>)}
+          </div>
+          <div className="freight-actions"><div><span className="eyebrow">DRIVER ROSTER</span><strong>{availableDrivers} available</strong><small>Each driver costs {WAGES.driver} RVT per minute. Assign drivers above to move ore.</small></div><button className="primary-button" disabled={s.cash<driverHireCost(s)} onClick={hireDriver}>HIRE DRIVER · {fmt(driverHireCost(s))} RVT</button><button className="secondary-button" disabled={s.drivers===0} onClick={fireDriver}>FIRE ONE</button></div>
+          <div className="freight-upgrade"><div><span className="eyebrow">FLEET EXPANSION</span><h3>{s.freightTier<3?'Next: '+FREIGHT_TIERS[s.freightTier+1].name:'Largest lorries unlocked'}</h3><p>{s.freightTier<3?'Your current drivers each carry more ore per second after upgrading. No need to reassign them.':'Your fleet has reached maximum lorry capacity.'}</p></div><button className="primary-button" disabled={s.freightTier>=3||s.cash<(FREIGHT_TIERS[s.freightTier+1]?.cost??Infinity)} onClick={upgradeFreight}>{s.freightTier>=3?'FLEET MAXED':'UPGRADE · '+fmt(FREIGHT_TIERS[s.freightTier+1].cost)+' RVT'}</button></div>
+          <div className="freight-drone-locked"><span><Zap size={17}/><b>DRONE FREIGHT</b></span><small>COMING LATER · LOCKED</small></div>
+        </section>}
         {staffTab==='maintenance'&&<section className="staff-assignments">
           <div className="section-heading"><div><span className="eyebrow">TEAM SETUP</span><h2>Assign your staff</h2><p>Choose where each mechanic works. One mechanic repairs one machine at a time.</p></div><div className="available-staff"><b>{unassigned}</b><span>AVAILABLE MECHANICS</span></div></div>
           <div className="assignment-list">{machines.filter(m=>s[m.id]>0).map(m=><div className="assignment-row" key={m.id}><span className="assignment-machine"><Cog size={19}/></span><div className="assignment-copy"><b>{m.name}</b><small>{faultCount(s,m.id)>0?faultCount(s,m.id)+' broken unit(s) · '+(s.mechanicAssignments[m.id]>0?'being repaired':'awaiting mechanic'):s[m.id]>0?'Machines operational':'Not built yet'}</small></div><div className="assignment-stepper" role="group" aria-label={m.name+' mechanic assignments'}><button type="button" aria-label={'Remove a mechanic from '+m.name} disabled={s.mechanicAssignments[m.id]===0} onClick={()=>assignMechanic(m.id,Math.max(0,s.mechanicAssignments[m.id]-1))}>−</button><output aria-live="polite">{s.mechanicAssignments[m.id]}</output><button type="button" aria-label={'Assign a mechanic to '+m.name} disabled={s.mechanics===0||unassigned===0} onClick={()=>assignMechanic(m.id,s.mechanicAssignments[m.id]+1)}>+</button></div></div>)}</div>
