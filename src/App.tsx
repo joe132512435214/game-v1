@@ -317,35 +317,11 @@ const boostClock=(seconds:number)=>`${Math.floor(seconds/60)}:${String(seconds%6
 
 // Pixel art comes from the supplied ZIP. Never redraw old machine photos in
 // a canvas: that kept the previous artwork and its smoke effects visible.
-type PixelMachineArt={sheet:string;icon:string};
-const pixelMachineCache=new Map<MachineId,Promise<PixelMachineArt>>();
-const PIXEL_ART_ARCHIVE='/machines/ore-and-order-pixel-machines.zip?v=2';
-let pixelArchive:Promise<Record<string,Uint8Array>>|null=null;
-function pixelArtFiles(){
-  if(!pixelArchive)pixelArchive=(async()=>{
-    const response=await fetch(PIXEL_ART_ARCHIVE);
-    if(!response.ok)throw new Error('Pixel artwork ZIP could not be loaded: '+response.status);
-    const {unzipSync}=await import('fflate');
-    return unzipSync(new Uint8Array(await response.arrayBuffer()));
-  })().catch(error=>{pixelArchive=null;throw error;});
-  return pixelArchive;
-}
-function loadPixelMachine(id:MachineId):Promise<PixelMachineArt>{
-  const cached=pixelMachineCache.get(id);
-  if(cached)return cached;
-  const result=pixelArtFiles().then(files=>{
-    const sheet=files['game_sprite_sheets/'+id+'-sheet.webp'];
-    const icon=files['icons/'+id+'-icon.png'];
-    if(!sheet||!icon)throw new Error('Missing pixel art for '+id);
-    return {
-      sheet:URL.createObjectURL(new Blob([new Uint8Array(sheet)],{type:'image/webp'})),
-      icon:URL.createObjectURL(new Blob([new Uint8Array(icon)],{type:'image/png'}))
-    };
-  });
-  pixelMachineCache.set(id,result);
-  result.catch(()=>pixelMachineCache.delete(id));
-  return result;
-}
+// Serve the selected pixel pack directly; no ZIP download or photo fallback.
+const pixelMachineArt=(id:MachineId)=>({
+  sheet:'/machines/pixel/'+id+'-sheet.webp',
+  icon:'/machines/pixel/'+id+'-icon.png'
+});
 // Products have their own flat, recognisable icons. Never reuse machine photos
 // as item artwork: an ingot should look like a material, not a blast furnace.
 function ProductIcon({id,size=36}:{id:StockId;size?:number}){
@@ -357,16 +333,13 @@ function ProductIcon({id,size=36}:{id:StockId;size?:number}){
    style={{width:size,height:size}}><Icon size={Math.max(17,Math.round(size*.57))} strokeWidth={2.25}/></span>;
 }
 function MachineIcon({id,size=36}:{id:MachineId;size?:number}){
-  const [art,setArt]=useState<PixelMachineArt|null>(null);
-  useEffect(()=>{if(id==='motorworks')return;let mounted=true;loadPixelMachine(id).then(v=>{if(mounted)setArt(v)}).catch(()=>{});return()=>{mounted=false;};},[id]);
   if(id==='motorworks')return <span className="motor-icon" role="img" aria-label="Electric Motor Works" style={{width:size,height:size}}><Cog size={Math.max(17,Math.round(size*.7))}/></span>;
-  return art?<img className="pixel-machine-icon" src={art.icon} alt={machines.find(m=>m.id===id)?.name||'Machine'} width={size} height={size}/>:<span className="pixel-machine-placeholder" role="img" aria-label="Loading pixel art" style={{width:size,height:size}}><Cog size={Math.max(14,Math.round(size*.6))}/></span>;
+  return <img className="pixel-machine-icon" src={pixelMachineArt(id).icon} alt={machines.find(m=>m.id===id)?.name||'Machine'} width={size} height={size}/>;
 }
 
 function MachineArt({id,active,broken,lights,cycleSeconds,progress}:{id:MachineId;active:boolean;broken:boolean;lights:('on'|'off'|'empty')[];cycleSeconds:number;progress:number}){
- const [sprite,setSprite]=useState<PixelMachineArt>({sheet:'',icon:''});
- useEffect(()=>{if(id==='motorworks'){setSprite({sheet:'',icon:''});return;}let mounted=true;loadPixelMachine(id).then(v=>{if(mounted)setSprite(v)}).catch(()=>{if(mounted)setSprite({sheet:'',icon:''})});return()=>{mounted=false;};},[id]);
- const spriteReady=!!sprite.sheet;
+ const sprite=pixelMachineArt(id);
+ const spriteReady=id!=='motorworks';
  const safeCycle=cycleSeconds>0?cycleSeconds:8;
  const electrical=['copperMiner','copperSmelter','wiremill','circuitpress','coilWinder','motorworks'].includes(id);
  const copper=electrical?'#bd8054':'#bd985e';
