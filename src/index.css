@@ -1522,3 +1522,20 @@ body { font-family:var(--font-ui)!important; font-size:14px; line-height:1.5; }
   .topbar .wallet i { font-size:8px; }
   .topbar .coin-symbol { width:22px; height:22px; flex-shrink:0; }
 }
+
+/* A quiet, in-flow reminder: stock has value even without automatic sales. */
+.stock-sale-reminder{display:flex;align-items:center;gap:12px;margin:12px 0;padding:12px 14px;border:1px solid #55765a;border-radius:7px;background:#22342a}
+.stock-sale-reminder-icon{display:grid;place-items:center;flex:0 0 34px;height:34px;border-radius:7px;background:#304b37;color:#b6d7ac}
+.stock-sale-reminder-copy{flex:1;min-width:0}
+.stock-sale-reminder-copy>b{font-size:14px;color:#d9ebd3}
+.stock-sale-reminder-copy p{margin:3px 0;color:#c3d0bc}
+.stock-sale-reminder-copy small{display:block;margin-top:3px;color:#a9bca5}
+.stock-sale-reminder>.secondary-button{width:auto;flex-shrink:0;min-width:115px}
+.stock-sale-reminder-dismiss{display:grid;place-items:center;flex:0 0 32px;height:32px;border:0;background:transparent;color:#bdcbb5;font-size:22px}
+@media(max-width:620px){
+ .stock-sale-reminder{display:grid;grid-template-columns:28px minmax(0,1fr) 28px;gap:8px;padding:10px}
+ .stock-sale-reminder-icon{width:28px;height:28px}
+ .stock-sale-reminder-copy{grid-column:2}
+ .stock-sale-reminder>.secondary-button{grid-column:2;grid-row:2;justify-self:start;min-width:125px}
+ .stock-sale-reminder-dismiss{grid-column:3;grid-row:1;align-self:start;width:28px}
+}

@@ -8,7 +8,7 @@ import ts from 'typescript';
 const root=dirname(dirname(fileURLToPath(import.meta.url)));
 const folder=await mkdtemp(join(root,'.contract-test-'));
 const source=await readFile(join(root,'src/App.tsx'),'utf8');
-const output=ts.transpileModule(source+'\nexport {fresh,goods,machines,contracts,issueRepeatOrder,estimateContractSeconds,orderPayout,orderExpiry,updateContractOffers,deliverRepeatOrder,closeRepeatOrder,contractStockTarget,loadGame,CONTRACT_TERMS};',{
+const output=ts.transpileModule(source+'\nexport {fresh,goods,machines,contracts,issueRepeatOrder,estimateContractSeconds,orderPayout,orderExpiry,updateContractOffers,deliverRepeatOrder,closeRepeatOrder,contractStockTarget,stockSaleReminder,loadGame,CONTRACT_TERMS};',{
   compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.ReactJSX}
 }).outputText;
 await writeFile(join(folder,'game.mjs'),output);
@@ -143,4 +143,17 @@ test('dashboard shows the reduced current payout for a late delivery',async()=>{
   const html=renderToStaticMarkup(createElement(game.default));delete globalThis.localStorage;
   assert.ok(html.includes('Order Inbox')||html.includes('ORDER INBOX'));
   assert.ok(html.includes('fulfil the order for '+game.orderPayout(o,s.contractClock).toLocaleString()+' RVT.'));
+});
+
+test('stock reminder excludes promised stock and fractional units',()=>{
+  const s=factory();const o=offer(s);s.repeatOffers=[o,null,null];s.ore=o.qty+3.8;
+  const reminder=game.stockSaleReminder(s);
+  assert.equal(reminder.units,3);assert.equal(reminder.value,15);
+  s.ore=o.qty-.1;assert.equal(game.stockSaleReminder(s).value,0);
+});
+test('stock reminder includes researched sale prices and excludes zero stock',()=>{
+  const s=factory();assert.equal(game.stockSaleReminder(s).value,0);
+  s.parts=2.9;s.researched=['market-intelligence'];
+  const reminder=game.stockSaleReminder(s);
+  assert.equal(reminder.units,2);assert.equal(reminder.value,252);
 });

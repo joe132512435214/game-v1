@@ -254,6 +254,13 @@ const contractStockTarget=(state:GameState,id:StockId)=>{
     &&state.reputation>=c.minRep&&state[contractProducer[id]]>0).map(c=>c.qty));
   return repeat+story;
 };
+// Offer a reminder only for complete units not promised to customer orders.
+function stockSaleReminder(state:GameState){
+  const multiplier=state.researched.includes('market-intelligence')?1.2:1;
+  const items=goods.map(g=>({good:g.id,qty:Math.floor(Math.max(0,state[g.id]-contractStockTarget(state,g.id))),price:g.price}))
+    .filter(item=>item.qty>0);
+  return {items,units:items.reduce((sum,item)=>sum+item.qty,0),value:Math.floor(items.reduce((sum,item)=>sum+item.qty*item.price*multiplier,0))};
+}
 const downstreamMaterialAvailable=(state:GameState,id:IntermediateStock,amount:number,made:number)=>{
   const mode=state.flowMode[id]||'balanced';
   if(mode==='stockpile')return 0;
@@ -616,6 +623,7 @@ export default function App(){
   const [running,setRunning]=useState(true);
   const [speed,setSpeed]=useState(1);
   const [notice,setNotice]=useState('');
+  const [stockPromptDismissedUntil,setStockPromptDismissedUntil]=useState(0);
   const [rewardSplash,setRewardSplash]=useState<{id:number;title:string;detail:string;cash?:number;xp?:number;rep?:number;kind:'shipment'|'contract'|'upgrade'}|null>(null);
   const celebrate=(title:string,detail:string,kind:'shipment'|'contract'|'upgrade',values:{cash?:number;xp?:number;rep?:number}={})=>{
     setRewardSplash({id:Date.now()+Math.random(),title,detail,kind,...values});
@@ -807,6 +815,10 @@ export default function App(){
     return()=>window.clearInterval(timer);
   },[running,speed]);
   const machineCount=machines.reduce((sum,m)=>sum+s[m.id],0);
+  const saleReminder=stockSaleReminder(s);
+  const showStockReminder=page!=='warehouse'&&s.contractsCompleted.includes('first-ore')&&
+    !s.powerCutEvent&&!s.breakdownEvent&&!s.cyberAttackEvent&&!s.writeOffEvent&&
+    s.contractClock>=stockPromptDismissedUntil&&saleReminder.value>=(s.cash<30?10:50);
   const stockValue=goods.reduce((sum,g)=>sum+s[g.id]*g.price,0);
   const brokenCount=machines.reduce((sum,m)=>sum+faultCount(s,m.id),0);
   const assignedTotal=machines.reduce((sum,m)=>sum+s.mechanicAssignments[m.id],0);
@@ -1205,7 +1217,7 @@ export default function App(){
     setS(v=>v.boostSeconds[id]>0||v.cash<offer.cost?v:{...v,cash:v.cash-offer.cost,boostSeconds:{...v.boostSeconds,[id]:offer.duration}});
     setNotice(offer.name+' activated for '+boostClock(offer.duration)+' · '+fmt(offer.cost)+' RVT spent.');
   };
-  const reset=()=>{setS(fresh);setRunning(true);setSpeed(1);setShowReset(false);setNotice('A fresh factory. Let’s get to work!');};
+  const reset=()=>{setStockPromptDismissedUntil(0);setS(fresh);setRunning(true);setSpeed(1);setShowReset(false);setNotice('A fresh factory. Let’s get to work!');};
   return <div className="game">
     {contractToast&&<div className={'contract-mini-toast '+contractToast.tone} role="status" aria-live="polite"><span aria-hidden="true">{contractToast.tone==='good'?'✓':'!'}</span><p>{contractToast.message}</p><button type="button" aria-label="Dismiss contract notification" onClick={()=>setContractToast(null)}>×</button></div>}
     <header className="topbar">
@@ -1247,6 +1259,12 @@ export default function App(){
         <div className={'cashflow-stat cashflow-net '+(netPerMinute>=0?'positive':'negative')}><small>NET CASH FLOW / MIN</small><b>{netPerMinute>=0?'+':'−'}{moneyPerMinute(netPerMinute)} <i>RVT</i></b></div>
         <small className="cashflow-note">{!running?'Paused · staff wages and electricity stopped':s.breakdownEvent||s.powerCutEvent||s.cyberAttackEvent||s.writeOffEvent?'Incident · staff wages and electricity paused':s.powerShortage?'INSUFFICIENT POWER FUNDS · ship stored goods to restart machinery':!payrollFunded?'Not enough cash for payroll · dispatch paused':'Live estimates from automatic sales, payroll and electricity · excludes manual shipments and contracts'}{' · Starter grid credit: '+s.starterPowerCredit.toFixed(2)+' RVT'}</small>
       </section>
+      {showStockReminder&&<section className="stock-sale-reminder" aria-label="Stock ready to sell">
+        <span className="stock-sale-reminder-icon" aria-hidden="true"><Store size={20}/></span>
+        <div className="stock-sale-reminder-copy"><b>{s.cash<30?'Cash running low · stock ready to sell':'Stock ready to sell'}</b><p>{fmt(saleReminder.units)} spare units worth {fmt(saleReminder.value)} RVT. Review your stock in the Warehouse to cover running costs.</p><small>Goods reserved for current contracts are excluded from this estimate.</small></div>
+        <button type="button" className="secondary-button" onClick={()=>setPage('warehouse')}>VIEW STOCK <ArrowUpRight size={14}/></button>
+        <button type="button" className="stock-sale-reminder-dismiss" aria-label="Dismiss stock reminder for 3 game minutes" onClick={()=>setStockPromptDismissedUntil(s.contractClock+180)}>×</button>
+      </section>}
       {page==='factory'&&<div className="page-content">
         <div className="factory-view-toolbar"><div><span className="eyebrow">FACTORY CONTROL</span><strong>{factoryView==='overview'?'Overview':'Equipment floor'}</strong></div><div className="factory-view-switch" role="tablist" aria-label="Factory view"><button type="button" role="tab" aria-selected={factoryView==='overview'} className={factoryView==='overview'?'selected':''} onClick={()=>setFactoryView('overview')}><TrendingUp size={15}/> Dashboard</button><button type="button" role="tab" aria-selected={factoryView==='equipment'} className={factoryView==='equipment'?'selected':''} onClick={()=>setFactoryView('equipment')}><Factory size={15}/> Machines</button></div></div>
         {factoryView==='overview'&&<>
