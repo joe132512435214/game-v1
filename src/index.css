@@ -1568,3 +1568,19 @@ body:has(.game[data-theme="copper"]){background:#2b1c18!important}
 .game:not([data-theme="workshop"]) :is(.primary-button,.brand-mark){background:var(--theme-accent)!important;color:#15202a!important}
 .game:not([data-theme="workshop"]) :is(.secondary-button,.main-nav button.active){background:var(--theme-button)!important;color:#f4eee8!important;border-color:var(--theme-edge)!important}
 .game:not([data-theme="workshop"]) :is(.eyebrow,.ops-kicker,.theme-card h3){color:var(--theme-accent)!important}
+
+
+/* Compact order inbox: readable on desktop and small screens. */
+.mail-dropdown{width:min(390px,calc(100vw - 20px));max-height:min(60dvh,520px)}
+.mail-heading{align-items:center}
+.mail-heading strong{font-size:13px;letter-spacing:.2px}
+.mail-heading small{font-size:12px}
+.mail-subject{grid-template-columns:20px minmax(0,1fr) 16px;align-items:center;padding:12px;gap:10px}
+.mail-subject b{font-size:14px;line-height:1.35}
+.mail-subject small{font-size:12px!important;line-height:1.35}
+.mail-subject>span:nth-child(2){gap:3px}
+.mail-body{gap:8px;padding:12px}
+.mail-body strong{font-size:13px}
+.mail-body small{font-size:12px}
+.mail-next,.mail-empty{font-size:12px}
+@media(max-width:620px){.mail-dropdown{width:min(390px,calc(100vw - 18px));max-height:55dvh}.mail-subject{padding:12px 10px}.mail-body button{min-height:42px}}
