@@ -13,7 +13,7 @@ type GameState = {
   miner:number; smelter:number; press:number; assembler:number; copperMiner:number; copperSmelter:number; wiremill:number; circuitpress:number; beamMill:number; coilWinder:number;
   tier_miner:number; tier_smelter:number; tier_press:number; tier_assembler:number; tier_copperMiner:number; tier_copperSmelter:number; tier_wiremill:number; tier_circuitpress:number; tier_beamMill:number; tier_coilWinder:number;
   level:number; experience:number; sold:number; xpMigrationVersion:number; salesXpProgress:number; autoSalesXpProgress:number; mechanics:number; salespeople:number; reputation:number; acceptedContracts:string[]; contractsCompleted:string[]; repeatContractRounds:number[]; contractClock:number; repeatNextAt:number[]; repeatDeadline:number[];
-  lastOutput:Record<MachineId,number>; visualProgress:Record<MachineId,number>;
+  lastOutput:Record<MachineId,number>; visualProgress:Record<MachineId,number>; unitPenalties:Record<MachineId,number[]>; pendingReplacement:Record<MachineId,number>; writeOffEvent:{id:MachineId;unit:number;oldLevel:number}|null; nextWriteOffAt:number;
   broken:Record<MachineId,number>; unitFaults:Record<MachineId,number[]>; mechanicAssignments:Record<MachineId,number>; breakdownEvent:MachineId|null; powerCutEvent:boolean; powerCutSeen:boolean; cyberAttackEvent:boolean; cyberAttackSeen:boolean; cybersecuritySpecialists:number;
   salesTarget:StockId; autoSell:boolean; salesAssignments:Record<StockId,number>; boostSeconds:Record<BoostId,number>; missionsClaimed:number[]; researched:string[];
 };
@@ -24,6 +24,7 @@ const fresh:GameState = {
   tier_miner:0,tier_smelter:0,tier_press:0,tier_assembler:0,tier_copperMiner:0,tier_copperSmelter:0,tier_wiremill:0,tier_circuitpress:0,tier_beamMill:0,tier_coilWinder:0,
   level:1,experience:0,sold:0,xpMigrationVersion:1,salesXpProgress:0,autoSalesXpProgress:0,mechanics:0,salespeople:0,
   lastOutput:{miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0,beamMill:0,coilWinder:0},visualProgress:{miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0,beamMill:0,coilWinder:0},
+  unitPenalties:{miner:[],smelter:[],press:[],assembler:[],copperMiner:[],copperSmelter:[],wiremill:[],circuitpress:[],beamMill:[],coilWinder:[]},pendingReplacement:{miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0,beamMill:0,coilWinder:0},writeOffEvent:null,nextWriteOffAt:900,
   broken:{miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0,beamMill:0,coilWinder:0},unitFaults:{miner:[],smelter:[],press:[],assembler:[],copperMiner:[],copperSmelter:[],wiremill:[],circuitpress:[],beamMill:[],coilWinder:[]},
   mechanicAssignments:{miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0,beamMill:0,coilWinder:0},breakdownEvent:null,powerCutEvent:false,powerCutSeen:false,cyberAttackEvent:false,cyberAttackSeen:false,cybersecuritySpecialists:0,
   salesTarget:'parts',autoSell:false,salesAssignments:{ore:0,ingot:0,plate:0,parts:0,copperOre:0,copperIngot:0,wire:0,circuits:0,beams:0,coils:0},boostSeconds:{production:0,dispatch:0,protection:0},missionsClaimed:[],researched:[],reputation:0,acceptedContracts:[],contractsCompleted:[],repeatContractRounds:[0,0,0],contractClock:0,repeatNextAt:[0,60,120],repeatDeadline:[0,0,0]
@@ -94,7 +95,7 @@ function loadGame():GameState{
     const legacyXpFromMissions=(Array.isArray(saved.missionsClaimed)?saved.missionsClaimed:[]).reduce((total:number,id:number)=>total+(missionXp[id]||0),0);
     const migratedExperience=saved.experience!==undefined?Math.max(0,Number(saved.experience)||0):Math.max(legacyXpFromContracts+legacyXpFromMissions,Number(saved.assembler)>0?270:Number(saved.press)>0?165:Number(saved.smelter)>0?60:Number(saved.miner)>0?25:0);
     const legacyShipmentXp=saved.xpMigrationVersion===undefined?Math.floor(Math.max(0,Number(saved.sold)||0)/500):0;
-    return {...fresh,...saved,starterPowerCredit:Math.max(0,Number(saved.starterPowerCredit??15)||0),powerShortage:Boolean(saved.powerShortage),xpMigrationVersion:1,gearShipmentProgress:Math.max(0,Number(saved.gearShipmentProgress)||0)%GEARS_PER_FINISHED_UNITS,salesXpProgress:Math.max(0,Number(saved.salesXpProgress)||0)%25,autoSalesXpProgress:Math.max(0,Number(saved.autoSalesXpProgress)||0)%60,lastOutput:{...fresh.lastOutput,...saved.lastOutput},visualProgress:{...fresh.visualProgress,...saved.visualProgress},broken:{...fresh.broken,...saved.broken},unitFaults:Object.fromEntries(machines.map(m=>[m.id,Array.from({length:Math.max(0,Number(saved[m.id])||0)},(_,i)=>Math.max(0,Number(saved.unitFaults?.[m.id]?.[i]??(i===0?saved.broken?.[m.id]:0))||0))])) as Record<MachineId,number[]>,mechanicAssignments:{...fresh.mechanicAssignments,...saved.mechanicAssignments},breakdownEvent:saved.breakdownEvent??null,powerCutEvent:shouldRecoverPowerCut?true:(saved.powerCutEvent??false),powerCutSeen:shouldRecoverPowerCut?true:(saved.powerCutSeen??false),cyberAttackEvent:shouldRecoverCyberAttack?true:(saved.cyberAttackEvent??false),cyberAttackSeen:shouldRecoverCyberAttack?true:(saved.cyberAttackSeen??false),cybersecuritySpecialists:Math.max(0,Number(saved.cybersecuritySpecialists)||0),researched:Array.isArray(saved.researched)?saved.researched:[],acceptedContracts:Array.isArray(saved.acceptedContracts)?saved.acceptedContracts:[],contractsCompleted:completed,boostSeconds:{production:Math.max(0,Math.floor(Number(saved.boostSeconds?.production)||0)),dispatch:Math.max(0,Math.floor(Number(saved.boostSeconds?.dispatch)||0)),protection:Math.max(0,Math.floor(Number(saved.boostSeconds?.protection)||0))},salesAssignments:goods.reduce((result,g)=>({...result,[g.id]:Math.max(0,Math.floor(Number(saved.salesAssignments?.[g.id]??(!saved.salesAssignments&&saved.salesTarget===g.id?saved.salespeople:0))||0))}),{...fresh.salesAssignments}),repeatContractRounds:Array.from({length:3},(_,i)=>Math.max(0,Math.floor(Number(saved.repeatContractRounds?.[i])||0))),contractClock:Math.max(0,Math.floor(Number(saved.contractClock)||0)),repeatNextAt:Array.from({length:3},(_,i)=>Math.max(0,Math.floor(Number(saved.repeatNextAt?.[i]??i*60)||0))),repeatDeadline:Array.from({length:3},(_,i)=>Math.max(0,Math.floor(Number(saved.repeatDeadline?.[i])||0))),experience:migratedExperience+legacyShipmentXp,reputation:Math.max(0,Number(saved.reputation)||0)};
+    return {...fresh,...saved,starterPowerCredit:Math.max(0,Number(saved.starterPowerCredit??15)||0),powerShortage:Boolean(saved.powerShortage),xpMigrationVersion:1,gearShipmentProgress:Math.max(0,Number(saved.gearShipmentProgress)||0)%GEARS_PER_FINISHED_UNITS,salesXpProgress:Math.max(0,Number(saved.salesXpProgress)||0)%25,autoSalesXpProgress:Math.max(0,Number(saved.autoSalesXpProgress)||0)%60,lastOutput:{...fresh.lastOutput,...saved.lastOutput},visualProgress:{...fresh.visualProgress,...saved.visualProgress},unitPenalties:Object.fromEntries(machines.map(m=>[m.id,Array.from({length:Math.max(0,Number(saved[m.id])||0)},(_,i)=>Math.max(0,Number(saved.unitPenalties?.[m.id]?.[i])||0))])) as Record<MachineId,number[]>,pendingReplacement:{...fresh.pendingReplacement,...saved.pendingReplacement},writeOffEvent:saved.writeOffEvent??null,nextWriteOffAt:Math.max(900,Number(saved.nextWriteOffAt)||900),broken:{...fresh.broken,...saved.broken},unitFaults:Object.fromEntries(machines.map(m=>[m.id,Array.from({length:Math.max(0,Number(saved[m.id])||0)},(_,i)=>Math.max(0,Number(saved.unitFaults?.[m.id]?.[i]??(i===0?saved.broken?.[m.id]:0))||0))])) as Record<MachineId,number[]>,mechanicAssignments:{...fresh.mechanicAssignments,...saved.mechanicAssignments},breakdownEvent:saved.breakdownEvent??null,powerCutEvent:shouldRecoverPowerCut?true:(saved.powerCutEvent??false),powerCutSeen:shouldRecoverPowerCut?true:(saved.powerCutSeen??false),cyberAttackEvent:shouldRecoverCyberAttack?true:(saved.cyberAttackEvent??false),cyberAttackSeen:shouldRecoverCyberAttack?true:(saved.cyberAttackSeen??false),cybersecuritySpecialists:Math.max(0,Number(saved.cybersecuritySpecialists)||0),researched:Array.isArray(saved.researched)?saved.researched:[],acceptedContracts:Array.isArray(saved.acceptedContracts)?saved.acceptedContracts:[],contractsCompleted:completed,boostSeconds:{production:Math.max(0,Math.floor(Number(saved.boostSeconds?.production)||0)),dispatch:Math.max(0,Math.floor(Number(saved.boostSeconds?.dispatch)||0)),protection:Math.max(0,Math.floor(Number(saved.boostSeconds?.protection)||0))},salesAssignments:goods.reduce((result,g)=>({...result,[g.id]:Math.max(0,Math.floor(Number(saved.salesAssignments?.[g.id]??(!saved.salesAssignments&&saved.salesTarget===g.id?saved.salespeople:0))||0))}),{...fresh.salesAssignments}),repeatContractRounds:Array.from({length:3},(_,i)=>Math.max(0,Math.floor(Number(saved.repeatContractRounds?.[i])||0))),contractClock:Math.max(0,Math.floor(Number(saved.contractClock)||0)),repeatNextAt:Array.from({length:3},(_,i)=>Math.max(0,Math.floor(Number(saved.repeatNextAt?.[i]??i*60)||0))),repeatDeadline:Array.from({length:3},(_,i)=>Math.max(0,Math.floor(Number(saved.repeatDeadline?.[i])||0))),experience:migratedExperience+legacyShipmentXp,reputation:Math.max(0,Number(saved.reputation)||0)};
   }catch{return fresh;}
 }
 const fmt=(n:number)=>Math.floor(n).toLocaleString();
@@ -304,8 +305,8 @@ export default function App(){
   useEffect(()=>{
     if(!running)return;
     const timer=window.setInterval(()=>{setS(v=>{
-      const n={...v,visualProgress:{...v.visualProgress},broken:{...v.broken},unitFaults:Object.fromEntries(machines.map(m=>[m.id,[...v.unitFaults[m.id]]])) as Record<MachineId,number[]>};
-      if(n.breakdownEvent||n.powerCutEvent||n.cyberAttackEvent)return n;
+      const n={...v,visualProgress:{...v.visualProgress},broken:{...v.broken},unitPenalties:{...v.unitPenalties},unitFaults:Object.fromEntries(machines.map(m=>[m.id,[...v.unitFaults[m.id]]])) as Record<MachineId,number[]>};
+      if(n.breakdownEvent||n.powerCutEvent||n.cyberAttackEvent||n.writeOffEvent)return n;
       n.contractClock++;
       n.repeatDeadline=[...n.repeatDeadline];
       n.repeatNextAt=[...n.repeatNextAt];
@@ -325,17 +326,36 @@ export default function App(){
       if(payrollFunded)n.cash=Math.max(0,n.cash-wages);
       const multiplier=speed;
       const reliabilityBonus=(n.researched.includes('reinforced-bearings')?.35:0)+(n.researched.includes('predictive-maintenance')?.2:0);
-      machines.forEach(m=>{
-        if(boostActive.protection)return;
+      let destroyedUnit=false;
+      for(const m of machines){
+        if(boostActive.protection)break;
         for(let i=0;i<n[m.id];i++){
           if(n.unitFaults[m.id][i]>0)continue;
-          if(Math.random()<.00065*(speed===2?4:1)*(1-reliabilityBonus)){
+          if(Math.random()>=.00065*(speed===2?4:1)*(1-reliabilityBonus))continue;
+          // Catastrophic failures are rare and limited to established factories.
+          // Protect the only ore mine and enforce a long cooldown between losses.
+          const eligible=n.contractClock>=n.nextWriteOffAt&&n.experience>=500&&n.reputation>=50&&
+            !(m.id==='miner'&&n.miner===1)&&n.cash>=machineCost(m,n)*.35;
+          if(eligible&&Math.random()<.04){
+            const oldLevel=Math.max(1,n['tier_'+m.id]-(n.unitPenalties[m.id][i]||0)+1);
+            n[m.id]--;
+            n.unitFaults[m.id].splice(i,1);
+            n.unitPenalties[m.id]=[...n.unitPenalties[m.id]];
+            n.unitPenalties[m.id].splice(i,1);
+            n.pendingReplacement={...n.pendingReplacement,[m.id]:(n.pendingReplacement[m.id]||0)+1};
+            n.cash+=Math.ceil(m.cost*.08);
+            n.writeOffEvent={id:m.id,unit:i+1,oldLevel};
+            n.nextWriteOffAt=n.contractClock+900;
+            destroyedUnit=true;
+          }else{
             n.unitFaults[m.id][i]=24;
             if(!n.breakdownEvent)n.breakdownEvent=m.id;
           }
+          break;
         }
-      });
-      if(n.breakdownEvent)return n;
+        if(destroyedUnit||n.breakdownEvent)break;
+      }
+      if(n.breakdownEvent||destroyedUnit)return n;
       machines.forEach(m=>{
         const assigned=n.mechanicAssignments[m.id]||0;
         if(payrollFunded&&assigned>0){
@@ -344,7 +364,7 @@ export default function App(){
         }
       });
       const researchOutput=(n.researched.includes('efficient-extraction')?1.15:1)*(n.researched.includes('precision-tooling')?1.3:1)*(n.researched.includes('smart-robotics')?1.2:1);
-      const rate=(id:MachineId,base:number)=>workingUnits(n,id)*base*(1+n['tier_'+id]*.25)*researchOutput*multiplier*(boostActive.production?2:1);
+      const rate=(id:MachineId,base:number)=>n.unitFaults[id].slice(0,n[id]).reduce((total,fault,i)=>total+(fault>0?0:(1+Math.max(0,n['tier_'+id]-(n.unitPenalties[id][i]||0))*.25)),0)*base*researchOutput*multiplier*(boostActive.production?2:1);
       const oreMade=rate('miner',.35);
       const ingotsMade=Math.min(n.ore+oreMade,rate('smelter',.22));
       const beamsMade=Math.min((n.ingot+ingotsMade)*.45,rate('beamMill',.075));
@@ -436,7 +456,7 @@ export default function App(){
   const unassignedSales=Math.max(0,s.salespeople-assignedSales);
   const payroll=payrollPerMinute(s);
   const payrollFunded=s.cash+1e-8>=payroll/60;
-  const economyActive=running&&!s.breakdownEvent&&!s.powerCutEvent&&!s.cyberAttackEvent;
+  const economyActive=running&&!s.breakdownEvent&&!s.powerCutEvent&&!s.cyberAttackEvent&&!s.writeOffEvent;
   const autoIncomePerMinute=economyActive&&payrollFunded&&s.autoSell?goods.reduce((sum,item)=>{
     const assigned=Math.min(s.salespeople,Math.max(0,s.salesAssignments[item.id]||0));
     // Estimate the next minute from the current one-second dispatch rate.
@@ -568,8 +588,17 @@ export default function App(){
     if(s[m.id]===0&&(!stageReached(machineStage[m.id])||s.experience<unlockAt[m.id]||s.reputation<reputationUnlock[m.id])){setNotice('This machine type is not unlocked yet.');return;}
     const cost=machineCost(m,s);
     if(s.cash<cost){setNotice('Not enough Rivets. Ship some stock to raise funds.');return;}
-    setS(v=>v[m.id]>=MAX_MACHINE_UNITS||v.cash<cost?v:{...v,cash:v.cash-cost,[m.id]:v[m.id]+1,unitFaults:{...v.unitFaults,[m.id]:[...v.unitFaults[m.id],0]},...(m.id==='assembler'&&!v.cyberAttackSeen?{cyberAttackSeen:true,cyberAttackEvent:true}:{})});
-    setNotice(m.id==='assembler'&&!s.cyberAttackSeen?'Mech Assembly commissioned. Security breach detected — the factory network is locked down.':m.name+' unit '+(s[m.id]+1)+' built and added to the factory.');
+    setS(v=>{
+      if(v[m.id]>=MAX_MACHINE_UNITS||v.cash<cost)return v;
+      const replaceLost=(v.pendingReplacement[m.id]||0)>0;
+      const levelLoss=replaceLost?Math.min(5,v['tier_'+m.id]):0;
+      return {...v,cash:v.cash-cost,[m.id]:v[m.id]+1,
+        unitFaults:{...v.unitFaults,[m.id]:[...v.unitFaults[m.id],0]},
+        unitPenalties:{...v.unitPenalties,[m.id]:[...v.unitPenalties[m.id],levelLoss]},
+        pendingReplacement:replaceLost?{...v.pendingReplacement,[m.id]:v.pendingReplacement[m.id]-1}:v.pendingReplacement,
+        ...(m.id==='assembler'&&!v.cyberAttackSeen?{cyberAttackSeen:true,cyberAttackEvent:true}:{})};
+    });
+    setNotice(m.id==='assembler'&&!s.cyberAttackSeen?'Mech Assembly commissioned. Security breach detected — the factory network is locked down.':m.name+' unit '+(s[m.id]+1)+' built'+((s.pendingReplacement[m.id]||0)>0?' as a replacement at up to 5 levels below the old equipment.':'.'));
   };
   const upgradeMachine=(m:typeof machines[number])=>{
     const cost=(s['tier_'+m.id]+1)*3;
@@ -724,7 +753,7 @@ export default function App(){
         <div className="cashflow-stat cashflow-expense"><small>− STAFF WAGES / MIN</small><b>−{moneyPerMinute(wagesPerMinute)} <i>RVT</i></b></div>
         <div className="cashflow-stat cashflow-electricity"><small>− ELECTRICITY / MIN</small><b>−{moneyPerMinute(powerPerMinute)} <i>RVT</i></b></div>
         <div className={'cashflow-stat cashflow-net '+(netPerMinute>=0?'positive':'negative')}><small>NET CASH FLOW / MIN</small><b>{netPerMinute>=0?'+':'−'}{moneyPerMinute(netPerMinute)} <i>RVT</i></b></div>
-        <small className="cashflow-note">{!running?'Paused · staff wages and electricity stopped':s.breakdownEvent||s.powerCutEvent||s.cyberAttackEvent?'Incident · staff wages and electricity paused':s.powerShortage?'INSUFFICIENT POWER FUNDS · ship stored goods to restart machinery':!payrollFunded?'Not enough cash for payroll · dispatch paused':'Live estimates from automatic sales, payroll and electricity · excludes manual shipments and contracts'}{' · Starter grid credit: '+s.starterPowerCredit.toFixed(2)+' RVT'}</small>
+        <small className="cashflow-note">{!running?'Paused · staff wages and electricity stopped':s.breakdownEvent||s.powerCutEvent||s.cyberAttackEvent||s.writeOffEvent?'Incident · staff wages and electricity paused':s.powerShortage?'INSUFFICIENT POWER FUNDS · ship stored goods to restart machinery':!payrollFunded?'Not enough cash for payroll · dispatch paused':'Live estimates from automatic sales, payroll and electricity · excludes manual shipments and contracts'}{' · Starter grid credit: '+s.starterPowerCredit.toFixed(2)+' RVT'}</small>
       </section>
       {page==='factory'&&<div className="page-content">
         <section className="welcome-row"><div><span className="eyebrow">{companyRank} · LEVEL {progressionLevel}</span><h1>Factory floor</h1><p>Build machines, keep production moving and ship what you make.</p><div className="level-progress"><span>COMPANY XP · {fmt(s.experience)} · LEVEL {progressionLevel}</span><div><i style={{width:goalProgress+'%'}}/></div><small>{fmt(Math.max(0,nextGoal-s.experience))} XP to level {progressionLevel+1}</small></div><div className="reputation-meter"><span>COMPANY REPUTATION · {s.reputation}</span><div><i style={{width:repProgress+'%'}}/></div><small>{companyRank} · {nextRank?('Next: '+nextRank.name+' · '+Math.max(0,nextRank.rep-s.reputation)+' REP · '+Math.max(0,nextRank.xp-s.experience)+' XP · '+fmt(Math.max(0,nextRank.sales-s.sold))+' RVT shipped · '+Math.max(0,nextRank.machines-machineTypesOwned)+' machine types'):'Top rank reached'}</small></div></div><div className="quick-stats"><div><small>MACHINES</small><b>{machineCount}/{machines.length*MAX_MACHINE_UNITS}</b></div><div><small>THROUGHPUT</small><b>{machines.reduce((sum,m)=>sum+rateFor(m),0).toFixed(2)}<i>/s</i></b></div><div><small>STAFF</small><b>{s.mechanics+s.salespeople}</b></div></div></section>
@@ -748,14 +777,14 @@ export default function App(){
           const failed=faultCount(s,m.id);
           // A downstream machine can use materials produced in the SAME tick.
           // Checking leftover warehouse inventory here incorrectly labels healthy copper machines STOPPED.
-          const interrupted=!running||!!s.breakdownEvent||s.powerCutEvent||s.cyberAttackEvent||s.powerShortage;
+          const interrupted=!running||!!s.breakdownEvent||s.powerCutEvent||s.cyberAttackEvent||!!s.writeOffEvent||s.powerShortage;
           const active=!interrupted&&unitsWorking>0&&s.lastOutput[m.id]>0;
           const perUnitRate=unitsWorking>0?s.lastOutput[m.id]/unitsWorking:0;
           const cycleSeconds=perUnitRate>0?1/perUnitRate:0;
           const lights:Array<'on'|'off'|'empty'>=Array.from({length:MAX_MACHINE_UNITS},(_,i)=>i>=owned?'empty':!active||(s.unitFaults[m.id][i]||0)>0?'off':'on');
           const inputNames:Partial<Record<MachineId,string>>={smelter:'raw ore',press:'iron ingots',beamMill:'iron ingots',assembler:'metal plates',copperSmelter:'copper ore',wiremill:'copper ingots',circuitpress:'copper wire',coilWinder:'copper wire'};
-          const stopReason=owned===0?'':!running?'Factory paused. Resume production to restart.':s.powerCutEvent?'Power cut. Resolve the incident to restore production.':s.cyberAttackEvent?'Network lockdown. Restore the factory systems.':s.breakdownEvent?'Emergency stop. Resolve or dismiss the active breakdown alert.':s.powerShortage?'No electricity funds left. Ship goods from Warehouse to restore production.':unitsWorking===0?'All purchased units are broken. Repair at least one.':s.lastOutput[m.id]<=0?'Waiting for '+(inputNames[m.id]||'materials')+' from the previous production stage. Check upstream machines.':'';
-          const machineStatus=owned===0?'NOT BUILT':unitsWorking===0?'BROKEN':!running?'PAUSED':s.powerCutEvent?'POWER CUT':s.cyberAttackEvent?'LOCKDOWN':s.breakdownEvent?'EMERGENCY STOP':s.powerShortage?'NO POWER':active?failed>0?'PARTIAL':'WORKING':'WAITING FOR INPUT';
+          const stopReason=owned===0?'':!running?'Factory paused. Resume production to restart.':s.powerCutEvent?'Power cut. Resolve the incident to restore production.':s.cyberAttackEvent?'Network lockdown. Restore the factory systems.':s.breakdownEvent?'Emergency stop. Resolve or dismiss the active breakdown alert.':s.writeOffEvent?'A machine was written off. Acknowledge the incident.':s.powerShortage?'No electricity funds left. Ship goods from Warehouse to restore production.':unitsWorking===0?'All purchased units are broken. Repair at least one.':s.lastOutput[m.id]<=0?'Waiting for '+(inputNames[m.id]||'materials')+' from the previous production stage. Check upstream machines.':'';
+          const machineStatus=owned===0?'NOT BUILT':unitsWorking===0?'BROKEN':!running?'PAUSED':s.powerCutEvent?'POWER CUT':s.cyberAttackEvent?'LOCKDOWN':s.breakdownEvent?'EMERGENCY STOP':s.writeOffEvent?'WRITE-OFF':s.powerShortage?'NO POWER':active?failed>0?'PARTIAL':'WORKING':'WAITING FOR INPUT';
           const cost=machineCost(m,s);
           const tier=s['tier_'+m.id];
           const repairCost=repairCostFor(m.id,tier);
@@ -768,7 +797,8 @@ export default function App(){
             {owned>0&&stopReason&&<div className="machine-stop-reason"><AlertTriangle size={13}/><span>{stopReason}</span></div>}
             {failed>0&&<div className="machine-repair"><span>{failed} broken unit{failed>1?'s':''} · {s.mechanicAssignments[m.id]>0?'mechanic repairing':'awaiting repair'}</span><button onClick={()=>{if(s.cash<repairCost){setNotice('Emergency repair costs '+repairCost+' Rivets per machine.');return;}const index=firstFault(s,m.id);if(index<0)return;setS(v=>({...repairUnit(v,m.id,index),cash:v.cash-repairCost}));setNotice(m.name+' unit '+(index+1)+' repaired.')}}>REPAIR ONE · {fmt(repairCost)} RVT</button></div>}
             <div className="machine-buttons">{owned===0?(!stageReached(machineStage[m.id])||s.experience<unlockAt[m.id]||s.reputation<reputationUnlock[m.id]?<div className="machine-locked-note">🔒 STAGE {machineStage[m.id]} · {unlockAt[m.id]} XP + {reputationUnlock[m.id]} REP</div>:<button className="primary-button" disabled={s.cash<cost} onClick={()=>buyMachine(m)}>BUILD MACHINE · {fmt(cost)} RVT</button>):<><button className="primary-button" disabled={owned>=MAX_MACHINE_UNITS||s.cash<cost} onClick={()=>buyMachine(m)}>{owned>=MAX_MACHINE_UNITS?'3/3 UNITS · MAX':'ADD UNIT '+(owned+1)+' · '+fmt(cost)+' RVT'}</button><button className="secondary-button" disabled={s.gears<(tier+1)*3} onClick={()=>upgradeMachine(m)}><ArrowUpRight size={15}/> UPGRADE · {(tier+1)*3} GEARS</button></>}</div>
-            {owned>0&&<small className="machine-footnote">+25% output per upgrade · {m.output} · {owned}/{MAX_MACHINE_UNITS} units installed</small>}
+            {owned>0&&<small className="machine-footnote">+25% output per upgrade · {m.output} · {owned}/{MAX_MACHINE_UNITS} units installed{(s.pendingReplacement[m.id]||0)>0?' · REPLACEMENT NEEDED':''}</small>}
+            {owned>0&&s.unitPenalties[m.id].some(p=>p>0)&&<div className="machine-replacement-levels">UNIT LEVELS: {s.unitPenalties[m.id].slice(0,owned).map((pen,i)=>'Unit '+(i+1)+' LV '+(Math.max(0,tier-pen)+1)).join(' · ')} · replacement units are up to 5 levels lower</div>}
           </article>;
         })}</section>
         <section className="achievement-panel"><div className="achievement-heading"><div><span className="eyebrow">MILESTONES</span><h2>Factory achievements</h2></div><span>{achievements.filter(a=>a.done).length}/{achievements.length} UNLOCKED</span></div><div className="achievement-grid">{achievements.map(a=><div className={'achievement '+(a.done?'earned':'')} key={a.name}><span>{a.icon}</span><div><b>{a.name}</b><small>{a.detail}</small></div><strong>{a.done?'✓':'LOCKED'}</strong></div>)}</div></section>
@@ -815,6 +845,7 @@ export default function App(){
         <div className="sales-note"><CircleDollarSign size={18}/> {s.salespeople>0&&s.autoSell?'Your assigned sales team is automatically dispatching stock.':'Hire sales staff and enable automatic sales from the Staff page to automate dispatch.'}</div>
       </div>}
     </main>
+    {s.writeOffEvent&&<div className="incident-backdrop" role="dialog" aria-modal="true" aria-labelledby="writeoff-title"><section className="incident-panel writeoff-panel"><div className="incident-siren"><AlertTriangle size={28}/><span>CATASTROPHIC EQUIPMENT LOSS</span></div><p className="incident-kicker">FACTORY ASSET REPORT</p><h2 id="writeoff-title">That machine is beyond repair.</h2><p className="incident-copy"><b>{machines.find(m=>m.id===s.writeOffEvent?.id)?.name}</b> unit {s.writeOffEvent.unit} has been permanently written off. Its production has stopped and it cannot be repaired by a mechanic.</p><div className="incident-readout"><span>OLD MACHINE LEVEL</span><b>LEVEL {s.writeOffEvent.oldLevel}</b><span>REPLACEMENT</span><b>BUY A NEW UNIT · UP TO 5 LEVELS LOWER</b></div><button className="primary-button" onClick={()=>{setS(v=>({...v,writeOffEvent:null}));setPage('factory');setNotice('Equipment written off. Buy a replacement machine to restore capacity.');}}>ACKNOWLEDGE · REPLACE WHEN READY</button></section></div>}
     {s.cyberAttackEvent&&<div className="cyberattack-backdrop" role="dialog" aria-modal="true" aria-labelledby="cyberattack-title"><section className="cyberattack-panel"><div className="powercut-topline"><span>ORE &amp; ORDER · INCIDENT 002</span><span className="cyberattack-live"><i/> NETWORK BREACH</span></div><h2 id="cyberattack-title">Someone's in the system.</h2><p className="powercut-intro">The new Mech Assembly has just joined the line when every terminal flashes red. An unknown process has seized the factory network, locked the control systems and frozen production. This isn't a blown fuse — someone has got inside.</p><img className="powercut-storyboard" src="/resources/Factory Lockdown_ Cyberattack Alert.png" alt="Six-panel comic storyboard showing a factory network breach, warning terminal, frozen machinery and red emergency lighting"/><div className="powercut-choice-heading"><b>TAKE BACK CONTROL</b><span>Production stays paused until recovery</span></div><div className="powercut-actions"><button className="primary-button" disabled={s.cash<cybersecurityCost(s)} onClick={hireCybersecuritySpecialist}>HIRE CYBERSECURITY SPECIALIST · {fmt(cybersecurityCost(s))} RVT <small>Contains the breach and installs permanent protection</small></button><button className="secondary-button" disabled={s.cash<120} onClick={emergencyCyberRecovery}>EXTERNAL SYSTEM RESTORE · 120 RVT <small>Restores production without an in-house specialist</small></button></div><small className="powercut-footnote">The incident is one-time. A specialist stays on your team and protects the factory network.</small></section></div>}
     {s.powerCutEvent&&<div className="powercut-backdrop" role="dialog" aria-modal="true" aria-labelledby="powercut-title"><section className="powercut-panel"><div className="powercut-topline"><span>ORE &amp; ORDER · INCIDENT 001</span><span className="powercut-live"><i/> POWER FAILURE</span></div><h2 id="powercut-title">Well, that's put a stop to things.</h2><p className="powercut-intro">The lights flicker. The Rockbreaker Mine gives one last shudder, then everything goes quiet. Your first proper factory problem has arrived.</p><img className="powercut-storyboard" src="/resources/Factory Power Cut_ A Comic Storyboard.png" alt="Comic storyboard showing the factory lights flickering, a machine sparking, the factory going dark and emergency red lights coming on"/><div className="powercut-choice-heading"><b>GET THE MINE BACK ONLINE</b><span>Choose how to recover</span></div><div className="powercut-actions"><button className="primary-button" disabled={s.cash<60} onClick={()=>resolvePowerCut(true)}>HIRE A MECHANIC · 60 RVT <small>First-day discount · keeps them on your team</small></button><button className="secondary-button" disabled={s.cash<40} onClick={()=>resolvePowerCut(false)}>ONE-OFF REPAIR · 40 RVT <small>Fix the mine without hiring staff</small></button></div><small className="powercut-footnote">Your factory is paused until the mine is repaired. This incident only happens once.</small></section></div>}
     {s.breakdownEvent&&<div className="incident-backdrop" role="dialog" aria-modal="true" aria-labelledby="incident-title"><section className="incident-panel"><div className="incident-siren"><AlertTriangle size={28}/><span>EMERGENCY STOP · 01</span></div><p className="incident-kicker">FACTORY INCIDENT REPORT</p><h2 id="incident-title">Critical machine failure</h2><p className="incident-copy"><b>{machines.find(m=>m.id===s.breakdownEvent)?.name}</b> has suffered a mechanical failure. The line has been stopped while the fault is isolated. Production and automatic dispatch are temporarily suspended.</p><div className="incident-readout"><span>FAULT DETECTED</span><b>DRIVE ASSEMBLY OVERHEATING</b><span>REQUIRED ACTION</span><b>REPAIR THE AFFECTED MACHINE</b></div><div className="incident-actions">{s.mechanicAssignments[s.breakdownEvent]>0&&<button className="primary-button" onClick={()=>resolveBreakdown(true)}>USE ASSIGNED MECHANIC · FREE</button>}<button className="primary-button" disabled={s.cash<repairCostFor(s.breakdownEvent,s['tier_'+s.breakdownEvent])} onClick={()=>resolveBreakdown(false)}>EMERGENCY REPAIR · {fmt(repairCostFor(s.breakdownEvent,s['tier_'+s.breakdownEvent]))} RVT</button><button className="secondary-button" onClick={()=>{setS(v=>({...v,breakdownEvent:null}));setNotice('Emergency stop cleared. '+machines.find(m=>m.id===s.breakdownEvent)?.name+' still needs repair.')}}>CONTINUE · REPAIR LATER</button></div><small className="incident-footnote">Tip: assign a mechanic in Staff to handle future breakdowns. You can also repair the machine from its factory card.</small></section></div>}
