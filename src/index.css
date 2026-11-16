@@ -1707,3 +1707,41 @@ body:has(.game[data-theme="copper"]){background:#2b1c18!important}
   .qc-v2 .qc-conveyor::before,.qc-plate-carriage,.qc-timer-fill,.qc-conveyor.is-error,.qc-feedback{animation:none!important}
   .qc-v2 .qc-conveyor::before{background-position:0}
 }
+
+
+/* QC v2 finishing pass: hierarchy, depth and responsive rhythm */
+.qc-v2{max-width:980px;margin-inline:auto;padding:clamp(14px,2.8vw,26px);box-shadow:0 12px 32px #101a142e}
+.qc-v2 .qc-game-heading h2{font-size:clamp(21px,3vw,29px);letter-spacing:-.035em;line-height:1.1}
+.qc-v2 .qc-instructions{margin-block:17px 13px}
+.qc-shift-progress{display:flex;align-items:center;gap:11px;max-width:650px;margin:13px auto 10px;color:#c2d1c0;font-size:10px;font-weight:800;letter-spacing:.07em}
+.qc-shift-progress>span{white-space:nowrap}
+.qc-shift-progress>b{min-width:33px;text-align:right;color:#f0dfad;font-size:12px}
+.qc-shift-track{height:6px;flex:1;overflow:hidden;border-radius:50px;background:#14231b;border:1px solid #425c49}
+.qc-shift-track>div{height:100%;border-radius:50px;background:linear-gradient(90deg,#8aa879,#cbd99a);transition:width .38s cubic-bezier(.2,.8,.3,1)}
+.qc-v2 .qc-conveyor{background:radial-gradient(ellipse at center,#3d5851 0%,#223a34 56%,#172923 100%)}
+.qc-v2 .qc-conveyor::before{background:repeating-linear-gradient(90deg,#354c48 0 30px,#263a37 30px 40px,#546a64 40px 44px)}
+.qc-station-side-label{position:absolute;bottom:10px;left:14px;z-index:3;font-size:10px;font-weight:800;letter-spacing:.1em;color:#d1d7bb;background:#1b2824cc;border-radius:4px;padding:4px 8px}
+.qc-v2 .qc-plate-carriage{filter:drop-shadow(0 4px 2px #07130c45)}
+.qc-v2 .qc-feedback{min-width:230px;padding:14px 24px;backdrop-filter:blur(4px)}
+.qc-v2 .qc-feedback strong{font-size:clamp(17px,3vw,22px)}
+.qc-v2 .qc-actions button:not(:disabled):hover{filter:brightness(1.09)}
+.qc-v2 .qc-actions button:disabled{opacity:.7}
+.qc-v2 .qc-actions button>small{letter-spacing:.01em}
+.qc-v2 .qc-help{margin-top:16px;color:#d6dfd0}
+.qc-v2 .qc-result{animation:qc-result-arrive .28s ease-out both}
+.qc-v2 .qc-results-grid>div{box-shadow:inset 0 1px #ffffff10}
+.qc-v2 .qc-token-result{box-shadow:inset 0 1px #fff4c41c}
+@keyframes qc-result-arrive{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:600px){
+  .qc-v2 .qc-instructions{font-size:12px;line-height:1.45;margin:12px 0}
+  .qc-v2 .qc-score>span{flex:1;justify-content:center;min-width:calc(50% - 5px)}
+  .qc-shift-progress{gap:7px;font-size:9px}
+  .qc-v2 .qc-conveyor{margin-bottom:11px}
+  .qc-v2 .qc-plate-carriage{width:min(78%,300px)}
+  .qc-v2 .qc-actions button{min-height:94px}
+  .qc-v2 .qc-help{margin:12px 0 2px}
+}
+@media(prefers-reduced-motion:reduce){
+  .qc-v2 .qc-result{animation:none}
+  .qc-shift-track>div{transition:none}
+}
