@@ -261,6 +261,20 @@ function stockSaleReminder(state:GameState){
     .filter(item=>item.qty>0);
   return {items,units:items.reduce((sum,item)=>sum+item.qty,0),value:Math.floor(items.reduce((sum,item)=>sum+item.qty*item.price*multiplier,0))};
 }
+function sellSurplusStock(state:GameState):GameState{
+  const batch=stockSaleReminder(state);
+  if(!batch.units)return state;
+  const multiplier=state.researched.includes('market-intelligence')?1.2:1;
+  const revenue=batch.items.reduce((sum,item)=>sum+item.qty*item.price*multiplier,0);
+  const progress=state.salesXpProgress+revenue;
+  const xp=Math.floor((progress+1e-8)/25);
+  const gearGain=shipmentGearGain(state,batch.items.reduce((sum,item)=>sum+finishedGearUnits(item.good,item.qty),0));
+  const next={...state,cash:state.cash+revenue,sold:state.sold+revenue,
+    experience:state.experience+xp,salesXpProgress:progress-xp*25,
+    gears:state.gears+gearGain.earned,gearShipmentProgress:gearGain.remainder};
+  for(const item of batch.items)next[item.good]-=item.qty;
+  return next;
+}
 const downstreamMaterialAvailable=(state:GameState,id:IntermediateStock,amount:number,made:number)=>{
   const mode=state.flowMode[id]||'balanced';
   if(mode==='stockpile')return 0;
@@ -1080,6 +1094,13 @@ export default function App(){
     setNotice('Shipped '+fmt(amount)+' '+item.name+' for '+fmt(revenue)+' Rivets.'+(shipmentXp>0?' · +'+shipmentXp+' XP from shipments.':''));
     celebrate('Shipment dispatched!',fmt(amount)+' '+item.name,'shipment',{cash:revenue,xp:shipmentXp});
   };
+  const shipSurplus=()=>{
+    if(!stockSaleReminder(s).units){setNotice('No spare full units to sell. Your contract stock is being kept safe.');return;}
+    // Recalculate against the latest state, so changing orders and repeated taps
+    // cannot sell reserved goods or award the same shipment twice.
+    setS(v=>sellSurplusStock(v));
+    setNotice('Surplus stock shipped. Goods reserved for current contracts stayed in the Warehouse.');
+  };
   const shipAllStock=()=>{
     const items=goods.map(g=>({item:g,amount:Math.max(0,Math.floor(s[g.id]))})).filter(x=>x.amount>0);
     if(!items.length){setNotice('There are no full units ready to ship.');return;}
@@ -1480,7 +1501,7 @@ export default function App(){
         <div className="research-footnote"><Cog size={16}/> Research effects apply automatically across every machine and sale. Your discoveries are saved with your factory.</div>
       </div>}
       {page==='warehouse'&&<div className="page-content">
-        <section className="welcome-row"><div><span className="eyebrow">STORAGE & DISPATCH</span><h1>Warehouse</h1><p>Keep an eye on your stock and decide when to turn it into Rivets.</p></div><div className="warehouse-total"><small>TOTAL STOCK VALUE</small><b>{fmt(stockValue)} RVT</b><button className="primary-button" disabled={!goods.some(g=>s[g.id]>=1)} onClick={shipAllStock}>SHIP ALL PRODUCTS · {fmt(goods.reduce((total,g)=>total+Math.floor(s[g.id])*g.price*saleMultiplier,0))} RVT</button></div></section>
+        <section className="welcome-row"><div><span className="eyebrow">STORAGE & DISPATCH</span><h1>Warehouse</h1><p>Keep an eye on your stock and decide when to turn it into Rivets.</p></div><div className="warehouse-total"><small>TOTAL STOCK VALUE</small><b>{fmt(stockValue)} RVT</b><button type="button" className="primary-button" disabled={saleReminder.units===0} onClick={shipSurplus}>SELL SURPLUS · {fmt(saleReminder.value)} RVT</button><small>Keeps goods reserved for current contracts. Full units only.</small><button className="primary-button" disabled={!goods.some(g=>s[g.id]>=1)} onClick={shipAllStock}>SHIP ALL PRODUCTS · {fmt(goods.reduce((total,g)=>total+Math.floor(s[g.id])*g.price*saleMultiplier,0))} RVT</button></div></section>
         <div className="gear-banner"><Cog size={21}/><span><b>{fmt(s.gears)} Gears</b><small>Earn 1 Gear per 12 total finished goods shipped (Precision Parts, Circuit Boards, Steel Beams or Copper Coils). Current progress: {s.gearShipmentProgress.toFixed(1)}/12. Mission rewards also grant Gears.</small></span></div>
         {(s.miner>0||s.copperMiner>0)&&<section className="freight-inventory-note"><div><Truck size={19}/><span><strong>ORE WAITING AT THE MINES</strong><small>Drivers collect this ore. Mines slow down if the queue gets too large; add drivers or upgrade the fleet to restore full output.</small></span></div><div className="freight-inventory-values">{s.miner>0&&<span>IRON <b>{s.oreAtMine.toFixed(1)}</b></span>}{s.copperMiner>0&&<span>COPPER <b>{s.copperAtMine.toFixed(1)}</b></span>}</div><button type="button" className="secondary-button" onClick={()=>{setPage('staff');setStaffTab('haulage')}}>MANAGE DRIVERS</button></section>}
         <section className="warehouse-grid">{visibleGoods.map(g=><article className="stock-card" key={g.id}><span className="stock-emoji"><ProductIcon id={g.id} size={43}/></span><div><h3>{g.name}</h3><p>{g.detail} · {g.price} RVT each</p><b>{fmt(s[g.id])} <small>IN STOCK</small></b>{(g.id==='ingot'||g.id==='wire')&&<div className="stock-flow-control"><div className="stock-flow-head"><span>WHERE SHOULD IT GO?</span><b>{s.flowMode[g.id as IntermediateStock]==='stockpile'?'STOCKPILE':s.flowMode[g.id as IntermediateStock]==='feed'?'PRODUCTION':'BALANCED'}</b></div><div className="stock-flow-switch" role="group" aria-label={g.name+' material routing'}>{([{id:'stockpile',label:'Store',hint:'Keep everything for orders'},{id:'balanced',label:'Split',hint:'Protect orders and feed machines'},{id:'feed',label:'Use',hint:'Send it to production'}] as const).map(option=><button key={option.id} type="button" aria-pressed={s.flowMode[g.id as IntermediateStock]===option.id} title={option.hint} className={s.flowMode[g.id as IntermediateStock]===option.id?'is-selected':''} onClick={()=>setS(v=>({...v,flowMode:{...v.flowMode,[g.id]:option.id}}))}>{option.label}</button>)}</div><small>{s.flowMode[g.id as IntermediateStock]==='stockpile'?'Save all new stock for shipping or contracts.':s.flowMode[g.id as IntermediateStock]==='feed'?'Other machines can use all available stock.':'Reserve contract quantities and keep production flowing.'}</small></div>}</div><button disabled={s[g.id]<1} onClick={()=>sellStock(g.id)}>SHIP ALL · {fmt(Math.floor(s[g.id])*g.price)} RVT</button></article>)}</section>

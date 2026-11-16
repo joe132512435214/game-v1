@@ -8,7 +8,7 @@ import ts from 'typescript';
 const root=dirname(dirname(fileURLToPath(import.meta.url)));
 const folder=await mkdtemp(join(root,'.contract-test-'));
 const source=await readFile(join(root,'src/App.tsx'),'utf8');
-const output=ts.transpileModule(source+'\nexport {fresh,goods,machines,contracts,issueRepeatOrder,estimateContractSeconds,orderPayout,orderExpiry,updateContractOffers,deliverRepeatOrder,closeRepeatOrder,contractStockTarget,stockSaleReminder,loadGame,CONTRACT_TERMS};',{
+const output=ts.transpileModule(source+'\nexport {fresh,goods,machines,contracts,issueRepeatOrder,estimateContractSeconds,orderPayout,orderExpiry,updateContractOffers,deliverRepeatOrder,closeRepeatOrder,contractStockTarget,stockSaleReminder,sellSurplusStock,loadGame,CONTRACT_TERMS};',{
   compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.ReactJSX}
 }).outputText;
 await writeFile(join(folder,'game.mjs'),output);
@@ -156,4 +156,25 @@ test('stock reminder includes researched sale prices and excludes zero stock',()
   s.parts=2.9;s.researched=['market-intelligence'];
   const reminder=game.stockSaleReminder(s);
   assert.equal(reminder.units,2);assert.equal(reminder.value,252);
+});
+
+test('surplus sale keeps current and late contract goods plus fractional stock',()=>{
+  const s=factory();const o=offer(s);s.repeatOffers=[o,null,null];s.ore=o.qty+4.75;s.contractClock=o.due+1;
+  const next=game.sellSurplusStock(s);
+  assert.equal(next.ore,o.qty+.75);assert.equal(next.cash-s.cash,20);
+  assert.equal(s.ore,o.qty+4.75);assert.strictEqual(game.sellSurplusStock(next),next);
+  assert.equal(next.repeatOffers[0].id,o.id);
+});
+test('surplus sale preserves exact researched revenue and XP/Gear carryover',()=>{
+  const s=factory();s.ingot=1;s.parts=12;s.researched=['market-intelligence'];s.salesXpProgress=24;s.gearShipmentProgress=11;
+  const next=game.sellSurplusStock(s);const revenue=(14+12*105)*1.2;
+  assert.ok(Math.abs(next.cash-s.cash-revenue)<1e-7);
+  assert.ok(Math.abs(next.sold-s.sold-revenue)<1e-7);
+  assert.equal(next.experience-s.experience,Math.floor((24+revenue+1e-8)/25));
+  assert.ok(next.salesXpProgress>=0&&next.salesXpProgress<25);
+  assert.equal(next.gears-s.gears,1);assert.equal(next.gearShipmentProgress,11);
+});
+test('surplus sale pays nothing for fully reserved or fractional-only stock',()=>{
+  const s=factory();const o=offer(s);s.repeatOffers=[o,null,null];s.ore=o.qty;s.parts=.9;
+  assert.strictEqual(game.sellSurplusStock(s),s);
 });
