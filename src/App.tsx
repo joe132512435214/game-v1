@@ -580,25 +580,22 @@ export default function App(){
           if(i>=0)n.unitFaults[m.id][i]=Math.max(0,n.unitFaults[m.id][i]-assigned*multiplier);
         }
       });
-      const researchOutput=(n.researched.includes('efficient-extraction')?1.15:1)*(n.researched.includes('precision-tooling')?1.3:1)*(n.researched.includes('smart-robotics')?1.2:1);
-      const rate=(id:MachineId,base:number)=>n.unitFaults[id].slice(0,n[id]).reduce((total,fault,i)=>total+(fault>0?0:(1+Math.max(0,n['tier_'+id]-(n.unitPenalties[id][i]||0))*.25)),0)*base*researchOutput*multiplier*(boostActive.production?2:1)*((id==='miner'||id==='copperMiner')?(1+n.capitalLevels.miningNetwork*.06):1);
-      const oreMade=rate('miner',.35);
-      const ingotsMade=Math.min(n.ore+oreMade,rate('smelter',.22));
+      const rate=(id:MachineId)=>machineCapacity(n,id,multiplier,boostActive.production);
+      const oreMade=rate('miner');
+      const ingotsMade=Math.min(n.ore+oreMade,rate('smelter'));
       const availableIngots=downstreamMaterialAvailable(n,'ingot',n.ingot+ingotsMade,ingotsMade);
-      const beamsMade=Math.min(availableIngots*.45,rate('beamMill',.075));
-      const platesMade=Math.min(Math.max(0,availableIngots-beamsMade),rate('press',.12));
-      const partsMade=Math.min(n.plate+platesMade,rate('assembler',.07));
-      const copperOreMade=rate('copperMiner',.26);
-      const copperIngotsMade=Math.min(n.copperOre+copperOreMade,rate('copperSmelter',.18));
-      const wireMade=Math.min(n.copperIngot+copperIngotsMade,rate('wiremill',.12));
+      const [platesMade,beamsMade]=splitMachineSupply(availableIngots,rate('press'),rate('beamMill'));
+      const partsMade=Math.min(n.plate+platesMade,rate('assembler'));
+      const copperOreMade=rate('copperMiner');
+      const copperIngotsMade=Math.min(n.copperOre+copperOreMade,rate('copperSmelter'));
+      const wireMade=Math.min(n.copperIngot+copperIngotsMade,rate('wiremill'));
       const availableWire=downstreamMaterialAvailable(n,'wire',n.wire+wireMade,wireMade);
-      const coilsMade=Math.min(availableWire*.45,rate('coilWinder',.065));
-      const circuitsMade=Math.min(Math.max(0,availableWire-coilsMade),rate('circuitpress',.07));
+      const [circuitsMade,coilsMade]=splitMachineSupply(availableWire,rate('circuitpress'),rate('coilWinder'));
       // Motor assembly uses two coils and one circuit board, including goods
       // finished earlier in this tick. Protect material reserved by open orders.
       const freeCoils=Math.max(0,n.coils+coilsMade-contractStockTarget(n,'coils'));
       const freeCircuits=Math.max(0,n.circuits+circuitsMade-contractStockTarget(n,'circuits'));
-      const motorsMade=Math.min(rate('motorworks',.04),freeCoils/2,freeCircuits);
+      const motorsMade=Math.min(rate('motorworks'),freeCoils/2,freeCircuits);
       // Electricity is metered per working machine that actually makes output.
       // A paused, broken or input-starved machine uses no electricity.
       const proposedOutput:Record<MachineId,number>={
@@ -607,7 +604,7 @@ export default function App(){
         circuitpress:circuitsMade,beamMill:beamsMade,coilWinder:coilsMade,motorworks:motorsMade
       };
       const powerBill=machines.reduce((sum,m)=>sum+(proposedOutput[m.id]>1e-8
-        ?workingUnits(n,m.id)*ELECTRICITY_PER_MINUTE[m.id]*electricitySpeedFactor(speed)*powerCostMultiplier(n)/60:0),0);
+        ?workingUnits(n,m.id)*ELECTRICITY_PER_MINUTE[m.id]*electricitySpeedFactor(speed)*machinePowerFactor(n,m.id)*powerCostMultiplier(n)/60:0),0);
       const powerFunded=n.cash+n.starterPowerCredit+1e-8>=powerBill;
       if(powerFunded){
         const creditUsed=Math.min(n.starterPowerCredit,powerBill);
@@ -633,7 +630,7 @@ export default function App(){
       n.lastOutput={
         miner:oreMade,smelter:ingotsMade,press:platesMade,assembler:partsMade,
         copperMiner:copperOreMade,copperSmelter:copperIngotsMade,wiremill:wireMade,
-        circuitpress:circuitsMade,beamMill:beamsMade,coilWinder:coilsMade
+        circuitpress:circuitsMade,beamMill:beamsMade,coilWinder:coilsMade,motorworks:motorsMade
       };
       machines.forEach(m=>{
         const units=workingUnits(n,m.id);
