@@ -8,8 +8,10 @@ type MachineId = 'miner' | 'smelter' | 'press' | 'assembler' | 'copperMiner' | '
 type StockId = 'ore' | 'ingot' | 'plate' | 'parts' | 'copperOre' | 'copperIngot' | 'wire' | 'circuits' | 'beams' | 'coils';
 type Page = 'factory' | 'staff' | 'warehouse' | 'research' | 'store';
 type BoostId = 'production' | 'dispatch' | 'protection';
+type StockFlowMode = 'balanced' | 'stockpile' | 'feed';
+type IntermediateStock = 'ingot' | 'wire';
 type GameState = {
-  cash:number; gears:number; starterPowerCredit:number; powerShortage:boolean; gearShipmentProgress:number; ore:number; beams:number; coils:number; ingot:number; plate:number; parts:number; copperOre:number; copperIngot:number; wire:number; circuits:number;
+  flowMode:Record<IntermediateStock,StockFlowMode>; cash:number; gears:number; starterPowerCredit:number; powerShortage:boolean; gearShipmentProgress:number; ore:number; beams:number; coils:number; ingot:number; plate:number; parts:number; copperOre:number; copperIngot:number; wire:number; circuits:number;
   miner:number; smelter:number; press:number; assembler:number; copperMiner:number; copperSmelter:number; wiremill:number; circuitpress:number; beamMill:number; coilWinder:number;
   tier_miner:number; tier_smelter:number; tier_press:number; tier_assembler:number; tier_copperMiner:number; tier_copperSmelter:number; tier_wiremill:number; tier_circuitpress:number; tier_beamMill:number; tier_coilWinder:number;
   level:number; experience:number; sold:number; xpMigrationVersion:number; salesXpProgress:number; autoSalesXpProgress:number; mechanics:number; salespeople:number; reputation:number; acceptedContracts:string[]; contractsCompleted:string[]; repeatContractRounds:number[]; contractClock:number; repeatNextAt:number[]; repeatDeadline:number[]; repeatOffers:(RepeatOrder|null)[]; contractHistory:StockId[]; storyNextAt:Record<string,number>;
@@ -19,7 +21,7 @@ type GameState = {
 };
 const SAVE_KEY = 'ironworks-tycoon-save-v2';
 const fresh:GameState = {
-  cash:0,gears:0,starterPowerCredit:15,powerShortage:false,gearShipmentProgress:0,ore:0,beams:0,coils:0,ingot:0,plate:0,parts:0,copperOre:0,copperIngot:0,wire:0,circuits:0,
+  flowMode:{ingot:'balanced',wire:'balanced'},cash:0,gears:0,starterPowerCredit:15,powerShortage:false,gearShipmentProgress:0,ore:0,beams:0,coils:0,ingot:0,plate:0,parts:0,copperOre:0,copperIngot:0,wire:0,circuits:0,
   miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0,beamMill:0,coilWinder:0,
   tier_miner:0,tier_smelter:0,tier_press:0,tier_assembler:0,tier_copperMiner:0,tier_copperSmelter:0,tier_wiremill:0,tier_circuitpress:0,tier_beamMill:0,tier_coilWinder:0,
   level:1,experience:0,sold:0,xpMigrationVersion:1,salesXpProgress:0,autoSalesXpProgress:0,mechanics:0,salespeople:0,
@@ -116,6 +118,24 @@ function issueRepeatOrder(s:GameState,slot:number):RepeatOrder|null{
     good:first.id,qty:items[0].qty,items,reward,rep:Math.min(6,1+items.length+Math.floor(variation)),xp:15+progress*4+items.length*7,kind,due:s.contractClock+duration};
 }
 const orderReady=(s:GameState,order:RepeatOrder)=>order.items.every(line=>s[line.good]+1e-7>=line.qty);
+const contractStockTarget=(state:GameState,id:StockId)=>{
+  const repeat=Math.max(0,...(state.repeatOffers||[]).filter((o):o is RepeatOrder=>!!o&&state.contractClock<=o.due)
+    .flatMap(o=>o.items.filter(line=>line.good===id).map(line=>line.qty)));
+  const story=Math.max(0,...contracts.filter(c=>c.good===id&&!state.contractsCompleted.includes(c.id)
+    &&state.reputation>=c.minRep&&state[contractProducer[id]]>0).map(c=>c.qty));
+  return Math.max(repeat,story);
+};
+const downstreamMaterialAvailable=(state:GameState,id:IntermediateStock,amount:number,made:number)=>{
+  const mode=state.flowMode[id]||'balanced';
+  if(mode==='stockpile')return 0;
+  if(mode==='feed')return amount;
+  const target=Math.max(2,contractStockTarget(state,id));
+  // Build a small buffer, then share output. Contract orders take priority but
+  // the downstream factory still gets 25% of newly produced material.
+  const surplus=Math.max(0,amount-target);
+  const trickle=contractStockTarget(state,id)>0?made*.25:0;
+  return Math.min(amount,surplus+trickle);
+};
 function loadGame():GameState{
   try{
     const saved=JSON.parse(localStorage.getItem(SAVE_KEY)||'{}');
@@ -127,7 +147,7 @@ function loadGame():GameState{
     const legacyXpFromMissions=(Array.isArray(saved.missionsClaimed)?saved.missionsClaimed:[]).reduce((total:number,id:number)=>total+(missionXp[id]||0),0);
     const migratedExperience=saved.experience!==undefined?Math.max(0,Number(saved.experience)||0):Math.max(legacyXpFromContracts+legacyXpFromMissions,Number(saved.assembler)>0?270:Number(saved.press)>0?165:Number(saved.smelter)>0?60:Number(saved.miner)>0?25:0);
     const legacyShipmentXp=saved.xpMigrationVersion===undefined?Math.floor(Math.max(0,Number(saved.sold)||0)/500):0;
-    return {...fresh,...saved,starterPowerCredit:Math.max(0,Number(saved.starterPowerCredit??15)||0),powerShortage:Boolean(saved.powerShortage),xpMigrationVersion:1,gearShipmentProgress:Math.max(0,Number(saved.gearShipmentProgress)||0)%GEARS_PER_FINISHED_UNITS,salesXpProgress:Math.max(0,Number(saved.salesXpProgress)||0)%25,autoSalesXpProgress:Math.max(0,Number(saved.autoSalesXpProgress)||0)%60,lastOutput:{...fresh.lastOutput,...saved.lastOutput},visualProgress:{...fresh.visualProgress,...saved.visualProgress},unitPenalties:Object.fromEntries(machines.map(m=>[m.id,Array.from({length:Math.max(0,Number(saved[m.id])||0)},(_,i)=>Math.max(0,Number(saved.unitPenalties?.[m.id]?.[i])||0))])) as Record<MachineId,number[]>,pendingReplacement:{...fresh.pendingReplacement,...saved.pendingReplacement},writeOffEvent:saved.writeOffEvent??null,nextWriteOffAt:Math.max(900,Number(saved.nextWriteOffAt)||900),broken:{...fresh.broken,...saved.broken},unitFaults:Object.fromEntries(machines.map(m=>[m.id,Array.from({length:Math.max(0,Number(saved[m.id])||0)},(_,i)=>Math.max(0,Number(saved.unitFaults?.[m.id]?.[i]??(i===0?saved.broken?.[m.id]:0))||0))])) as Record<MachineId,number[]>,mechanicAssignments:{...fresh.mechanicAssignments,...saved.mechanicAssignments},breakdownEvent:saved.breakdownEvent??null,powerCutEvent:shouldRecoverPowerCut?true:(saved.powerCutEvent??false),powerCutSeen:shouldRecoverPowerCut?true:(saved.powerCutSeen??false),cyberAttackEvent:shouldRecoverCyberAttack?true:(saved.cyberAttackEvent??false),cyberAttackSeen:shouldRecoverCyberAttack?true:(saved.cyberAttackSeen??false),cybersecuritySpecialists:Math.max(0,Number(saved.cybersecuritySpecialists)||0),researched:Array.isArray(saved.researched)?saved.researched:[],acceptedContracts:Array.isArray(saved.acceptedContracts)?saved.acceptedContracts:[],contractsCompleted:completed,repeatOffers:Array.from({length:3},(_,i)=>saved.repeatOffers?.[i]&&Array.isArray(saved.repeatOffers[i].items)?saved.repeatOffers[i]:null),contractHistory:Array.isArray(saved.contractHistory)?saved.contractHistory.slice(-6):[],storyNextAt:saved.storyNextAt&&typeof saved.storyNextAt==='object'?saved.storyNextAt:{},boostSeconds:{production:Math.max(0,Math.floor(Number(saved.boostSeconds?.production)||0)),dispatch:Math.max(0,Math.floor(Number(saved.boostSeconds?.dispatch)||0)),protection:Math.max(0,Math.floor(Number(saved.boostSeconds?.protection)||0))},salesAssignments:goods.reduce((result,g)=>({...result,[g.id]:Math.max(0,Math.floor(Number(saved.salesAssignments?.[g.id]??(!saved.salesAssignments&&saved.salesTarget===g.id?saved.salespeople:0))||0))}),{...fresh.salesAssignments}),repeatContractRounds:Array.from({length:3},(_,i)=>Math.max(0,Math.floor(Number(saved.repeatContractRounds?.[i])||0))),contractClock:Math.max(0,Math.floor(Number(saved.contractClock)||0)),repeatNextAt:Array.from({length:3},(_,i)=>Math.max(0,Math.floor(Number(saved.repeatNextAt?.[i]??i*60)||0))),repeatDeadline:Array.from({length:3},(_,i)=>Math.max(0,Math.floor(Number(saved.repeatDeadline?.[i])||0))),experience:migratedExperience+legacyShipmentXp,reputation:Math.max(0,Number(saved.reputation)||0)};
+    return {...fresh,...saved,flowMode:{ingot:['balanced','stockpile','feed'].includes(saved.flowMode?.ingot)?saved.flowMode.ingot:'balanced',wire:['balanced','stockpile','feed'].includes(saved.flowMode?.wire)?saved.flowMode.wire:'balanced'},starterPowerCredit:Math.max(0,Number(saved.starterPowerCredit??15)||0),powerShortage:Boolean(saved.powerShortage),xpMigrationVersion:1,gearShipmentProgress:Math.max(0,Number(saved.gearShipmentProgress)||0)%GEARS_PER_FINISHED_UNITS,salesXpProgress:Math.max(0,Number(saved.salesXpProgress)||0)%25,autoSalesXpProgress:Math.max(0,Number(saved.autoSalesXpProgress)||0)%60,lastOutput:{...fresh.lastOutput,...saved.lastOutput},visualProgress:{...fresh.visualProgress,...saved.visualProgress},unitPenalties:Object.fromEntries(machines.map(m=>[m.id,Array.from({length:Math.max(0,Number(saved[m.id])||0)},(_,i)=>Math.max(0,Number(saved.unitPenalties?.[m.id]?.[i])||0))])) as Record<MachineId,number[]>,pendingReplacement:{...fresh.pendingReplacement,...saved.pendingReplacement},writeOffEvent:saved.writeOffEvent??null,nextWriteOffAt:Math.max(900,Number(saved.nextWriteOffAt)||900),broken:{...fresh.broken,...saved.broken},unitFaults:Object.fromEntries(machines.map(m=>[m.id,Array.from({length:Math.max(0,Number(saved[m.id])||0)},(_,i)=>Math.max(0,Number(saved.unitFaults?.[m.id]?.[i]??(i===0?saved.broken?.[m.id]:0))||0))])) as Record<MachineId,number[]>,mechanicAssignments:{...fresh.mechanicAssignments,...saved.mechanicAssignments},breakdownEvent:saved.breakdownEvent??null,powerCutEvent:shouldRecoverPowerCut?true:(saved.powerCutEvent??false),powerCutSeen:shouldRecoverPowerCut?true:(saved.powerCutSeen??false),cyberAttackEvent:shouldRecoverCyberAttack?true:(saved.cyberAttackEvent??false),cyberAttackSeen:shouldRecoverCyberAttack?true:(saved.cyberAttackSeen??false),cybersecuritySpecialists:Math.max(0,Number(saved.cybersecuritySpecialists)||0),researched:Array.isArray(saved.researched)?saved.researched:[],acceptedContracts:Array.isArray(saved.acceptedContracts)?saved.acceptedContracts:[],contractsCompleted:completed,repeatOffers:Array.from({length:3},(_,i)=>saved.repeatOffers?.[i]&&Array.isArray(saved.repeatOffers[i].items)?saved.repeatOffers[i]:null),contractHistory:Array.isArray(saved.contractHistory)?saved.contractHistory.slice(-6):[],storyNextAt:saved.storyNextAt&&typeof saved.storyNextAt==='object'?saved.storyNextAt:{},boostSeconds:{production:Math.max(0,Math.floor(Number(saved.boostSeconds?.production)||0)),dispatch:Math.max(0,Math.floor(Number(saved.boostSeconds?.dispatch)||0)),protection:Math.max(0,Math.floor(Number(saved.boostSeconds?.protection)||0))},salesAssignments:goods.reduce((result,g)=>({...result,[g.id]:Math.max(0,Math.floor(Number(saved.salesAssignments?.[g.id]??(!saved.salesAssignments&&saved.salesTarget===g.id?saved.salespeople:0))||0))}),{...fresh.salesAssignments}),repeatContractRounds:Array.from({length:3},(_,i)=>Math.max(0,Math.floor(Number(saved.repeatContractRounds?.[i])||0))),contractClock:Math.max(0,Math.floor(Number(saved.contractClock)||0)),repeatNextAt:Array.from({length:3},(_,i)=>Math.max(0,Math.floor(Number(saved.repeatNextAt?.[i]??i*60)||0))),repeatDeadline:Array.from({length:3},(_,i)=>Math.max(0,Math.floor(Number(saved.repeatDeadline?.[i])||0))),experience:migratedExperience+legacyShipmentXp,reputation:Math.max(0,Number(saved.reputation)||0)};
   }catch{return fresh;}
 }
 const fmt=(n:number)=>Math.floor(n).toLocaleString();
@@ -404,14 +424,16 @@ export default function App(){
       const rate=(id:MachineId,base:number)=>n.unitFaults[id].slice(0,n[id]).reduce((total,fault,i)=>total+(fault>0?0:(1+Math.max(0,n['tier_'+id]-(n.unitPenalties[id][i]||0))*.25)),0)*base*researchOutput*multiplier*(boostActive.production?2:1);
       const oreMade=rate('miner',.35);
       const ingotsMade=Math.min(n.ore+oreMade,rate('smelter',.22));
-      const beamsMade=Math.min((n.ingot+ingotsMade)*.45,rate('beamMill',.075));
-      const platesMade=Math.min(Math.max(0,n.ingot+ingotsMade-beamsMade),rate('press',.12));
+      const availableIngots=downstreamMaterialAvailable(n,'ingot',n.ingot+ingotsMade,ingotsMade);
+      const beamsMade=Math.min(availableIngots*.45,rate('beamMill',.075));
+      const platesMade=Math.min(Math.max(0,availableIngots-beamsMade),rate('press',.12));
       const partsMade=Math.min(n.plate+platesMade,rate('assembler',.07));
       const copperOreMade=rate('copperMiner',.26);
       const copperIngotsMade=Math.min(n.copperOre+copperOreMade,rate('copperSmelter',.18));
       const wireMade=Math.min(n.copperIngot+copperIngotsMade,rate('wiremill',.12));
-      const coilsMade=Math.min((n.wire+wireMade)*.45,rate('coilWinder',.065));
-      const circuitsMade=Math.min(Math.max(0,n.wire+wireMade-coilsMade),rate('circuitpress',.07));
+      const availableWire=downstreamMaterialAvailable(n,'wire',n.wire+wireMade,wireMade);
+      const coilsMade=Math.min(availableWire*.45,rate('coilWinder',.065));
+      const circuitsMade=Math.min(Math.max(0,availableWire-coilsMade),rate('circuitpress',.07));
       // Electricity is metered per working machine that actually makes output.
       // A paused, broken or input-starved machine uses no electricity.
       const proposedOutput:Record<MachineId,number>={
@@ -463,7 +485,12 @@ export default function App(){
         goods.forEach(item=>{
           const count=Math.min(n.salespeople,Math.max(0,n.salesAssignments[item.id]||0));
           if(count<=0)return;
-          const amount=Math.min(n[item.id],count*.12*(n.researched.includes('dispatch-systems')?1.25:1)*multiplier*(boostActive.dispatch?2:1));
+          // Automatic sales must not take goods reserved for active customer contracts.
+          const manualFlow=(item.id==='ingot'||item.id==='wire')&&n.flowMode[item.id]==='feed';
+          const stockFloor=manualFlow?0:contractStockTarget(n,item.id);
+          const warehouseBuffer=(item.id==='ingot'||item.id==='wire')&&n.flowMode[item.id]==='balanced'?2:0;
+          const availableToSell=Math.max(0,n[item.id]-Math.max(stockFloor,warehouseBuffer));
+          const amount=Math.min(availableToSell,count*.12*(n.researched.includes('dispatch-systems')?1.25:1)*multiplier*(boostActive.dispatch?2:1));
           if(amount<=0)return;
           const revenue=amount*item.price*saleBonus;
           const total=n.salesXpProgress+revenue;
@@ -497,7 +524,10 @@ export default function App(){
   const autoIncomePerMinute=economyActive&&payrollFunded&&s.autoSell?goods.reduce((sum,item)=>{
     const assigned=Math.min(s.salespeople,Math.max(0,s.salesAssignments[item.id]||0));
     // Estimate the next minute from the current one-second dispatch rate.
-    const amount=Math.min(Math.max(0,s[item.id]),assigned*.12*(s.researched.includes('dispatch-systems')?1.25:1)*speed*(s.boostSeconds.dispatch>0?2:1));
+    const manualFlow=(item.id==='ingot'||item.id==='wire')&&s.flowMode[item.id]==='feed';
+    const stockFloor=manualFlow?0:contractStockTarget(s,item.id);
+    const warehouseBuffer=(item.id==='ingot'||item.id==='wire')&&s.flowMode[item.id]==='balanced'?2:0;
+    const amount=Math.min(Math.max(0,s[item.id]-Math.max(stockFloor,warehouseBuffer)),assigned*.12*(s.researched.includes('dispatch-systems')?1.25:1)*speed*(s.boostSeconds.dispatch>0?2:1));
     return sum+amount*item.price*(s.researched.includes('market-intelligence')?1.2:1)*60;
   },0):0;
   const wagesPerMinute=economyActive&&payrollFunded?payroll:0;
@@ -900,7 +930,7 @@ export default function App(){
       {page==='warehouse'&&<div className="page-content">
         <section className="welcome-row"><div><span className="eyebrow">STORAGE & DISPATCH</span><h1>Warehouse</h1><p>Keep an eye on your stock and decide when to turn it into Rivets.</p></div><div className="warehouse-total"><small>TOTAL STOCK VALUE</small><b>{fmt(stockValue)} RVT</b><button className="primary-button" disabled={!goods.some(g=>s[g.id]>=1)} onClick={shipAllStock}>SHIP ALL PRODUCTS · {fmt(goods.reduce((total,g)=>total+Math.floor(s[g.id])*g.price*saleMultiplier,0))} RVT</button></div></section>
         <div className="gear-banner"><Cog size={21}/><span><b>{fmt(s.gears)} Gears</b><small>Earn 1 Gear per 12 total finished goods shipped (Precision Parts, Circuit Boards, Steel Beams or Copper Coils). Current progress: {s.gearShipmentProgress.toFixed(1)}/12. Mission rewards also grant Gears.</small></span></div>
-        <section className="warehouse-grid">{visibleGoods.map(g=><article className="stock-card" key={g.id}><span className="stock-emoji">{g.emoji}</span><div><h3>{g.name}</h3><p>{g.detail} · {g.price} RVT each</p><b>{fmt(s[g.id])} <small>IN STOCK</small></b></div><button disabled={s[g.id]<1} onClick={()=>sellStock(g.id)}>SHIP ALL · {fmt(Math.floor(s[g.id])*g.price)} RVT</button></article>)}</section>
+        <section className="warehouse-grid">{visibleGoods.map(g=><article className="stock-card" key={g.id}><span className="stock-emoji">{g.emoji}</span><div><h3>{g.name}</h3><p>{g.detail} · {g.price} RVT each</p><b>{fmt(s[g.id])} <small>IN STOCK</small></b>{(g.id==='ingot'||g.id==='wire')&&<div className="stock-flow-control"><label htmlFor={'flow-'+g.id}>MATERIAL ROUTING</label><select id={'flow-'+g.id} value={s.flowMode[g.id]} onChange={e=>setS(v=>({...v,flowMode:{...v.flowMode,[g.id]:e.target.value as StockFlowMode}}))}><option value="balanced">Balanced · save stock for contracts</option><option value="stockpile">Stockpile · no downstream consumption</option><option value="feed">Feed production · no reserve</option></select><small>{s.flowMode[g.id]==='stockpile'?'All new material goes into Warehouse.':s.flowMode[g.id]==='feed'?'Downstream machines may use all incoming material.':'Keeps a buffer and prioritises customer contracts while feeding other lines.'}</small></div>}</div><button disabled={s[g.id]<1} onClick={()=>sellStock(g.id)}>SHIP ALL · {fmt(Math.floor(s[g.id])*g.price)} RVT</button></article>)}</section>
         <section className="contracts-panel"><div className="section-heading"><div><span className="eyebrow">CUSTOMER EMAILS</span><h2>Order Desk</h2><p>Contracts now arrive in the Order Inbox at the top-right. Requests have varied sizes, deadlines and cooldowns before replacements.</p></div><button className="primary-button" onClick={()=>setInboxOpen(true)}>OPEN INBOX · {incomingMail.length}</button></div><div className="contract-summary"><span><b>{readyOrders}</b> READY</span><span><b>{activeOrders}</b> PREPARING</span><span><b>{completedOrders}</b> STORY DELIVERIES</span></div></section>
         <div className="sales-note"><CircleDollarSign size={18}/> {s.salespeople>0&&s.autoSell?'Your assigned sales team is automatically dispatching stock.':'Hire sales staff and enable automatic sales from the Staff page to automate dispatch.'}</div>
       </div>}
