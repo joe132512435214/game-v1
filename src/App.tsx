@@ -1314,7 +1314,7 @@ export default function App(){
   return <div className="game" data-theme={s.theme}>
     {contractToast&&<div className={'contract-mini-toast '+contractToast.tone} role="status" aria-live="polite"><span aria-hidden="true">{contractToast.tone==='good'?'✓':'!'}</span><p>{contractToast.message}</p><button type="button" aria-label="Dismiss contract notification" onClick={()=>setContractToast(null)}>×</button></div>}
     <header className="topbar">
-      <div className="brand"><span className="brand-mark"><Factory size={23}/></span><span><b>ORE &amp; ORDER</b><small>FACTORY TYCOON</small></span></div>
+      <div className="brand"><span className="brand-mark"><Factory size={23}/></span><span><b>ORE &amp; ORDER</b><small>FACTORY TYCOON · v1.1</small></span></div>
       <div className="wallet">
         <div className="wallet-cash"><span className="coin-symbol">R</span><span><small>RIVETS</small><b>{fmt(s.cash)} <i>RVT</i></b></span></div>
         <div className="wallet-gears"><Cog size={18}/><span><small>GEARS</small><b>{fmt(s.gears)}</b></span></div>
