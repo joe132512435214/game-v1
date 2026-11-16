@@ -997,8 +997,6 @@ export default function App(){
   const powerPerMinute=economyActive&&!s.powerShortage?electricityCostPerMinute(s,speed):0;
   const netPerMinute=autoIncomePerMinute-wagesPerMinute-powerPerMinute;
   const moneyPerMinute=(amount:number)=>Math.abs(amount).toFixed(1);
-  // XP requirements increase with each level; there is no artificial maximum.
-  const xpForLevel=(level:number)=>75*(level-1)*level;
   const progressionLevel=Math.max(1,Math.floor((1+Math.sqrt(1+4*s.experience/75))/2));
   const reputationUnlock:Record<MachineId,number>={miner:0,smelter:2,press:8,assembler:18,copperMiner:20,copperSmelter:35,wiremill:50,circuitpress:60,beamMill:18,coilWinder:50,motorworks:190};
   const machineTypesOwned=machines.filter(m=>s[m.id]>0).length;
@@ -1066,6 +1064,12 @@ export default function App(){
   const readyOrders=visibleContracts.filter(c=>!s.contractsCompleted.includes(c.id)&&s.reputation>=c.minRep&&s[c.good]>=c.qty).length+repeatOrders.filter(c=>orderReady(s,c)).length;
   const activeOrders=visibleContracts.filter(c=>!s.contractsCompleted.includes(c.id)&&s.reputation>=c.minRep&&s[c.good]<c.qty).length+repeatOrders.filter(c=>!orderReady(s,c)).length;
   const capacityOf=(id:MachineId)=>machineCapacity(s,id,speed,s.boostSeconds.production>0);
+  const upstreamAdvice:Partial<Record<MachineId,string>>={
+    smelter:'Rockbreaker Mine',press:'Blast Furnace',beamMill:'Blast Furnace',
+    assembler:'Stamping Press',copperSmelter:'Copper Excavator',
+    wiremill:'Copper Foundry',circuitpress:'Wire Drawing Mill',coilWinder:'Wire Drawing Mill',
+    motorworks:'Coil Winding Machine + Circuit Board Line'
+  };
   const completedOrders=s.contractsCompleted.length;
   const deliveryCandidates=[
     ...visibleContracts.filter(c=>s.reputation>=c.minRep).map(c=>({key:'story-'+c.id,name:c.name,items:[{good:c.good,qty:c.qty}],reward:c.reward,due:0})),
