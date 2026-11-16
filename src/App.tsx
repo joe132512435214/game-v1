@@ -359,6 +359,7 @@ export default function App(){
   const [s,setS]=useState<GameState>(loadGame);
   const [page,setPage]=useState<Page>('factory');
   const [staffTab,setStaffTab]=useState<'maintenance'|'dispatch'>('maintenance');
+  const [factoryView,setFactoryView]=useState<'overview'|'equipment'>('overview');
   const [running,setRunning]=useState(true);
   const [speed,setSpeed]=useState(1);
   const [notice,setNotice]=useState('');
@@ -873,6 +874,8 @@ export default function App(){
         <small className="cashflow-note">{!running?'Paused · staff wages and electricity stopped':s.breakdownEvent||s.powerCutEvent||s.cyberAttackEvent||s.writeOffEvent?'Incident · staff wages and electricity paused':s.powerShortage?'INSUFFICIENT POWER FUNDS · ship stored goods to restart machinery':!payrollFunded?'Not enough cash for payroll · dispatch paused':'Live estimates from automatic sales, payroll and electricity · excludes manual shipments and contracts'}{' · Starter grid credit: '+s.starterPowerCredit.toFixed(2)+' RVT'}</small>
       </section>
       {page==='factory'&&<div className="page-content">
+        <div className="factory-view-toolbar"><div><span className="eyebrow">FACTORY CONTROL</span><strong>{factoryView==='overview'?'Overview':'Equipment floor'}</strong></div><div className="factory-view-switch" role="tablist" aria-label="Factory view"><button type="button" role="tab" aria-selected={factoryView==='overview'} className={factoryView==='overview'?'selected':''} onClick={()=>setFactoryView('overview')}><TrendingUp size={15}/> Dashboard</button><button type="button" role="tab" aria-selected={factoryView==='equipment'} className={factoryView==='equipment'?'selected':''} onClick={()=>setFactoryView('equipment')}><Factory size={15}/> Machines</button></div></div>
+        {factoryView==='overview'&&<>
         <section className="ops-dashboard" aria-label="Factory dashboard">
           <div className="ops-dashboard-header">
             <div className="ops-dashboard-title">
@@ -881,7 +884,8 @@ export default function App(){
               <p>Track production, fulfil orders and grow your operation.</p>
             </div>
             <div className="ops-quick-actions">
-              <button className="primary-button" onClick={()=>setInboxOpen(true)}><Truck size={16}/> Customer orders <span>{incomingMail.length}</span></button>
+              <button className="primary-button" onClick={()=>setFactoryView('equipment')}><Factory size={16}/> Manage machines</button>
+              <button className="secondary-button" onClick={()=>setInboxOpen(true)}><Truck size={16}/> Orders <span>{incomingMail.length}</span></button>
               <button className="secondary-button" onClick={()=>setPage('warehouse')}><Boxes size={16}/> Warehouse</button>
             </div>
           </div>
@@ -903,10 +907,10 @@ export default function App(){
             <div className="ops-focus">
               <div className="ops-section-title"><span>PRIORITY ACTION</span><strong>{s.powerShortage||brokenCount>0||!!s.writeOffEvent?'ATTENTION':'OPERATIONS'}</strong></div>
               {s.powerShortage?<><h2>Restore electricity</h2><p>Running machinery needs Rivets for its power bill. Sell spare stock to bring production back online.</p><button className="secondary-button" onClick={()=>setPage('warehouse')}>OPEN WAREHOUSE <ArrowUpRight size={15}/></button></>:
-               s.writeOffEvent?<><h2>Replace written-off equipment</h2><p>A machine was lost permanently. Resolve the incident and order a replacement unit.</p><button className="secondary-button" onClick={()=>setPage('factory')}>VIEW EQUIPMENT <ArrowUpRight size={15}/></button></>:
+               s.writeOffEvent?<><h2>Replace written-off equipment</h2><p>A machine was lost permanently. Resolve the incident and order a replacement unit.</p><button className="secondary-button" onClick={()=>setFactoryView('equipment')}>VIEW EQUIPMENT <ArrowUpRight size={15}/></button></>:
                brokenCount>0?<><h2>{brokenCount} machine {brokenCount===1?'needs':'units need'} repair</h2><p>Assign mechanics or pay for a one-off repair to recover production.</p><button className="secondary-button" onClick={()=>{setPage('staff');setStaffTab('maintenance')}}>ASSIGN MAINTENANCE <ArrowUpRight size={15}/></button></>:
                readyOrders>0?<><h2>{readyOrders} order{readyOrders===1?' is':'s are'} ready</h2><p>Your warehouse has the required products. Deliver now to earn Rivets, reputation and experience.</p><button className="secondary-button" onClick={()=>setInboxOpen(true)}>OPEN ORDER INBOX <ArrowUpRight size={15}/></button></>:
-               machineCount===0?<><h2>Get the workshop running</h2><p>Accept your opening contract and purchase the first Rockbreaker Mine.</p><button className="secondary-button" onClick={()=>setInboxOpen(true)}>VIEW FIRST CONTRACT <ArrowUpRight size={15}/></button></>:
+               machineCount===0?<><h2>Get the workshop running</h2><p>Accept your opening contract and purchase the first Rockbreaker Mine.</p><button className="secondary-button" onClick={()=>setFactoryView('equipment')}>OPEN FACTORY FLOOR <ArrowUpRight size={15}/></button></>:
                unassigned>0?<><h2>Put your mechanics to work</h2><p>{unassigned} mechanic{unassigned===1?' is':'s are'} unassigned. Choose the machines they should maintain.</p><button className="secondary-button" onClick={()=>{setPage('staff');setStaffTab('maintenance')}}>MANAGE STAFF <ArrowUpRight size={15}/></button></>:
                <><h2>{activeMission?activeMission.title:'Plan your next expansion'}</h2><p>{activeMission?activeMission.detail:'The factory is stable. Invest in equipment, technology or infrastructure.'}</p><button className="secondary-button" onClick={()=>setPage('capital')}>VIEW CAPITAL PROJECTS <ArrowUpRight size={15}/></button></>}
             </div>
@@ -917,7 +921,9 @@ export default function App(){
           <div className="ops-roadmap-steps">{FACTORY_STAGES.filter(stage=>stage.number<=currentStage.number+1).map(stage=><div key={stage.number} className={'ops-roadmap-step '+(stage.number===currentStage.number?'is-current':stage.number<currentStage.number?'is-done':'is-upcoming')}><span>{stage.number<currentStage.number?'✓':String(stage.number).padStart(2,'0')}</span><div><b>{stage.name}</b><small>{stage.number<currentStage.number?'COMPLETE':stage.number===currentStage.number?'IN PROGRESS':'NEXT UNLOCK'}</small></div></div>)}</div>
         </section>
         <section className="mission-panel"><div className="mission-heading"><div><span className="eyebrow">YOUR NEXT OBJECTIVE</span><h2>{activeMission?activeMission.title:'All missions complete!'}</h2><p>{activeMission?activeMission.detail:'You have completed the starter mission line. Keep expanding your factory.'}</p></div><span className="mission-count">{s.missionsClaimed.length}/{missions.length} COMPLETE</span></div>{activeMission?<><div className="mission-progress"><i style={{width:(activeMission.progress/activeMission.target*100)+'%'}}/></div><div className="mission-footer"><span>{activeMission.target>1?fmt(activeMission.progress)+' / '+fmt(activeMission.target):activeMission.progress>=1?'Objective complete':'Not complete yet'}</span><b>REWARD · {fmt(activeMission.rivets)} RVT · {activeMission.xp} XP{activeMission.gears?' + '+activeMission.gears+' GEARS':''}</b></div></>:<div className="mission-finished">Starter campaign finished. Your next challenge is to grow the factory your way.</div>}</section>
-        {brokenCount>0&&<div className="alert-banner"><AlertTriangle size={18}/><span><b>{brokenCount} machine{brokenCount>1?'s':''} broken.</b> Visit Staff to assign a mechanic, or repair them here.</span><button onClick={()=>setPage('staff')}>MANAGE STAFF</button></div>}
+        {brokenCount>0&&<div className="alert-banner"><AlertTriangle size={18}/><span><b>{brokenCount} machine{brokenCount>1?'s':''} broken.</b> Visit Staff to assign a mechanic, or repair them here.</span><button onClick={()=>{setPage('staff');setStaffTab('maintenance')}}>MANAGE STAFF</button></div>}
+        </>}
+        {factoryView==='equipment'&&<>
         <section className="line-panel"><div className="line-heading"><div><span className="eyebrow">LIVE PRODUCTION</span><h2>Assembly line</h2></div><span className="line-live"><i/> {running?'RUNNING':'PAUSED'}</span></div>
           <div className={'production-route '+(!running?'is-paused':'')}>
             {visibleMachines.map((m,i)=>{const owned=s[m.id]>0;const stageGoods=goods.find(g=>g.id===({miner:'ore',smelter:'ingot',press:'plate',assembler:'parts',copperMiner:'copperOre',copperSmelter:'copperIngot',wiremill:'wire',circuitpress:'circuits',beamMill:'beams',coilWinder:'coils'} as Record<MachineId,StockId>)[m.id]);return <div className={'route-stage '+(owned?'stage-owned':'stage-next')} key={m.id}>
@@ -961,6 +967,7 @@ export default function App(){
         })}</section>
         <section className="achievement-panel"><div className="achievement-heading"><div><span className="eyebrow">MILESTONES</span><h2>Factory achievements</h2></div><span>{achievements.filter(a=>a.done).length}/{achievements.length} UNLOCKED</span></div><div className="achievement-grid">{achievements.map(a=><div className={'achievement '+(a.done?'earned':'')} key={a.name}><span>{a.icon}</span><div><b>{a.name}</b><small>{a.detail}</small></div><strong>{a.done?'✓':'LOCKED'}</strong></div>)}</div></section>
         <section className="factory-footer"><div><Zap size={16}/><span>Production speed</span>{[1,2].map(x=><button key={x} className={speed===x?'selected':''} onClick={()=>setSpeed(x)} title={x===2?'Double output, 4× breakdown risk':'Normal speed and breakdown risk'}>{x}×</button>)}<small className="speed-risk-note">{speed===2?'⚠ 2× output · 4× breakdown risk':'1× output · normal breakdown risk'}</small></div><span className="saved"><CheckCircle2 size={14}/> Progress auto-saves</span></section>
+        </>}
       </div>}
       {page==='staff'&&<div className="page-content">
         <section className="welcome-row"><div><span className="eyebrow">PEOPLE MAKE THE FACTORY</span><h1>Workforce HQ</h1><p>Build a team that earns its wages. Hire deliberately, track payroll and assign each employee to a useful job.</p></div><div className="staff-summary"><b>{s.mechanics+s.salespeople+s.cybersecuritySpecialists}</b><span>TEAM MEMBERS</span><small>{unassigned} mechanic{unassigned===1?'':'s'} unassigned</small></div></section>
