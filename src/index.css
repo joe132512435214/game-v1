@@ -558,3 +558,33 @@ body{background:#171b19}.game{max-width:1240px}
 .machine-art.art-sprite-ready.broken .machine-sprite-layer{filter:saturate(.65) brightness(.8)}
 @keyframes machineSpriteFrames{from{background-position:0% 0}to{background-position:100% 0}}
 @media(prefers-reduced-motion:reduce){.machine-art .machine-sprite-layer{animation:none!important}}
+
+
+/* Clear material allocation controls for iron ingots and copper wire */
+.stock-flow-control{display:flex;flex-direction:column;gap:6px;margin-top:10px;padding:10px;background:#19231d;border:1px solid #536150;border-radius:4px}
+.stock-flow-control label{font:700 9px 'IBM Plex Mono',monospace;color:#dec28f;letter-spacing:.5px}
+.stock-flow-control select{width:100%;min-width:0;padding:8px 9px;background:#303d33;border:1px solid #71816a;border-radius:3px;color:#f5edd9;font-size:11px}
+.stock-flow-control small{font-size:9px;color:#a7b6a8;line-height:1.5}
+.stock-card:has(.stock-flow-control){align-items:flex-start}
+.stock-card:has(.stock-flow-control)>button{align-self:center}
+/* Permanent industrial investment pages */
+.main-nav{overflow-x:auto;scrollbar-width:thin;scrollbar-color:#4b594d #1b211d}
+.main-nav button{flex-shrink:0;white-space:nowrap}
+.capital-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px;margin:17px 0}
+.capital-card{display:flex;flex-direction:column;gap:12px;background:#222b25;border:1px solid #4d5b4e;border-radius:5px;padding:19px}
+.capital-card-heading{display:flex;align-items:center;gap:11px}
+.capital-card-heading>div{flex:1;min-width:0}
+.capital-icon{display:grid;place-items:center;background:#3a3f31;border:1px solid #777044;border-radius:4px;width:48px;height:48px;font-size:25px}
+.capital-card-heading small{font:9px 'IBM Plex Mono',monospace;color:#c7b081;letter-spacing:.4px}
+.capital-card h2{margin:4px 0 0;font-size:18px;color:#efe5d1}
+.capital-level{font:10px 'IBM Plex Mono',monospace;color:#edc58c;background:#40372b;border:1px solid #8e7450;border-radius:3px;padding:6px}
+.capital-card>p{font-size:12px;line-height:1.55;color:#bac3b7;min-height:36px;margin:0}
+.capital-effect{display:flex;align-items:center;gap:8px;padding:9px;border:1px solid #4c6955;background:#29382d;color:#b1d3ae;font-size:11px}
+.capital-effect svg{flex-shrink:0}
+.capital-progress{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}
+.capital-progress i{height:7px;border-radius:2px;background:#3b493c}
+.capital-progress i.done{background:#dbad6f}
+.capital-card>.primary-button{width:100%;margin-top:auto}
+.capital-maxed{border-color:#8b905c}
+@media(max-width:780px){.capital-grid{grid-template-columns:1fr}.main-nav{gap:4px}.main-nav button{padding:8px 10px;flex:0 0 auto}}
+@media(max-width:560px){.stock-card:has(.stock-flow-control){flex-wrap:wrap}.stock-card:has(.stock-flow-control)>button{margin-left:auto}.capital-card{padding:13px}.capital-card h2{font-size:16px}}
