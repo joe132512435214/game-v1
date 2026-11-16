@@ -1353,3 +1353,12 @@ button:focus-visible,select:focus-visible{outline:2px solid #f1c48d;outline-offs
 .freight-flow-track i{display:block;height:100%;background:#b2cb84;transition:width .3s}
 .freight-flow-advice{font-size:11px;color:#c8d4c4;line-height:1.5;margin:0}
 @media(max-width:650px){.freight-flow-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+
+/* Focused factory dashboard: secondary information is opt-in */
+.ops-details-toggle{display:flex;justify-content:flex-end;margin:4px 0 10px}
+.ops-details-toggle button{font-size:11px;display:inline-flex;align-items:center;gap:10px}
+.ops-details-toggle button span{font-size:16px;line-height:1}
+.ops-dashboard .ops-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.ops-dashboard .ops-quick-actions{gap:8px}
+@media(max-width:600px){.ops-dashboard .ops-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ops-details-toggle button{width:100%;justify-content:center}}
