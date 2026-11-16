@@ -526,6 +526,7 @@ export default function App(){
   },[running,speed]);
   const machineCount=machines.reduce((sum,m)=>sum+s[m.id],0);
   const stockValue=goods.reduce((sum,g)=>sum+s[g.id]*g.price,0);
+  const machinesWorking=economyActive&&!s.powerShortage?machines.reduce((sum,m)=>sum+(s.lastOutput[m.id]>0?workingUnits(s,m.id):0),0):0;
   const brokenCount=machines.reduce((sum,m)=>sum+faultCount(s,m.id),0);
   const assignedTotal=machines.reduce((sum,m)=>sum+s.mechanicAssignments[m.id],0);
   const unassigned=s.mechanics-assignedTotal;
@@ -872,8 +873,49 @@ export default function App(){
         <small className="cashflow-note">{!running?'Paused · staff wages and electricity stopped':s.breakdownEvent||s.powerCutEvent||s.cyberAttackEvent||s.writeOffEvent?'Incident · staff wages and electricity paused':s.powerShortage?'INSUFFICIENT POWER FUNDS · ship stored goods to restart machinery':!payrollFunded?'Not enough cash for payroll · dispatch paused':'Live estimates from automatic sales, payroll and electricity · excludes manual shipments and contracts'}{' · Starter grid credit: '+s.starterPowerCredit.toFixed(2)+' RVT'}</small>
       </section>
       {page==='factory'&&<div className="page-content">
-        <section className="welcome-row"><div><span className="eyebrow">{companyRank} · LEVEL {progressionLevel}</span><h1>Factory floor</h1><p>Build machines, keep production moving and ship what you make.</p><div className="level-progress"><span>COMPANY XP · {fmt(s.experience)} · LEVEL {progressionLevel}</span><div><i style={{width:goalProgress+'%'}}/></div><small>{fmt(Math.max(0,nextGoal-s.experience))} XP to level {progressionLevel+1}</small></div><div className="reputation-meter"><span>COMPANY REPUTATION · {s.reputation}</span><div><i style={{width:repProgress+'%'}}/></div><small>{companyRank} · {nextRank?('Next: '+nextRank.name+' · '+Math.max(0,nextRank.rep-s.reputation)+' REP · '+Math.max(0,nextRank.xp-s.experience)+' XP · '+fmt(Math.max(0,nextRank.sales-s.sold))+' RVT shipped · '+Math.max(0,nextRank.machines-machineTypesOwned)+' machine types'):'Top rank reached'}</small></div></div><div className="quick-stats"><div><small>MACHINES</small><b>{machineCount}/{machines.length*MAX_MACHINE_UNITS}</b></div><div><small>THROUGHPUT</small><b>{machines.reduce((sum,m)=>sum+rateFor(m),0).toFixed(2)}<i>/s</i></b></div><div><small>STAFF</small><b>{s.mechanics+s.salespeople}</b></div></div></section>
-        <section className="factory-stages"><div className="section-heading"><div><span className="eyebrow">FACTORY ROADMAP</span><h2>Stage {currentStage.number} · {currentStage.name}</h2><p>{currentStage.detail}</p></div><span className="machine-count">{currentStage.number}/{FACTORY_STAGES.length} STAGES</span></div><div className="factory-stages-grid">{FACTORY_STAGES.map(stage=>{const unlocked=stageReached(stage.number);const active=stage.number===currentStage.number;return <div className={'factory-stage '+(active?'current':unlocked?'complete':'locked')} key={stage.number}><span className="factory-stage-num">{unlocked?'✓':'🔒'} STAGE {stage.number}</span><b>{stage.name}</b><small>{stage.detail}</small><small>{stage.xp} XP · {stage.rep} REP</small></div>})}</div>{nextStage&&<p className="stage-upcoming">Next: {nextStage.name} · {Math.max(0,nextStage.xp-s.experience)} XP and {Math.max(0,nextStage.rep-s.reputation)} REP still needed{nextStage.number>=5?' · company rank and manufacturing scale required':''}</p>}</section>
+        <section className="ops-dashboard" aria-label="Factory dashboard">
+          <div className="ops-dashboard-header">
+            <div className="ops-dashboard-title">
+              <span className="ops-kicker"><span className={running&&!s.powerShortage&&!s.breakdownEvent&&!s.powerCutEvent&&!s.cyberAttackEvent&&!s.writeOffEvent?'ops-pip':'ops-pip is-idle'}/> CONTROL ROOM <i>/</i> {companyRank}</span>
+              <h1>Factory overview</h1>
+              <p>Track production, fulfil orders and grow your operation.</p>
+            </div>
+            <div className="ops-quick-actions">
+              <button className="primary-button" onClick={()=>setInboxOpen(true)}><Truck size={16}/> Customer orders <span>{incomingMail.length}</span></button>
+              <button className="secondary-button" onClick={()=>setPage('warehouse')}><Boxes size={16}/> Warehouse</button>
+            </div>
+          </div>
+          <div className="ops-kpi-grid">
+            <div className="ops-kpi"><div className="ops-kpi-label"><Factory size={16}/> MACHINES OPERATING</div><strong>{machinesWorking}<small> / {machineCount}</small></strong><p>{brokenCount>0?brokenCount+' unit(s) need repairs':machineCount===0?'Build your first machine':'Installed units currently producing'}</p></div>
+            <div className="ops-kpi"><div className="ops-kpi-label"><Cog size={16}/> FACTORY OUTPUT</div><strong>{(machines.reduce((total,m)=>total+rateFor(m),0)*60).toFixed(1)}<small> / min</small></strong><p>Across every active production stage</p></div>
+            <div className="ops-kpi"><div className="ops-kpi-label"><Truck size={16}/> CUSTOMER ORDERS</div><strong>{readyOrders}<small> ready</small></strong><p>{activeOrders} in progress · {incomingMail.length} in your inbox</p></div>
+            <div className="ops-kpi"><div className="ops-kpi-label"><Boxes size={16}/> INVENTORY VALUE</div><strong>{fmt(stockValue)}<small> RVT</small></strong><p>Stock available in your warehouse</p></div>
+          </div>
+          <div className="ops-command-grid">
+            <div className="ops-growth">
+              <div className="ops-section-title"><span>COMPANY DEVELOPMENT</span><strong>LEVEL {progressionLevel}</strong></div>
+              <h2>Stage {currentStage.number} · {currentStage.name}</h2>
+              <p>{currentStage.detail}</p>
+              <div className="ops-growth-meter"><div><span>LEVEL EXPERIENCE</span><b>{fmt(s.experience)} / {fmt(nextGoal)} XP</b></div><div className="ops-track"><i style={{width:goalProgress+'%'}}/></div></div>
+              <div className="ops-growth-meter"><div><span>COMPANY REPUTATION</span><b>{s.reputation} / {nextRank?.rep??s.reputation} REP</b></div><div className="ops-track ops-track-rep"><i style={{width:repProgress+'%'}}/></div></div>
+              <div className="ops-growth-next">{nextStage?<>NEXT STAGE <strong>{nextStage.name}</strong> · {fmt(Math.max(0,nextStage.xp-s.experience))} XP / {Math.max(0,nextStage.rep-s.reputation)} REP needed</>:'All factory stages reached · keep building your industrial network'}</div>
+            </div>
+            <div className="ops-focus">
+              <div className="ops-section-title"><span>PRIORITY ACTION</span><strong>{s.powerShortage||brokenCount>0||!!s.writeOffEvent?'ATTENTION':'OPERATIONS'}</strong></div>
+              {s.powerShortage?<><h2>Restore electricity</h2><p>Running machinery needs Rivets for its power bill. Sell spare stock to bring production back online.</p><button className="secondary-button" onClick={()=>setPage('warehouse')}>OPEN WAREHOUSE <ArrowUpRight size={15}/></button></>:
+               s.writeOffEvent?<><h2>Replace written-off equipment</h2><p>A machine was lost permanently. Resolve the incident and order a replacement unit.</p><button className="secondary-button" onClick={()=>setPage('factory')}>VIEW EQUIPMENT <ArrowUpRight size={15}/></button></>:
+               brokenCount>0?<><h2>{brokenCount} machine {brokenCount===1?'needs':'units need'} repair</h2><p>Assign mechanics or pay for a one-off repair to recover production.</p><button className="secondary-button" onClick={()=>{setPage('staff');setStaffTab('maintenance')}}>ASSIGN MAINTENANCE <ArrowUpRight size={15}/></button></>:
+               readyOrders>0?<><h2>{readyOrders} order{readyOrders===1?' is':'s are'} ready</h2><p>Your warehouse has the required products. Deliver now to earn Rivets, reputation and experience.</p><button className="secondary-button" onClick={()=>setInboxOpen(true)}>OPEN ORDER INBOX <ArrowUpRight size={15}/></button></>:
+               machineCount===0?<><h2>Get the workshop running</h2><p>Accept your opening contract and purchase the first Rockbreaker Mine.</p><button className="secondary-button" onClick={()=>setInboxOpen(true)}>VIEW FIRST CONTRACT <ArrowUpRight size={15}/></button></>:
+               unassigned>0?<><h2>Put your mechanics to work</h2><p>{unassigned} mechanic{unassigned===1?' is':'s are'} unassigned. Choose the machines they should maintain.</p><button className="secondary-button" onClick={()=>{setPage('staff');setStaffTab('maintenance')}}>MANAGE STAFF <ArrowUpRight size={15}/></button></>:
+               <><h2>{activeMission?activeMission.title:'Plan your next expansion'}</h2><p>{activeMission?activeMission.detail:'The factory is stable. Invest in equipment, technology or infrastructure.'}</p><button className="secondary-button" onClick={()=>setPage('capital')}>VIEW CAPITAL PROJECTS <ArrowUpRight size={15}/></button></>}
+            </div>
+          </div>
+        </section>
+        <section className="ops-roadmap" aria-label="Factory progression">
+          <div className="ops-roadmap-heading"><b>PROGRESSION</b><span>Completed stages, current stage and your next milestone</span></div>
+          <div className="ops-roadmap-steps">{FACTORY_STAGES.filter(stage=>stage.number<=currentStage.number+1).map(stage=><div key={stage.number} className={'ops-roadmap-step '+(stage.number===currentStage.number?'is-current':stage.number<currentStage.number?'is-done':'is-upcoming')}><span>{stage.number<currentStage.number?'✓':String(stage.number).padStart(2,'0')}</span><div><b>{stage.name}</b><small>{stage.number<currentStage.number?'COMPLETE':stage.number===currentStage.number?'IN PROGRESS':'NEXT UNLOCK'}</small></div></div>)}</div>
+        </section>
         <section className="mission-panel"><div className="mission-heading"><div><span className="eyebrow">YOUR NEXT OBJECTIVE</span><h2>{activeMission?activeMission.title:'All missions complete!'}</h2><p>{activeMission?activeMission.detail:'You have completed the starter mission line. Keep expanding your factory.'}</p></div><span className="mission-count">{s.missionsClaimed.length}/{missions.length} COMPLETE</span></div>{activeMission?<><div className="mission-progress"><i style={{width:(activeMission.progress/activeMission.target*100)+'%'}}/></div><div className="mission-footer"><span>{activeMission.target>1?fmt(activeMission.progress)+' / '+fmt(activeMission.target):activeMission.progress>=1?'Objective complete':'Not complete yet'}</span><b>REWARD · {fmt(activeMission.rivets)} RVT · {activeMission.xp} XP{activeMission.gears?' + '+activeMission.gears+' GEARS':''}</b></div></>:<div className="mission-finished">Starter campaign finished. Your next challenge is to grow the factory your way.</div>}</section>
         {brokenCount>0&&<div className="alert-banner"><AlertTriangle size={18}/><span><b>{brokenCount} machine{brokenCount>1?'s':''} broken.</b> Visit Staff to assign a mechanic, or repair them here.</span><button onClick={()=>setPage('staff')}>MANAGE STAFF</button></div>}
         <section className="line-panel"><div className="line-heading"><div><span className="eyebrow">LIVE PRODUCTION</span><h2>Assembly line</h2></div><span className="line-live"><i/> {running?'RUNNING':'PAUSED'}</span></div>
