@@ -241,9 +241,34 @@ function MachineArt({id,active,broken,lights,cycleSeconds,progress}:{id:MachineI
       <path d="M87 150h146v10H87z" fill="#c18b5f"/>{bolt(67,48)}{bolt(251,48)}{bolt(67,151)}{bolt(251,151)}
       <path d="M263 66h15v47h-15" fill="none" stroke="#d2a36f" strokeWidth="6"/>
     </g>}
-    <g fill="#d5c18b" stroke="#29372f" strokeWidth="1.5"><circle cx="48" cy="167" r="5"/><circle cx="272" cy="167" r="5"/></g>
+    {id==='beamMill'&&<g>
+ <path d="M55 77h210v80H55z" fill="#5d6d64"/><path d="M64 89h192v51H64z" fill="#26362e"/><path d="M66 71l22-25h148l20 25-13 16H79z" fill="#cbb993"/>
+ <path d="M77 85h17v65H77zm149 0h17v65h-17z" fill="#b5c4ab"/>
+ <g className="roller-top"><circle cx="137" cy="99" r="25" fill="#526157" stroke="#dbc99f" strokeWidth="6"/><circle cx="137" cy="99" r="9" fill="#293d32"/><path d="M137 78v9m20 12h-9m-11 20v-9m-20-11h9" stroke="#e7d1a2" strokeWidth="4"/></g>
+ <g className="roller-bottom"><circle cx="137" cy="143" r="22" fill="#4f5e54" stroke="#a9b5a4" strokeWidth="6"/><circle cx="137" cy="143" r="8" fill="#293d32"/><path d="M137 124v10m18 9h-10m-8 18v-10m-18-8h10" stroke="#ddd0a2" strokeWidth="4"/></g>
+ <g className="rolling-beam"><path d="M153 113h109v10H153z" fill="#e8a45e"/><path d="M153 123h109v7H153z" fill="#9a6644"/><path d="M174 113v-7h55v7m-55 17v8h55v-8" fill="none" stroke="#f3cb8c" strokeWidth="5"/></g>
+ <path d="M60 159h203v10H60z" fill="#b88b5c"/><path d="M72 170h180" stroke="#f2c37d" strokeWidth="4" strokeDasharray="10 8"/>{bolt(75,80)}{bolt(244,80)}{bolt(77,157)}{bolt(244,157)}
+</g>}
+{id==='coilWinder'&&<g>
+ <path d="M56 78h207v81H56z" fill="#687a6e"/><path d="M67 89h185v55H67z" fill="#2c3c32"/><path d="M75 66h38v17H75zm128 0h42v17h-42z" fill="#cd9869"/>
+ <g className="coil-feed"><circle cx="93" cy="105" r="27" fill="#46594e" stroke="#cc9b69" strokeWidth="7"/><circle cx="93" cy="105" r="13" fill="#222e27" stroke="#e4bd85" strokeWidth="5"/><path d="M72 105h42m-21-21v42" stroke="#edce97" strokeWidth="4"/></g>
+ <path d="M116 105h34" stroke="#e7b276" strokeWidth="6"/>
+ <g className="coil-spindle"><rect x="139" y="96" width="83" height="29" rx="8" fill="#a36e48" stroke="#e3bc83" strokeWidth="6"/><path d="M151 98v24m9-26v28m9-28v28m9-28v28m9-28v28m9-28v28m9-26v24" stroke="#f3c589" strokeWidth="5"/><circle cx="141" cy="110" r="10" fill="#3e4c40" stroke="#d7b180" strokeWidth="4"/><circle cx="222" cy="110" r="10" fill="#3e4c40" stroke="#d7b180" strokeWidth="4"/></g>
+ <g className="coil-guide"><path d="M184 82l22-24h16l4 26-20 19" fill="none" stroke="#d8b079" strokeWidth="10"/><circle cx="204" cy="102" r="7" fill="#e9d1a0"/></g>
+ <path d="M58 155h205v13H58z" fill="#b18457"/><path d="M70 170h179" stroke="#e0a975" strokeWidth="4" strokeDasharray="8 7"/>{bolt(67,89)}{bolt(252,89)}{bolt(67,155)}{bolt(252,155)}
+</g>}
+<g fill="#d5c18b" stroke="#29372f" strokeWidth="1.5"><circle cx="48" cy="167" r="5"/><circle cx="272" cy="167" r="5"/></g>
    </g>
-   {active&&<g className="sparkles" fill="#f4d28f" stroke="#f4d28f"><path d="M42 39v-12m-6 6h12"/><path d="M279 83V71m-6 6h12"/><circle cx="291" cy="126" r="2.5"/></g>}
+   {(id==='smelter'||id==='copperSmelter'||id==='beamMill')&&<g className="steam-plume" fill="none" stroke="#e5d9bf" strokeWidth="5" strokeLinecap="round">
+  <path d="M108 38c-17-15 8-15-5-31"/><path d="M121 35c-12-15 12-15 0-30"/><path d="M207 37c-12-14 10-15-1-29"/>
+ </g>}
+ {(id==='smelter'||id==='copperSmelter')&&<g className="molten-flow" fill="none" stroke="#ffb35b" strokeWidth="7" strokeLinecap="round"><path d="M241 113q18 2 22 20l12 12"/><path d="M272 146l9 8" stroke="#ffe0a3" strokeWidth="3"/></g>}
+ {(id==='miner'||id==='copperMiner')&&<g className="crusher-dust" fill="#d4b28a"><circle cx="38" cy="131" r="7"/><circle cx="51" cy="137" r="5"/><circle cx="23" cy="141" r="4"/></g>}
+ {id==='press'&&<g className="stamp-sparks" stroke="#f7bd62" strokeWidth="3" strokeLinecap="round"><path d="M105 137l-13-9m118 9 13-9m-66 15v11m-39-5-8 6"/></g>}
+ {id==='assembler'&&<g className="assembly-parts"><path d="M141 121h26v13h-26z" fill="#d2ad72" stroke="#344d3a" strokeWidth="3"/><path d="M143 118h21" stroke="#e9d39c" strokeWidth="4"/></g>}
+ {id==='circuitpress'&&<g className="circuit-head"><path d="M161 55h17v28h-17z" fill="#c7a476" stroke="#263e32" strokeWidth="3"/><path d="M166 83h7v18h-7z" fill="#e5c589"/><circle cx="169" cy="106" r="5" fill="#8fe4ca"/></g>}
+ {(id==='wiremill'||id==='coilWinder')&&<g className="coil-spark" fill="#f9c67d"><path d="M259 79l5-11 3 12 11 5-12 4-5 12-3-12-12-5z"/></g>}
+ {active&&<g className="sparkles" fill="#f4d28f" stroke="#f4d28f"><path d="M42 39v-12m-6 6h12"/><path d="M279 83V71m-6 6h12"/><circle cx="291" cy="126" r="2.5"/></g>}
    {broken&&<path d="M151 27l-10 20h12l-7 18 22-26h-13l8-12z" fill="#d47b55" stroke="#ffe0aa" strokeWidth="2"/>}
   </svg>
   <div className="machine-art-floor"/><div className="art-cycle-hud"><span>{active?'PRODUCING':broken?'REPAIR REQUIRED':'STANDBY'}</span><b>{active?'1 UNIT / '+cycleSeconds.toFixed(1)+'s':'MACHINE STOPPED'}</b><i className="art-cycle-track"><i style={{width:(progress*100)+'%'}}/></i></div><span className="art-lamp" role="group" aria-label="Individual machine status lights">{lights.map((light,i)=><i key={i} className={"unit-light "+light} title={"Unit "+(i+1)+": "+(light==="on"?"running":light==="off"?"stopped":"not purchased")}/>)}</span>
@@ -467,7 +492,6 @@ export default function App(){
       setNotice('Mission complete: '+next.title+' · +'+next.rivets+' Rivets · +'+next.xp+' XP'+(next.gears?' · +'+next.gears+' Gears':''));
     }
   },[s]);
-  const researchOutput=(s.researched.includes('efficient-extraction')?1.15:1)*(s.researched.includes('precision-tooling')?1.3:1)*(s.researched.includes('smart-robotics')?1.2:1);
   const saleMultiplier=s.researched.includes('market-intelligence')?1.2:1;
   const rateFor=(m:typeof machines[number])=>economyActive?s.lastOutput[m.id]:0;
   const resolvePowerCut=(hireMechanic:boolean)=>{
