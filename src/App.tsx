@@ -910,13 +910,17 @@ export default function App(){
   const rateFor=(m:typeof machines[number])=>economyActive?s.lastOutput[m.id]:0;
   const resolvePowerCut=(hireMechanic:boolean)=>{
     if(!s.powerCutEvent)return;
-    if(hireMechanic){
-      setS(v=>({...v,cash:v.cash-60,mechanics:v.mechanics+1,mechanicAssignments:{...v.mechanicAssignments,miner:v.mechanicAssignments.miner+1},broken:{...v.broken,miner:0},unitFaults:{...v.unitFaults,miner:v.unitFaults.miner.map(()=>0)},powerCutEvent:false}));
-      setNotice('Mechanic hired on a first-day discount. The Rockbreaker Mine is repaired and back online.');
-      return;
-    }
-    setS(v=>({...v,cash:v.cash-40,broken:{...v.broken,miner:0},powerCutEvent:false}));
-    setNotice('One-off emergency repair complete. The Rockbreaker Mine is back online.');
+    const cost=hireMechanic?60:40;
+    if(s.cash<cost){setNotice('Power cut recovery requires '+cost+' RVT.');return;}
+    setS(v=>{
+      if(!v.powerCutEvent||v.cash<cost)return v;
+      return {...v,cash:v.cash-cost,
+        ...(hireMechanic?{mechanics:v.mechanics+1,mechanicAssignments:{...v.mechanicAssignments,miner:v.mechanicAssignments.miner+1}}:{}),
+        broken:{...v.broken,miner:0},
+        unitFaults:{...v.unitFaults,miner:v.unitFaults.miner.map(()=>0)},
+        powerCutEvent:false};
+    });
+    setNotice(hireMechanic?'Mechanic hired on a first-day discount. The Rockbreaker Mine is repaired and back online.':'One-off emergency repair complete. The Rockbreaker Mine is back online.');
   };
   const cybersecurityCost=(state:GameState)=>Math.floor(2250*Math.pow(2.1,state.cybersecuritySpecialists));
   const hireCybersecuritySpecialist=()=>{
