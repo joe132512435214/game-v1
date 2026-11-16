@@ -11,7 +11,7 @@ type GameState = {
   cash:number; gears:number; ore:number; ingot:number; plate:number; parts:number; copperOre:number; copperIngot:number; wire:number; circuits:number;
   miner:number; smelter:number; press:number; assembler:number; copperMiner:number; copperSmelter:number; wiremill:number; circuitpress:number;
   tier_miner:number; tier_smelter:number; tier_press:number; tier_assembler:number; tier_copperMiner:number; tier_copperSmelter:number; tier_wiremill:number; tier_circuitpress:number;
-  level:number; sold:number; mechanics:number; salespeople:number; reputation:number; acceptedContracts:string[]; contractsCompleted:string[];
+  level:number; experience:number; sold:number; mechanics:number; salespeople:number; reputation:number; acceptedContracts:string[]; contractsCompleted:string[];
   broken:Record<MachineId,number>; mechanicAssignments:Record<MachineId,number>; breakdownEvent:MachineId|null; powerCutEvent:boolean; powerCutSeen:boolean; cyberAttackEvent:boolean; cyberAttackSeen:boolean; cybersecuritySpecialists:number;
   salesTarget:StockId; autoSell:boolean; missionsClaimed:number[]; researched:string[];
 };
@@ -20,7 +20,7 @@ const fresh:GameState = {
   cash:0,gears:0,ore:0,ingot:0,plate:0,parts:0,copperOre:0,copperIngot:0,wire:0,circuits:0,
   miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0,
   tier_miner:0,tier_smelter:0,tier_press:0,tier_assembler:0,tier_copperMiner:0,tier_copperSmelter:0,tier_wiremill:0,tier_circuitpress:0,
-  level:1,sold:0,mechanics:0,salespeople:0,
+  level:1,experience:0,sold:0,mechanics:0,salespeople:0,
   broken:{miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0},
   mechanicAssignments:{miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0},breakdownEvent:null,powerCutEvent:false,powerCutSeen:false,cyberAttackEvent:false,cyberAttackSeen:false,cybersecuritySpecialists:0,
   salesTarget:'parts',autoSell:false,missionsClaimed:[],researched:[],reputation:0,acceptedContracts:[],contractsCompleted:[]
@@ -45,14 +45,14 @@ const goods:{id:StockId;name:string;emoji:string;price:number;detail:string}[]=[
   {id:'wire',name:'Copper Wire',emoji:'🧵',price:48,detail:'Drawn wire for electrical manufacturing'},
   {id:'circuits',name:'Circuit Boards',emoji:'🟩',price:140,detail:'High-value electrical components'}
 ];
-const contracts:{id:string;name:string;detail:string;good:StockId;qty:number;reward:number;rep:number;minRep:number}[]=[
-  {id:'first-ore',name:'First Ore Delivery',detail:'A nearby foundry advances your first machine purchase, then pays the balance when you deliver five raw ore.',good:'ore',qty:5,reward:85,rep:5,minRep:0},
-  {id:'foundry-batch',name:'Foundry Batch',detail:'Supply a run of iron ingots.',good:'ingot',qty:8,reward:320,rep:7,minRep:5},
-  {id:'steel-plates',name:'Steel Plate Consignment',detail:'A construction firm needs steel plates.',good:'plate',qty:6,reward:720,rep:10,minRep:12},
-  {id:'precision-order',name:'Precision Components',detail:'A machinery customer wants precision parts.',good:'parts',qty:4,reward:1500,rep:15,minRep:22},
-  {id:'copper-delivery',name:'Copper Ore Delivery',detail:'An electrical foundry needs copper.',good:'copperOre',qty:10,reward:1100,rep:12,minRep:30},
-  {id:'wire-contract',name:'Electrical Wire Contract',detail:'Wire for a regional infrastructure project.',good:'wire',qty:6,reward:2400,rep:20,minRep:48},
-  {id:'circuit-contract',name:'Circuit Board Supply',detail:'A technology manufacturer needs circuits.',good:'circuits',qty:4,reward:5200,rep:30,minRep:75}
+const contracts:{id:string;name:string;detail:string;good:StockId;qty:number;reward:number;rep:number;xp:number;minRep:number}[]=[
+  {id:'first-ore',name:'First Ore Delivery',detail:'A nearby foundry advances your first machine purchase, then pays the balance when you deliver five raw ore.',good:'ore',qty:5,reward:85,rep:5,xp:25,minRep:0},
+  {id:'foundry-batch',name:'Foundry Batch',detail:'Supply a run of iron ingots.',good:'ingot',qty:8,reward:180,rep:7,xp:35,minRep:5},
+  {id:'steel-plates',name:'Steel Plate Consignment',detail:'A construction firm needs steel plates.',good:'plate',qty:6,reward:360,rep:10,xp:45,minRep:12},
+  {id:'precision-order',name:'Precision Components',detail:'A machinery customer wants precision parts.',good:'parts',qty:4,reward:650,rep:15,xp:60,minRep:22},
+  {id:'copper-delivery',name:'Copper Ore Delivery',detail:'An electrical foundry needs copper.',good:'copperOre',qty:10,reward:700,rep:12,xp:50,minRep:25},
+  {id:'wire-contract',name:'Electrical Wire Contract',detail:'Wire for a regional infrastructure project.',good:'wire',qty:6,reward:1100,rep:20,xp:65,minRep:40},
+  {id:'circuit-contract',name:'Circuit Board Supply',detail:'A technology manufacturer needs circuits.',good:'circuits',qty:4,reward:1800,rep:30,xp:80,minRep:60}
 ];
 const contractProducer:Record<StockId,MachineId>={ore:'miner',ingot:'smelter',plate:'press',parts:'assembler',copperOre:'copperMiner',copperIngot:'copperSmelter',wire:'wiremill',circuits:'circuitpress'};
 function loadGame():GameState{
@@ -61,7 +61,7 @@ function loadGame():GameState{
     const completed=Array.isArray(saved.contractsCompleted)?saved.contractsCompleted:[];
     const shouldRecoverPowerCut=completed.includes('first-ore')&&!saved.powerCutSeen&&!saved.powerCutEvent;
     const shouldRecoverCyberAttack=Number(saved.assembler)>0&&!saved.cyberAttackSeen&&!saved.cyberAttackEvent;
-    return {...fresh,...saved,broken:{...fresh.broken,...saved.broken},mechanicAssignments:{...fresh.mechanicAssignments,...saved.mechanicAssignments},breakdownEvent:saved.breakdownEvent??null,powerCutEvent:shouldRecoverPowerCut?true:(saved.powerCutEvent??false),powerCutSeen:shouldRecoverPowerCut?true:(saved.powerCutSeen??false),cyberAttackEvent:shouldRecoverCyberAttack?true:(saved.cyberAttackEvent??false),cyberAttackSeen:shouldRecoverCyberAttack?true:(saved.cyberAttackSeen??false),cybersecuritySpecialists:Math.max(0,Number(saved.cybersecuritySpecialists)||0),researched:Array.isArray(saved.researched)?saved.researched:[],acceptedContracts:Array.isArray(saved.acceptedContracts)?saved.acceptedContracts:[],contractsCompleted:completed,reputation:Math.max(0,Number(saved.reputation)||0)};
+    return {...fresh,...saved,broken:{...fresh.broken,...saved.broken},mechanicAssignments:{...fresh.mechanicAssignments,...saved.mechanicAssignments},breakdownEvent:saved.breakdownEvent??null,powerCutEvent:shouldRecoverPowerCut?true:(saved.powerCutEvent??false),powerCutSeen:shouldRecoverPowerCut?true:(saved.powerCutSeen??false),cyberAttackEvent:shouldRecoverCyberAttack?true:(saved.cyberAttackEvent??false),cyberAttackSeen:shouldRecoverCyberAttack?true:(saved.cyberAttackSeen??false),cybersecuritySpecialists:Math.max(0,Number(saved.cybersecuritySpecialists)||0),researched:Array.isArray(saved.researched)?saved.researched:[],acceptedContracts:Array.isArray(saved.acceptedContracts)?saved.acceptedContracts:[],contractsCompleted:completed,experience:Math.max(0,Number(saved.experience)||0),reputation:Math.max(0,Number(saved.reputation)||0)};
   }catch{return fresh;}
 }
 const fmt=(n:number)=>Math.floor(n).toLocaleString();
@@ -245,14 +245,14 @@ export default function App(){
   const brokenCount=machines.filter(m=>s.broken[m.id]>0).length;
   const assignedTotal=machines.reduce((sum,m)=>sum+s.mechanicAssignments[m.id],0);
   const unassigned=s.mechanics-assignedTotal;
-  const progressionLevel=1+Math.floor(s.sold/1000);
-  const reputationUnlock:Record<MachineId,number>={miner:0,smelter:2,press:8,assembler:18,copperMiner:25,copperSmelter:40,wiremill:60,circuitpress:90};
+  const progressionLevel=1+Math.floor(s.experience/100);
+  const reputationUnlock:Record<MachineId,number>={miner:0,smelter:2,press:8,assembler:18,copperMiner:20,copperSmelter:35,wiremill:50,circuitpress:60};
   const companyRank=s.reputation>=90?'GLOBAL MANUFACTURER':s.reputation>=50?'INDUSTRIAL CORPORATION':s.reputation>=25?'REGIONAL SUPPLIER':s.reputation>=10?'LOCAL MANUFACTURER':'WORKSHOP';
   const nextRep=s.reputation<10?10:s.reputation<25?25:s.reputation<50?50:s.reputation<90?90:120;
   const repProgress=Math.min(100,s.reputation>=90?100:s.reputation/nextRep*100);
-  const nextGoal=progressionLevel*1000;
-  const goalProgress=Math.min(100,(s.sold-(progressionLevel-1)*1000)/1000*100);
-  const unlockAt:Record<MachineId,number>={miner:0,smelter:150,press:1200,assembler:5000,copperMiner:3000,copperSmelter:6000,wiremill:12000,circuitpress:25000};
+  const nextGoal=progressionLevel*100;
+  const goalProgress=Math.min(100,(s.experience-(progressionLevel-1)*100)/100*100);
+  const unlockAt:Record<MachineId,number>={miner:0,smelter:100,press:150,assembler:200,copperMiner:220,copperSmelter:350,wiremill:500,circuitpress:700};
   // Keep the floor focused: show every machine already owned and just the next milestone.
   const nextMachine=machines.filter(m=>s[m.id]===0).sort((a,b)=>unlockAt[a.id]-unlockAt[b.id])[0];
   const visibleMachines=machines.filter(m=>s[m.id]>0||m.id===nextMachine?.id);
@@ -271,20 +271,20 @@ export default function App(){
     {name:'Going Electric',detail:'Build the Circuit Board Line',done:s.circuitpress>0,icon:'🟩'}
   ];
   const missions=[
-    {id:1,title:'Make your first shipment',detail:'Ship any goods from the Warehouse.',progress:Math.min(1,s.sold),target:1,done:s.sold>=1,rivets:100,gears:0},
-    {id:2,title:'Bring the heat',detail:'Build your first Blast Furnace.',progress:s.smelter>0?1:0,target:1,done:s.smelter>0,rivets:160,gears:0},
-    {id:3,title:'Build your maintenance crew',detail:'Hire your first mechanic in Staff.',progress:Math.min(1,s.mechanics),target:1,done:s.mechanics>0,rivets:180,gears:0},
-    {id:4,title:'Become a serious supplier',detail:'Ship 1,000 Rivets worth of goods in total.',progress:Math.min(1000,s.sold),target:1000,done:s.sold>=1000,rivets:250,gears:2},
-    {id:5,title:'Shape the steel',detail:'Build your first Stamping Press.',progress:s.press>0?1:0,target:1,done:s.press>0,rivets:420,gears:0},
-    {id:6,title:'Assemble the future',detail:'Build your first Mech Assembly.',progress:s.assembler>0?1:0,target:1,done:s.assembler>0,rivets:650,gears:3},
-    {id:7,title:'Double your extraction',detail:'Build a second Rockbreaker Mine.',progress:Math.min(2,s.miner),target:2,done:s.miner>=2,rivets:900,gears:2},
-    {id:8,title:'Take sales off the floor',detail:'Hire your first sales representative.',progress:Math.min(1,s.salespeople),target:1,done:s.salespeople>0,rivets:1200,gears:2},
-    {id:9,title:'Work smarter, not harder',detail:'Research Efficient Extraction.',progress:s.researched.includes('efficient-extraction')?1:0,target:1,done:s.researched.includes('efficient-extraction'),rivets:1800,gears:3},
-    {id:10,title:'Become a regional supplier',detail:'Reach 10,000 Rivets in lifetime shipments.',progress:Math.min(10000,s.sold),target:10000,done:s.sold>=10000,rivets:3500,gears:5},
-    {id:11,title:'Scale up the press room',detail:'Build a second Stamping Press.',progress:Math.min(2,s.press),target:2,done:s.press>=2,rivets:6500,gears:6},
-    {id:12,title:'A new metal to master',detail:'Build your first Copper Excavator.',progress:s.copperMiner>0?1:0,target:1,done:s.copperMiner>0,rivets:8000,gears:5},
-    {id:13,title:'Power the future',detail:'Build your first Wire Drawing Mill.',progress:s.wiremill>0?1:0,target:1,done:s.wiremill>0,rivets:14000,gears:8},
-    {id:14,title:'Electronics manufacturer',detail:'Build your first Circuit Board Line.',progress:s.circuitpress>0?1:0,target:1,done:s.circuitpress>0,rivets:24000,gears:12}
+    {id:1,title:'Make your first shipment',detail:'Ship any goods from the Warehouse.',progress:Math.min(1,s.sold),target:1,done:s.sold>=1,rivets:40,gears:0,xp:10},
+    {id:2,title:'Bring the heat',detail:'Build your first Blast Furnace.',progress:s.smelter>0?1:0,target:1,done:s.smelter>0,rivets:60,gears:0,xp:15},
+    {id:3,title:'Build your maintenance crew',detail:'Hire your first mechanic in Staff.',progress:Math.min(1,s.mechanics),target:1,done:s.mechanics>0,rivets:80,gears:0,xp:15},
+    {id:4,title:'Become a serious supplier',detail:'Ship 1,000 Rivets worth of goods in total.',progress:Math.min(1000,s.sold),target:1000,done:s.sold>=1000,rivets:100,gears:2,xp:20},
+    {id:5,title:'Shape the steel',detail:'Build your first Stamping Press.',progress:s.press>0?1:0,target:1,done:s.press>0,rivets:120,gears:0,xp:20},
+    {id:6,title:'Assemble the future',detail:'Build your first Mech Assembly.',progress:s.assembler>0?1:0,target:1,done:s.assembler>0,rivets:150,gears:3,xp:25},
+    {id:7,title:'Double your extraction',detail:'Build a second Rockbreaker Mine.',progress:Math.min(2,s.miner),target:2,done:s.miner>=2,rivets:180,gears:2,xp:20},
+    {id:8,title:'Take sales off the floor',detail:'Hire your first sales representative.',progress:Math.min(1,s.salespeople),target:1,done:s.salespeople>0,rivets:200,gears:2,xp:25},
+    {id:9,title:'Work smarter, not harder',detail:'Research Efficient Extraction.',progress:s.researched.includes('efficient-extraction')?1:0,target:1,done:s.researched.includes('efficient-extraction'),rivets:250,gears:3,xp:30},
+    {id:10,title:'Become a regional supplier',detail:'Reach 10,000 Rivets in lifetime shipments.',progress:Math.min(10000,s.sold),target:10000,done:s.sold>=10000,rivets:350,gears:5,xp:35},
+    {id:11,title:'Scale up the press room',detail:'Build a second Stamping Press.',progress:Math.min(2,s.press),target:2,done:s.press>=2,rivets:450,gears:6,xp:40},
+    {id:12,title:'A new metal to master',detail:'Build your first Copper Excavator.',progress:s.copperMiner>0?1:0,target:1,done:s.copperMiner>0,rivets:550,gears:5,xp:45},
+    {id:13,title:'Power the future',detail:'Build your first Wire Drawing Mill.',progress:s.wiremill>0?1:0,target:1,done:s.wiremill>0,rivets:700,gears:8,xp:50},
+    {id:14,title:'Electronics manufacturer',detail:'Build your first Circuit Board Line.',progress:s.circuitpress>0?1:0,target:1,done:s.circuitpress>0,rivets:900,gears:12,xp:60}
   ];
   const activeMission=missions.find(m=>!s.missionsClaimed.includes(m.id));
   const visibleContracts=contracts.filter(c=>s[contractProducer[c.good]]>0||contractProducer[c.good]===nextMachine?.id);
@@ -296,8 +296,8 @@ export default function App(){
   useEffect(()=>{
     const next=missions.find(m=>!s.missionsClaimed.includes(m.id));
     if(next&&next.done){
-      setS(v=>v.missionsClaimed.includes(next.id)?v:{...v,missionsClaimed:[...v.missionsClaimed,next.id],cash:v.cash+next.rivets,gears:v.gears+next.gears});
-      setNotice('Mission complete: '+next.title+' · +'+next.rivets+' Rivets'+(next.gears?' · +'+next.gears+' Gears':''));
+      setS(v=>v.missionsClaimed.includes(next.id)?v:{...v,missionsClaimed:[...v.missionsClaimed,next.id],cash:v.cash+next.rivets,gears:v.gears+next.gears,experience:v.experience+next.xp});
+      setNotice('Mission complete: '+next.title+' · +'+next.rivets+' Rivets · +'+next.xp+' XP'+(next.gears?' · +'+next.gears+' Gears':''));
     }
   },[s]);
   const researchOutput=(s.researched.includes('efficient-extraction')?1.15:1)*(s.researched.includes('precision-tooling')?1.3:1);
@@ -356,8 +356,8 @@ export default function App(){
     if(contract.id==='first-ore'&&!s.acceptedContracts.includes('first-ore')){setNotice('Accept the opening contract before delivering goods.');return;}
     if(s.reputation<contract.minRep){setNotice('Your company needs '+contract.minRep+' reputation.');return;}
     if(s[contract.good]<contract.qty){setNotice('You need '+contract.qty+' units in stock.');return;}
-    setS(v=>({...v,[contract.good]:v[contract.good]-contract.qty,cash:v.cash+contract.reward,reputation:v.reputation+contract.rep,contractsCompleted:[...v.contractsCompleted,contract.id],...(contract.id==='first-ore'&&!v.powerCutSeen?{powerCutSeen:true,powerCutEvent:true,broken:{...v.broken,miner:Math.max(v.broken.miner,30)}}:{})}));
-    setNotice(contract.id==='first-ore'?'DELIVERY SIGNED OFF — then the lights go out. The Rockbreaker Mine has lost power.':'Delivery signed off. +'+fmt(contract.reward)+' RVT and +'+contract.rep+' reputation. The client says you are now their favourite supplier.');
+    setS(v=>({...v,[contract.good]:v[contract.good]-contract.qty,cash:v.cash+contract.reward,reputation:v.reputation+contract.rep,experience:v.experience+contract.xp,contractsCompleted:[...v.contractsCompleted,contract.id],...(contract.id==='first-ore'&&!v.powerCutSeen?{powerCutSeen:true,powerCutEvent:true,broken:{...v.broken,miner:Math.max(v.broken.miner,30)}}:{})}));
+    setNotice(contract.id==='first-ore'?'DELIVERY SIGNED OFF · +'+contract.xp+' XP — then the lights go out. The Rockbreaker Mine has lost power.':'Delivery signed off. +'+fmt(contract.reward)+' RVT · +'+contract.rep+' reputation · +'+contract.xp+' XP. The client says you are now their favourite supplier.');
   };
   const hire=(role:'mechanic'|'sales')=>{
     const cost=role==='mechanic'?mechanicCost(s):salesCost(s);
@@ -402,7 +402,7 @@ export default function App(){
         <button className={page==='research'?'active':''} onClick={()=>setPage('research')}><FlaskConical size={16}/> Research <span>{s.researched.length}/4</span></button>
       </nav>
       {page==='factory'&&<div className="page-content">
-        <section className="welcome-row"><div><span className="eyebrow">{companyRank} · LEVEL {progressionLevel}</span><h1>Factory floor</h1><p>Build machines, keep production moving and ship what you make.</p><div className="level-progress"><span>LEVEL {progressionLevel} PROGRESS</span><div><i style={{width:goalProgress+'%'}}/></div><small>{fmt(Math.max(0,nextGoal-s.sold))} RVT to level {progressionLevel+1}</small></div><div className="reputation-meter"><span>COMPANY REPUTATION · {s.reputation}</span><div><i style={{width:repProgress+'%'}}/></div><small>{companyRank} · {s.reputation>=90?'Top rank reached':(nextRep-s.reputation)+' reputation to next rank'}</small></div></div><div className="quick-stats"><div><small>MACHINES</small><b>{machineCount}/8</b></div><div><small>THROUGHPUT</small><b>{machines.reduce((sum,m)=>sum+rateFor(m),0).toFixed(2)}<i>/s</i></b></div><div><small>STAFF</small><b>{s.mechanics+s.salespeople}</b></div></div></section>
+        <section className="welcome-row"><div><span className="eyebrow">{companyRank} · LEVEL {progressionLevel}</span><h1>Factory floor</h1><p>Build machines, keep production moving and ship what you make.</p><div className="level-progress"><span>COMPANY XP · {fmt(s.experience)} · LEVEL {progressionLevel}</span><div><i style={{width:goalProgress+'%'}}/></div><small>{fmt(Math.max(0,nextGoal-s.experience))} XP to level {progressionLevel+1}</small></div><div className="reputation-meter"><span>COMPANY REPUTATION · {s.reputation}</span><div><i style={{width:repProgress+'%'}}/></div><small>{companyRank} · {s.reputation>=90?'Top rank reached':(nextRep-s.reputation)+' reputation to next rank'}</small></div></div><div className="quick-stats"><div><small>MACHINES</small><b>{machineCount}/8</b></div><div><small>THROUGHPUT</small><b>{machines.reduce((sum,m)=>sum+rateFor(m),0).toFixed(2)}<i>/s</i></b></div><div><small>STAFF</small><b>{s.mechanics+s.salespeople}</b></div></div></section>
         <section className="mission-panel"><div className="mission-heading"><div><span className="eyebrow">YOUR NEXT OBJECTIVE</span><h2>{activeMission?activeMission.title:'All missions complete!'}</h2><p>{activeMission?activeMission.detail:'You have completed the starter mission line. Keep expanding your factory.'}</p></div><span className="mission-count">{s.missionsClaimed.length}/{missions.length} COMPLETE</span></div>{activeMission?<><div className="mission-progress"><i style={{width:(activeMission.progress/activeMission.target*100)+'%'}}/></div><div className="mission-footer"><span>{activeMission.target>1?fmt(activeMission.progress)+' / '+fmt(activeMission.target):activeMission.progress>=1?'Objective complete':'Not complete yet'}</span><b>REWARD · {fmt(activeMission.rivets)} RVT{activeMission.gears?' + '+activeMission.gears+' GEARS':''}</b></div></>:<div className="mission-finished">Starter campaign finished. Your next challenge is to grow the factory your way.</div>}</section>
         {brokenCount>0&&<div className="alert-banner"><AlertTriangle size={18}/><span><b>{brokenCount} machine{brokenCount>1?'s':''} broken.</b> Visit Staff to assign a mechanic, or repair them here.</span><button onClick={()=>setPage('staff')}>MANAGE STAFF</button></div>}
         <section className="line-panel"><div className="line-heading"><div><span className="eyebrow">LIVE PRODUCTION</span><h2>Assembly line</h2></div><span className="line-live"><i/> {running?'RUNNING':'PAUSED'}</span></div>
@@ -424,7 +424,7 @@ export default function App(){
             <div className="machine-info"><div><h3>{m.name}</h3><p>{m.desc}</p></div><span className="machine-level">LV {tier+1}</span></div>
             <div className="machine-details"><span>OUTPUT</span><b>{rateFor(m).toFixed(2)} / sec</b><span>OWNED</span><b>{owned}</b></div>
             {s.broken[m.id]>0&&<div className="machine-repair"><span>{s.mechanicAssignments[m.id]>0?'Mechanic assigned · repairing':'No mechanic assigned'}</span><button onClick={()=>{if(s.cash<repairCost){setNotice('Emergency repair costs 40 Rivets.');return;}setS(v=>({...v,cash:v.cash-repairCost,broken:{...v.broken,[m.id]:0}}));setNotice(m.name+' repaired.')}}>REPAIR · 40 RVT</button></div>}
-            <div className="machine-buttons">{owned===0?(s.sold<unlockAt[m.id]||s.reputation<reputationUnlock[m.id]?<div className="machine-locked-note">🔒 {fmt(unlockAt[m.id])} RVT sales + {reputationUnlock[m.id]} reputation required</div>:<button className="primary-button" disabled={s.cash<cost} onClick={()=>buyMachine(m)}>BUILD MACHINE · {fmt(cost)} RVT</button>):<button className="secondary-button" disabled={s.gears<(tier+1)*3} onClick={()=>upgradeMachine(m)}><ArrowUpRight size={15}/> UPGRADE · {(tier+1)*3} GEARS</button>}</div>
+            <div className="machine-buttons">{owned===0?(s.experience<unlockAt[m.id]||s.reputation<reputationUnlock[m.id]?<div className="machine-locked-note">🔒 {unlockAt[m.id]} XP + {reputationUnlock[m.id]} reputation required</div>:<button className="primary-button" disabled={s.cash<cost} onClick={()=>buyMachine(m)}>BUILD MACHINE · {fmt(cost)} RVT</button>):<button className="secondary-button" disabled={s.gears<(tier+1)*3} onClick={()=>upgradeMachine(m)}><ArrowUpRight size={15}/> UPGRADE · {(tier+1)*3} GEARS</button>}</div>
             {owned>0&&<small className="machine-footnote">+25% output per upgrade · {m.output}</small>}
           </article>;
         })}</section>
