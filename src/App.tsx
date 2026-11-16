@@ -16,7 +16,7 @@ type IntermediateStock = 'ingot' | 'wire';
 type FreightRoute='iron'|'copper';
 type VehicleTier=0|1|2|3;
 type GameState = {
-  flowMode:Record<IntermediateStock,StockFlowMode>; freightTier:VehicleTier; drivers:number; driverAssignments:Record<FreightRoute,number>; oreAtMine:number; copperAtMine:number; drones:number; droneAssignments:Record<FreightRoute,number>; freightRouteLevels:Record<FreightRoute,number>; freightBoostSeconds:Record<FreightRoute,number>; freightBoostReadyAt:Record<FreightRoute,number>; cash:number; gears:number; starterPowerCredit:number; powerShortage:boolean; gearShipmentProgress:number; ore:number; beams:number; coils:number; motors:number; ingot:number; plate:number; parts:number; copperOre:number; copperIngot:number; wire:number; circuits:number;
+  flowMode:Record<IntermediateStock,StockFlowMode>; freightTier:VehicleTier; drivers:number; driverAssignments:Record<FreightRoute,number>; oreAtMine:number; copperAtMine:number; drones:number; droneAssignments:Record<FreightRoute,number>; freightRouteLevels:Record<FreightRoute,number>; freightBoostSeconds:Record<FreightRoute,number>; freightBoostReadyAt:Record<FreightRoute,number>; freightLastMined:Record<FreightRoute,number>; freightLastDelivered:Record<FreightRoute,number>; cash:number; gears:number; starterPowerCredit:number; powerShortage:boolean; gearShipmentProgress:number; ore:number; beams:number; coils:number; motors:number; ingot:number; plate:number; parts:number; copperOre:number; copperIngot:number; wire:number; circuits:number;
   miner:number; smelter:number; press:number; assembler:number; copperMiner:number; copperSmelter:number; wiremill:number; circuitpress:number; beamMill:number; coilWinder:number; motorworks:number;
   tier_miner:number; tier_smelter:number; tier_press:number; tier_assembler:number; tier_copperMiner:number; tier_copperSmelter:number; tier_wiremill:number; tier_circuitpress:number; tier_beamMill:number; tier_coilWinder:number; tier_motorworks:number;
   level:number; experience:number; sold:number; xpMigrationVersion:number; salesXpProgress:number; autoSalesXpProgress:number; mechanics:number; salespeople:number; reputation:number; acceptedContracts:string[]; contractsCompleted:string[]; repeatContractRounds:number[]; contractClock:number; repeatNextAt:number[]; repeatDeadline:number[]; repeatOffers:(RepeatOrder|null)[]; contractHistory:StockId[]; storyNextAt:Record<string,number>;
@@ -26,7 +26,7 @@ type GameState = {
 };
 const SAVE_KEY = 'ironworks-tycoon-save-v2';
 const fresh:GameState = {
-  flowMode:{ingot:'balanced',wire:'balanced'},freightTier:0,drivers:0,driverAssignments:{iron:0,copper:0},oreAtMine:0,copperAtMine:0,drones:0,droneAssignments:{iron:0,copper:0},freightRouteLevels:{iron:0,copper:0},freightBoostSeconds:{iron:0,copper:0},freightBoostReadyAt:{iron:0,copper:0},cash:0,gears:0,starterPowerCredit:15,powerShortage:false,gearShipmentProgress:0,ore:0,beams:0,coils:0,motors:0,ingot:0,plate:0,parts:0,copperOre:0,copperIngot:0,wire:0,circuits:0,
+  flowMode:{ingot:'balanced',wire:'balanced'},freightTier:0,drivers:0,driverAssignments:{iron:0,copper:0},oreAtMine:0,copperAtMine:0,drones:0,droneAssignments:{iron:0,copper:0},freightRouteLevels:{iron:0,copper:0},freightBoostSeconds:{iron:0,copper:0},freightBoostReadyAt:{iron:0,copper:0},freightLastMined:{iron:0,copper:0},freightLastDelivered:{iron:0,copper:0},cash:0,gears:0,starterPowerCredit:15,powerShortage:false,gearShipmentProgress:0,ore:0,beams:0,coils:0,motors:0,ingot:0,plate:0,parts:0,copperOre:0,copperIngot:0,wire:0,circuits:0,
   miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0,beamMill:0,coilWinder:0,motorworks:0,
   tier_miner:0,tier_smelter:0,tier_press:0,tier_assembler:0,tier_copperMiner:0,tier_copperSmelter:0,tier_wiremill:0,tier_circuitpress:0,tier_beamMill:0,tier_coilWinder:0,tier_motorworks:0,
   level:1,experience:0,sold:0,xpMigrationVersion:1,salesXpProgress:0,autoSalesXpProgress:0,mechanics:0,salespeople:0,
@@ -199,6 +199,8 @@ function loadGame():GameState{
       freightRouteLevels:{iron:Math.max(0,Math.min(5,Math.floor(Number(saved.freightRouteLevels?.iron)||0))),copper:Math.max(0,Math.min(5,Math.floor(Number(saved.freightRouteLevels?.copper)||0)))},
       freightBoostSeconds:{iron:Math.max(0,Math.floor(Number(saved.freightBoostSeconds?.iron)||0)),copper:Math.max(0,Math.floor(Number(saved.freightBoostSeconds?.copper)||0))},
       freightBoostReadyAt:{iron:Math.max(0,Math.floor(Number(saved.freightBoostReadyAt?.iron)||0)),copper:Math.max(0,Math.floor(Number(saved.freightBoostReadyAt?.copper)||0))},
+      freightLastMined:{iron:Math.max(0,Number(saved.freightLastMined?.iron)||0),copper:Math.max(0,Number(saved.freightLastMined?.copper)||0)},
+      freightLastDelivered:{iron:Math.max(0,Number(saved.freightLastDelivered?.iron)||0),copper:Math.max(0,Number(saved.freightLastDelivered?.copper)||0)},
       oreAtMine:Math.max(0,Number(saved.oreAtMine)||0),
       copperAtMine:Math.max(0,Number(saved.copperAtMine)||0),
       capitalLevels:{powerGrid:Math.max(0,Math.min(6,Math.floor(Number(saved.capitalLevels?.powerGrid)||0))),miningNetwork:Math.max(0,Math.min(6,Math.floor(Number(saved.capitalLevels?.miningNetwork)||0))),freightNetwork:Math.max(0,Math.min(6,Math.floor(Number(saved.capitalLevels?.freightNetwork)||0))),safetySystems:Math.max(0,Math.min(6,Math.floor(Number(saved.capitalLevels?.safetySystems)||0)))},capitalSpent:Math.max(0,Number(saved.capitalSpent)||0),
@@ -540,7 +542,7 @@ export default function App(){
     if(!running)return;
     const timer=window.setInterval(()=>{setS(v=>{
       const n={...v,visualProgress:{...v.visualProgress},broken:{...v.broken},unitPenalties:{...v.unitPenalties},unitFaults:Object.fromEntries(machines.map(m=>[m.id,[...v.unitFaults[m.id]]])) as Record<MachineId,number[]>};
-      if(n.breakdownEvent||n.powerCutEvent||n.cyberAttackEvent||n.writeOffEvent)return n;
+      if(n.breakdownEvent||n.powerCutEvent||n.cyberAttackEvent||n.writeOffEvent)return {...n,freightLastMined:{iron:0,copper:0},freightLastDelivered:{iron:0,copper:0}};
       n.contractClock++;
       n.freightBoostSeconds={iron:Math.max(0,n.freightBoostSeconds.iron-1),copper:Math.max(0,n.freightBoostSeconds.copper-1)};
       n.repeatDeadline=[...n.repeatDeadline];
@@ -646,6 +648,8 @@ export default function App(){
         n.powerShortage=powerBill>0;
       }
       if(powerFunded){
+      n.freightLastMined={iron:oreMade,copper:copperOreMade};
+      n.freightLastDelivered={iron:hauledOre,copper:hauledCopper};
       n.oreAtMine=ironFreight.waiting;
       n.ore=Math.max(0,n.ore+hauledOre-ingotsMade);
       n.ingot=Math.max(0,n.ingot+ingotsMade-platesMade-beamsMade);
@@ -674,6 +678,8 @@ export default function App(){
       }else{
         // Suspend production; staff can still sell warehouse inventory to restore power.
         n.lastOutput={...fresh.lastOutput};
+        n.freightLastMined={iron:0,copper:0};
+        n.freightLastDelivered={iron:0,copper:0};
       }
       if(payrollFunded&&n.autoSell&&n.salespeople>0){
         let activeSellers=0;
@@ -1295,6 +1301,22 @@ export default function App(){
             {([{route:'iron' as FreightRoute,name:'IRON MINE',stock:s.oreAtMine,owned:s.miner},{route:'copper' as FreightRoute,name:'COPPER MINE',stock:s.copperAtMine,owned:s.copperMiner}] as const).map(item=><div className="freight-route" key={item.route}>
               <div className="freight-route-title"><span className={item.route==='iron'?'freight-route-emblem':'freight-route-emblem copper'}><Truck size={19}/></span><div><b>{item.name}</b><small>{item.stock.toFixed(1)} ore waiting · {item.owned} mines · {item.owned>0&&freightThroughput(s,item.route)===0?'NO TRANSPORT':item.stock>freightThroughput(s,item.route)*30?'BACKLOG: add drivers or upgrade':!payrollFunded?'PAYROLL UNFUNDED': 'DELIVERING'}</small></div></div>
               <div className="freight-route-stats"><span><b>{freightThroughput(s,item.route).toFixed(1)}/sec</b><small>MAX DELIVERY</small></span><span><b>{s.driverAssignments[item.route]}</b><small>DRIVERS</small></span>{droneUnlocked(s)&&<span><b>{s.droneAssignments[item.route]}</b><small>DRONES</small></span>}</div>
+              {(()=>{const miningCapacity=machineCapacity(s,item.route==='iron'?'miner':'copperMiner',speed,s.boostSeconds.production>0);
+                const deliveryCapacity=freightThroughput(s,item.route);
+                const utilisation=miningCapacity>0?Math.min(100,Math.round(deliveryCapacity/miningCapacity*100)):0;
+                const shortfall=Math.max(0,miningCapacity-deliveryCapacity);
+                const actualMined=s.freightLastMined[item.route];
+                const actualDelivered=s.freightLastDelivered[item.route];
+                const canClearBacklog=item.stock>0&&deliveryCapacity>miningCapacity;
+                const nextDriverCapacity=FREIGHT_TIERS[s.freightTier].capacity*(1+s.freightRouteLevels[item.route]*.2)*(s.freightBoostSeconds[item.route]>0?2:1);
+                return <div className="freight-flow-panel">
+                  <div className="freight-flow-heading"><b>LIVE ORE FLOW</b><span className={shortfall>.01?'freight-flow-bad':'freight-flow-good'}>{item.owned===0?'NO MINE':deliveryCapacity===0?'NO TRANSPORT':shortfall>.01?'BOTTLENECK':'CAPACITY OK'}</span></div>
+                  <div className="freight-flow-metrics"><span><small>MINED / SEC</small><strong>{actualMined.toFixed(2)}</strong></span><span><small>DELIVERED / SEC</small><strong>{actualDelivered.toFixed(2)}</strong></span><span><small>MINE CAPACITY</small><strong>{miningCapacity.toFixed(2)}/sec</strong></span><span><small>TRANSPORT CAPACITY</small><strong>{deliveryCapacity.toFixed(2)}/sec</strong></span></div>
+                  <div className="freight-flow-track"><i style={{width:utilisation+'%'}}/></div>
+                  <div className="freight-flow-foot"><span>TRANSPORT COVERAGE · {utilisation}%</span><span>{shortfall>.01?'SHORT '+shortfall.toFixed(2)+'/sec':canClearBacklog?'CLEARING BACKLOG':'CAPACITY MATCHED'}</span></div>
+                  <p className="freight-flow-advice">{item.owned===0?'Build a mine to start this route.':deliveryCapacity<=0?'Assign a driver or drone to start deliveries.':!payrollFunded?'Operating funds are insufficient; transport is paused.':shortfall>.01?'Mine output exceeds your fleet. '+(nextDriverCapacity>=shortfall?'One additional driver would cover the shortfall.':'Add drivers, upgrade the route or use a temporary boost.'):(canClearBacklog?'Your fleet has spare capacity and can clear existing ore waiting at the mine.':'Transport is keeping up with mining. No additional drivers needed right now.')}</p>
+                </div>;
+              })()}
               <div className="freight-route-tuning"><div className="freight-route-tuning-copy"><b>ROUTE EFFICIENCY · LV {s.freightRouteLevels[item.route]}/{MAX_FREIGHT_ROUTE_LEVEL}</b><small>Permanent +{s.freightRouteLevels[item.route]*20}% transport · boost {s.freightBoostSeconds[item.route]>0?'ACTIVE '+s.freightBoostSeconds[item.route]+'s':s.contractClock<s.freightBoostReadyAt[item.route]?'READY IN '+(s.freightBoostReadyAt[item.route]-s.contractClock)+'s':'READY'}</small></div><div className="freight-route-tuning-buttons"><button type="button" className="secondary-button" disabled={s.freightRouteLevels[item.route]>=MAX_FREIGHT_ROUTE_LEVEL||s.cash<freightRouteUpgradeCost(s,item.route)} onClick={()=>upgradeFreightRoute(item.route)}>{s.freightRouteLevels[item.route]>=MAX_FREIGHT_ROUTE_LEVEL?'MAX UPGRADE':'UPGRADE · '+fmt(freightRouteUpgradeCost(s,item.route))+' RVT'}</button><button type="button" className="primary-button" disabled={s.freightBoostSeconds[item.route]>0||s.contractClock<s.freightBoostReadyAt[item.route]||s.cash<freightBoostCost(s,item.route)||freightThroughput(s,item.route)<=0} onClick={()=>boostFreightRoute(item.route)}><Zap size={13}/> {s.freightBoostSeconds[item.route]>0?'BOOST ACTIVE':s.contractClock<s.freightBoostReadyAt[item.route]?'COOLDOWN':'BOOST 2× · '+fmt(freightBoostCost(s,item.route))+' RVT'}</button></div></div>
               <div className="freight-allocations"><div className="assignment-stepper" role="group" aria-label={item.name+' driver allocation'}><button type="button" aria-label={'Remove driver from '+item.name} disabled={s.driverAssignments[item.route]===0} onClick={()=>assignDriver(item.route,s.driverAssignments[item.route]-1)}>−</button><output>{s.driverAssignments[item.route]}</output><button type="button" aria-label={'Assign driver to '+item.name} disabled={availableDrivers===0} onClick={()=>assignDriver(item.route,s.driverAssignments[item.route]+1)}>+</button></div>{droneUnlocked(s)&&<div className="freight-drone-stepper"><span>DRONES</span><div className="assignment-stepper" role="group" aria-label={item.name+' drone allocation'}><button type="button" aria-label={'Remove drone from '+item.name} disabled={s.droneAssignments[item.route]===0} onClick={()=>assignDrone(item.route,s.droneAssignments[item.route]-1)}>−</button><output>{s.droneAssignments[item.route]}</output><button type="button" aria-label={'Assign drone to '+item.name} disabled={availableDrones===0} onClick={()=>assignDrone(item.route,s.droneAssignments[item.route]+1)}>+</button></div></div>}</div>
             </div>)}
