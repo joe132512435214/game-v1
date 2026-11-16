@@ -1213,6 +1213,7 @@ export default function App(){
       <div className="wallet">
         <div className="wallet-cash"><span className="coin-symbol">R</span><span><small>RIVETS</small><b>{fmt(s.cash)} <i>RVT</i></b></span></div>
         <div className="wallet-gears"><Cog size={18}/><span><small>GEARS</small><b>{fmt(s.gears)}</b></span></div>
+        <div className="wallet-reputation" title="Earn reputation by fulfilling contracts. Late, expired and declined orders reduce it." aria-label={'Reputation: '+fmt(s.reputation)}><ShieldCheck size={18}/><span><small>REPUTATION</small><b>{fmt(s.reputation)} <i>REP</i></b></span></div>
       </div>
       <div className="top-controls"><span className="online"><i/> {s.cyberAttackEvent?'SECURITY LOCKDOWN':running?'RUNNING':'PAUSED'}</span><button className="round-btn" onClick={()=>setRunning(!running)} aria-label={running?'Pause':'Resume'}>{running?<Pause size={16}/>:<Play size={16}/>}</button><button className="round-btn" onClick={()=>setShowReset(true)} aria-label="Reset game"><RotateCcw size={16}/></button></div>
     </header>
