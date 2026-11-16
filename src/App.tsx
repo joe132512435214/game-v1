@@ -399,7 +399,6 @@ function loadGame():GameState{
     const legacyShipmentXp=saved.xpMigrationVersion===undefined?Math.floor(Math.max(0,Number(saved.sold)||0)/500):0;
     return {...fresh,...saved,...normaliseStyle(saved),
       qualityInspectors:Math.max(0,Math.min(2,Math.floor(Number(saved.qualityInspectors)||0))),
-      boostSeconds:{production:Math.max(0,Math.min(540,Number(saved.boostSeconds?.production)||0)),dispatch:Math.max(0,Math.min(540,Number(saved.boostSeconds?.dispatch)||0)),protection:Math.max(0,Math.min(540,Number(saved.boostSeconds?.protection)||0))},
       freightTier:Math.max(0,Math.min(3,Math.floor(Number(saved.freightTier)||0))) as VehicleTier,
       drivers:saved.drivers!==undefined?Math.max(0,Math.floor(Number(saved.drivers)||0)):(Number(saved.copperMiner)>0?2:Number(saved.miner)>0||(completed.includes('first-ore')||saved.acceptedContracts?.includes('first-ore'))?1:0),
       driverAssignments:{
