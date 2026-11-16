@@ -144,13 +144,18 @@ const BOOSTS:{id:BoostId;name:string;subtitle:string;description:string;cost:num
 const boostClock=(seconds:number)=>`${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;
 
 function MachineArt({id,active,broken,lights,cycleSeconds,progress}:{id:MachineId;active:boolean;broken:boolean;lights:('on'|'off'|'empty')[];cycleSeconds:number;progress:number}){
+ const [spriteReady,setSpriteReady]=useState(false);
+ const spritePath='/machines/'+id+'-sheet.webp';
+ const safeCycle=cycleSeconds>0?cycleSeconds:8;
  const electrical=['copperMiner','copperSmelter','wiremill','circuitpress','coilWinder'].includes(id);
  const copper=electrical?'#bd8054':'#bd985e';
  const steel=electrical?'#78877e':'#819187';
  const dark=electrical?'#39453d':'#35453d';
  const glass=electrical?'#d8a16d':'#d5c18b';
  const bolt=(x:number,y:number)=><circle cx={x} cy={y} r="2.3" fill="#d7c9a8" stroke="#39453b" strokeWidth="1"/>;
- return <div className={'machine-art art-'+id+(electrical?' art-electrical':'')+(active?' running':'')+(broken?' broken':'')} style={{'--machine-cycle':(cycleSeconds>0?cycleSeconds:8)+'s'} as CSSProperties}>
+ return <div className={'machine-art art-'+id+(electrical?' art-electrical':'')+(active?' running':'')+(broken?' broken':'')+(spriteReady?' art-sprite-ready':'')} style={{'--machine-cycle':safeCycle+'s','--machine-offset':'-'+(Math.max(0,Math.min(1,progress))*safeCycle)+'s'} as CSSProperties}>
+  <img className="machine-sprite-loader" src={spritePath} alt="" aria-hidden="true" onLoad={()=>setSpriteReady(true)} onError={()=>setSpriteReady(false)}/>
+  {spriteReady&&<div className="machine-sprite-layer" role="img" aria-label={machines.find(m=>m.id===id)?.name+' animated machine producing goods'} style={{backgroundImage:'url('+spritePath+')'}}/>}
   <div className="art-backdrop"/>
   <svg viewBox="0 0 320 210" role="img" aria-label={machines.find(m=>m.id===id)?.name+' detailed industrial machine illustration'}>
    <defs>
