@@ -6,7 +6,8 @@ import {
 
 type MachineId = 'miner' | 'smelter' | 'press' | 'assembler' | 'copperMiner' | 'copperSmelter' | 'wiremill' | 'circuitpress' | 'beamMill' | 'coilWinder';
 type StockId = 'ore' | 'ingot' | 'plate' | 'parts' | 'copperOre' | 'copperIngot' | 'wire' | 'circuits' | 'beams' | 'coils';
-type Page = 'factory' | 'staff' | 'warehouse' | 'research' | 'store';
+type Page = 'factory' | 'staff' | 'warehouse' | 'research' | 'store' | 'capital';
+type CapitalId = 'powerGrid' | 'miningNetwork' | 'freightNetwork' | 'safetySystems';
 type BoostId = 'production' | 'dispatch' | 'protection';
 type StockFlowMode = 'balanced' | 'stockpile' | 'feed';
 type IntermediateStock = 'ingot' | 'wire';
@@ -17,7 +18,7 @@ type GameState = {
   level:number; experience:number; sold:number; xpMigrationVersion:number; salesXpProgress:number; autoSalesXpProgress:number; mechanics:number; salespeople:number; reputation:number; acceptedContracts:string[]; contractsCompleted:string[]; repeatContractRounds:number[]; contractClock:number; repeatNextAt:number[]; repeatDeadline:number[]; repeatOffers:(RepeatOrder|null)[]; contractHistory:StockId[]; storyNextAt:Record<string,number>;
   lastOutput:Record<MachineId,number>; visualProgress:Record<MachineId,number>; unitPenalties:Record<MachineId,number[]>; pendingReplacement:Record<MachineId,number>; writeOffEvent:{id:MachineId;unit:number;oldLevel:number}|null; nextWriteOffAt:number;
   broken:Record<MachineId,number>; unitFaults:Record<MachineId,number[]>; mechanicAssignments:Record<MachineId,number>; breakdownEvent:MachineId|null; powerCutEvent:boolean; powerCutSeen:boolean; cyberAttackEvent:boolean; cyberAttackSeen:boolean; cybersecuritySpecialists:number;
-  salesTarget:StockId; autoSell:boolean; salesAssignments:Record<StockId,number>; boostSeconds:Record<BoostId,number>; missionsClaimed:number[]; researched:string[];
+  salesTarget:StockId; autoSell:boolean; salesAssignments:Record<StockId,number>; boostSeconds:Record<BoostId,number>; capitalLevels:Record<CapitalId,number>; capitalSpent:number; missionsClaimed:number[]; researched:string[];
 };
 const SAVE_KEY = 'ironworks-tycoon-save-v2';
 const fresh:GameState = {
@@ -29,7 +30,7 @@ const fresh:GameState = {
   unitPenalties:{miner:[],smelter:[],press:[],assembler:[],copperMiner:[],copperSmelter:[],wiremill:[],circuitpress:[],beamMill:[],coilWinder:[]},pendingReplacement:{miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0,beamMill:0,coilWinder:0},writeOffEvent:null,nextWriteOffAt:900,
   broken:{miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0,beamMill:0,coilWinder:0},unitFaults:{miner:[],smelter:[],press:[],assembler:[],copperMiner:[],copperSmelter:[],wiremill:[],circuitpress:[],beamMill:[],coilWinder:[]},
   mechanicAssignments:{miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0,beamMill:0,coilWinder:0},breakdownEvent:null,powerCutEvent:false,powerCutSeen:false,cyberAttackEvent:false,cyberAttackSeen:false,cybersecuritySpecialists:0,
-  salesTarget:'parts',autoSell:false,salesAssignments:{ore:0,ingot:0,plate:0,parts:0,copperOre:0,copperIngot:0,wire:0,circuits:0,beams:0,coils:0},boostSeconds:{production:0,dispatch:0,protection:0},missionsClaimed:[],researched:[],reputation:0,acceptedContracts:[],contractsCompleted:[],repeatContractRounds:[0,0,0],contractClock:0,repeatNextAt:[0,60,120],repeatDeadline:[0,0,0],repeatOffers:[null,null,null],contractHistory:[],storyNextAt:{}
+  salesTarget:'parts',autoSell:false,salesAssignments:{ore:0,ingot:0,plate:0,parts:0,copperOre:0,copperIngot:0,wire:0,circuits:0,beams:0,coils:0},boostSeconds:{production:0,dispatch:0,protection:0},capitalLevels:{powerGrid:0,miningNetwork:0,freightNetwork:0,safetySystems:0},capitalSpent:0,missionsClaimed:[],researched:[],reputation:0,acceptedContracts:[],contractsCompleted:[],repeatContractRounds:[0,0,0],contractClock:0,repeatNextAt:[0,60,120],repeatDeadline:[0,0,0],repeatOffers:[null,null,null],contractHistory:[],storyNextAt:{}
 };
 const machines:{id:MachineId;name:string;short:string;cost:number;desc:string;input:string;output:string;rate:number}[]=[
   {id:'miner',name:'Rockbreaker Mine',short:'EXTRACT',cost:50,desc:'Breaks rock into raw ore.',input:'Raw ore',output:'Raw ore',rate:.22},
@@ -147,13 +148,24 @@ function loadGame():GameState{
     const legacyXpFromMissions=(Array.isArray(saved.missionsClaimed)?saved.missionsClaimed:[]).reduce((total:number,id:number)=>total+(missionXp[id]||0),0);
     const migratedExperience=saved.experience!==undefined?Math.max(0,Number(saved.experience)||0):Math.max(legacyXpFromContracts+legacyXpFromMissions,Number(saved.assembler)>0?270:Number(saved.press)>0?165:Number(saved.smelter)>0?60:Number(saved.miner)>0?25:0);
     const legacyShipmentXp=saved.xpMigrationVersion===undefined?Math.floor(Math.max(0,Number(saved.sold)||0)/500):0;
-    return {...fresh,...saved,flowMode:{ingot:['balanced','stockpile','feed'].includes(saved.flowMode?.ingot)?saved.flowMode.ingot:'balanced',wire:['balanced','stockpile','feed'].includes(saved.flowMode?.wire)?saved.flowMode.wire:'balanced'},starterPowerCredit:Math.max(0,Number(saved.starterPowerCredit??15)||0),powerShortage:Boolean(saved.powerShortage),xpMigrationVersion:1,gearShipmentProgress:Math.max(0,Number(saved.gearShipmentProgress)||0)%GEARS_PER_FINISHED_UNITS,salesXpProgress:Math.max(0,Number(saved.salesXpProgress)||0)%25,autoSalesXpProgress:Math.max(0,Number(saved.autoSalesXpProgress)||0)%60,lastOutput:{...fresh.lastOutput,...saved.lastOutput},visualProgress:{...fresh.visualProgress,...saved.visualProgress},unitPenalties:Object.fromEntries(machines.map(m=>[m.id,Array.from({length:Math.max(0,Number(saved[m.id])||0)},(_,i)=>Math.max(0,Number(saved.unitPenalties?.[m.id]?.[i])||0))])) as Record<MachineId,number[]>,pendingReplacement:{...fresh.pendingReplacement,...saved.pendingReplacement},writeOffEvent:saved.writeOffEvent??null,nextWriteOffAt:Math.max(900,Number(saved.nextWriteOffAt)||900),broken:{...fresh.broken,...saved.broken},unitFaults:Object.fromEntries(machines.map(m=>[m.id,Array.from({length:Math.max(0,Number(saved[m.id])||0)},(_,i)=>Math.max(0,Number(saved.unitFaults?.[m.id]?.[i]??(i===0?saved.broken?.[m.id]:0))||0))])) as Record<MachineId,number[]>,mechanicAssignments:{...fresh.mechanicAssignments,...saved.mechanicAssignments},breakdownEvent:saved.breakdownEvent??null,powerCutEvent:shouldRecoverPowerCut?true:(saved.powerCutEvent??false),powerCutSeen:shouldRecoverPowerCut?true:(saved.powerCutSeen??false),cyberAttackEvent:shouldRecoverCyberAttack?true:(saved.cyberAttackEvent??false),cyberAttackSeen:shouldRecoverCyberAttack?true:(saved.cyberAttackSeen??false),cybersecuritySpecialists:Math.max(0,Number(saved.cybersecuritySpecialists)||0),researched:Array.isArray(saved.researched)?saved.researched:[],acceptedContracts:Array.isArray(saved.acceptedContracts)?saved.acceptedContracts:[],contractsCompleted:completed,repeatOffers:Array.from({length:3},(_,i)=>saved.repeatOffers?.[i]&&Array.isArray(saved.repeatOffers[i].items)?saved.repeatOffers[i]:null),contractHistory:Array.isArray(saved.contractHistory)?saved.contractHistory.slice(-6):[],storyNextAt:saved.storyNextAt&&typeof saved.storyNextAt==='object'?saved.storyNextAt:{},boostSeconds:{production:Math.max(0,Math.floor(Number(saved.boostSeconds?.production)||0)),dispatch:Math.max(0,Math.floor(Number(saved.boostSeconds?.dispatch)||0)),protection:Math.max(0,Math.floor(Number(saved.boostSeconds?.protection)||0))},salesAssignments:goods.reduce((result,g)=>({...result,[g.id]:Math.max(0,Math.floor(Number(saved.salesAssignments?.[g.id]??(!saved.salesAssignments&&saved.salesTarget===g.id?saved.salespeople:0))||0))}),{...fresh.salesAssignments}),repeatContractRounds:Array.from({length:3},(_,i)=>Math.max(0,Math.floor(Number(saved.repeatContractRounds?.[i])||0))),contractClock:Math.max(0,Math.floor(Number(saved.contractClock)||0)),repeatNextAt:Array.from({length:3},(_,i)=>Math.max(0,Math.floor(Number(saved.repeatNextAt?.[i]??i*60)||0))),repeatDeadline:Array.from({length:3},(_,i)=>Math.max(0,Math.floor(Number(saved.repeatDeadline?.[i])||0))),experience:migratedExperience+legacyShipmentXp,reputation:Math.max(0,Number(saved.reputation)||0)};
+    return {...fresh,...saved,capitalLevels:{powerGrid:Math.max(0,Math.min(6,Math.floor(Number(saved.capitalLevels?.powerGrid)||0))),miningNetwork:Math.max(0,Math.min(6,Math.floor(Number(saved.capitalLevels?.miningNetwork)||0))),freightNetwork:Math.max(0,Math.min(6,Math.floor(Number(saved.capitalLevels?.freightNetwork)||0))),safetySystems:Math.max(0,Math.min(6,Math.floor(Number(saved.capitalLevels?.safetySystems)||0)))},capitalSpent:Math.max(0,Number(saved.capitalSpent)||0),flowMode:{ingot:['balanced','stockpile','feed'].includes(saved.flowMode?.ingot)?saved.flowMode.ingot:'balanced',wire:['balanced','stockpile','feed'].includes(saved.flowMode?.wire)?saved.flowMode.wire:'balanced'},starterPowerCredit:Math.max(0,Number(saved.starterPowerCredit??15)||0),powerShortage:Boolean(saved.powerShortage),xpMigrationVersion:1,gearShipmentProgress:Math.max(0,Number(saved.gearShipmentProgress)||0)%GEARS_PER_FINISHED_UNITS,salesXpProgress:Math.max(0,Number(saved.salesXpProgress)||0)%25,autoSalesXpProgress:Math.max(0,Number(saved.autoSalesXpProgress)||0)%60,lastOutput:{...fresh.lastOutput,...saved.lastOutput},visualProgress:{...fresh.visualProgress,...saved.visualProgress},unitPenalties:Object.fromEntries(machines.map(m=>[m.id,Array.from({length:Math.max(0,Number(saved[m.id])||0)},(_,i)=>Math.max(0,Number(saved.unitPenalties?.[m.id]?.[i])||0))])) as Record<MachineId,number[]>,pendingReplacement:{...fresh.pendingReplacement,...saved.pendingReplacement},writeOffEvent:saved.writeOffEvent??null,nextWriteOffAt:Math.max(900,Number(saved.nextWriteOffAt)||900),broken:{...fresh.broken,...saved.broken},unitFaults:Object.fromEntries(machines.map(m=>[m.id,Array.from({length:Math.max(0,Number(saved[m.id])||0)},(_,i)=>Math.max(0,Number(saved.unitFaults?.[m.id]?.[i]??(i===0?saved.broken?.[m.id]:0))||0))])) as Record<MachineId,number[]>,mechanicAssignments:{...fresh.mechanicAssignments,...saved.mechanicAssignments},breakdownEvent:saved.breakdownEvent??null,powerCutEvent:shouldRecoverPowerCut?true:(saved.powerCutEvent??false),powerCutSeen:shouldRecoverPowerCut?true:(saved.powerCutSeen??false),cyberAttackEvent:shouldRecoverCyberAttack?true:(saved.cyberAttackEvent??false),cyberAttackSeen:shouldRecoverCyberAttack?true:(saved.cyberAttackSeen??false),cybersecuritySpecialists:Math.max(0,Number(saved.cybersecuritySpecialists)||0),researched:Array.isArray(saved.researched)?saved.researched:[],acceptedContracts:Array.isArray(saved.acceptedContracts)?saved.acceptedContracts:[],contractsCompleted:completed,repeatOffers:Array.from({length:3},(_,i)=>saved.repeatOffers?.[i]&&Array.isArray(saved.repeatOffers[i].items)?saved.repeatOffers[i]:null),contractHistory:Array.isArray(saved.contractHistory)?saved.contractHistory.slice(-6):[],storyNextAt:saved.storyNextAt&&typeof saved.storyNextAt==='object'?saved.storyNextAt:{},boostSeconds:{production:Math.max(0,Math.floor(Number(saved.boostSeconds?.production)||0)),dispatch:Math.max(0,Math.floor(Number(saved.boostSeconds?.dispatch)||0)),protection:Math.max(0,Math.floor(Number(saved.boostSeconds?.protection)||0))},salesAssignments:goods.reduce((result,g)=>({...result,[g.id]:Math.max(0,Math.floor(Number(saved.salesAssignments?.[g.id]??(!saved.salesAssignments&&saved.salesTarget===g.id?saved.salespeople:0))||0))}),{...fresh.salesAssignments}),repeatContractRounds:Array.from({length:3},(_,i)=>Math.max(0,Math.floor(Number(saved.repeatContractRounds?.[i])||0))),contractClock:Math.max(0,Math.floor(Number(saved.contractClock)||0)),repeatNextAt:Array.from({length:3},(_,i)=>Math.max(0,Math.floor(Number(saved.repeatNextAt?.[i]??i*60)||0))),repeatDeadline:Array.from({length:3},(_,i)=>Math.max(0,Math.floor(Number(saved.repeatDeadline?.[i])||0))),experience:migratedExperience+legacyShipmentXp,reputation:Math.max(0,Number(saved.reputation)||0)};
   }catch{return fresh;}
 }
 const fmt=(n:number)=>Math.floor(n).toLocaleString();
 const machineCost=(m:typeof machines[number],s:GameState)=>Math.floor(m.cost*Math.pow(1.48,s[m.id]));
 const mechanicCost=(s:GameState)=>Math.floor(600*Math.pow(2,s.mechanics));
 const salesCost=(s:GameState)=>Math.floor(900*Math.pow(2,s.salespeople));
+const CAPITAL_PROJECTS:{id:CapitalId;name:string;subtitle:string;description:string;effect:string;base:number;growth:number;max:number;icon:string}[]=[
+  {id:'powerGrid',name:'Modernise the Power Grid',subtitle:'ENERGY INFRASTRUCTURE',description:'Install transformers, waste-heat recovery and more efficient electrical systems.',effect:'8% less electricity per level',base:900,growth:2.35,max:6,icon:'⚡'},
+  {id:'miningNetwork',name:'Expand Mining Operations',subtitle:'RESOURCE SECURITY',description:'Upgrade drilling systems and secure new iron and copper extraction sites.',effect:'6% faster ore extraction per level',base:1800,growth:2.4,max:6,icon:'⛏️'},
+  {id:'freightNetwork',name:'Build a Freight Network',subtitle:'LOGISTICS & DELIVERY',description:'Invest in depots, loading equipment and delivery vehicles for your sales team.',effect:'10% faster automatic dispatch per level',base:3500,growth:2.5,max:6,icon:'🚚'},
+  {id:'safetySystems',name:'Industrial Safety Programme',subtitle:'FACTORY RELIABILITY',description:'Install sensors, safety controls and inspection equipment to prevent failures.',effect:'10% lower breakdown risk per level',base:2500,growth:2.45,max:6,icon:'🛡️'}
+];
+const capitalPrice=(v:GameState,id:CapitalId)=>{
+  const project=CAPITAL_PROJECTS.find(p=>p.id===id)!;
+  return Math.floor(project.base*Math.pow(project.growth,v.capitalLevels[id]));
+};
+const powerCostMultiplier=(v:GameState)=>Math.max(.52,1-v.capitalLevels.powerGrid*.08);
 const WAGES={mechanic:12,sales:18,cyber:30} as const;
 const payrollPerMinute=(v:GameState)=>v.mechanics*WAGES.mechanic+v.salespeople*WAGES.sales+v.cybersecuritySpecialists*WAGES.cyber;
 const ELECTRICITY_PER_MINUTE:Record<MachineId,number>={
@@ -163,7 +175,7 @@ const ELECTRICITY_PER_MINUTE:Record<MachineId,number>={
 };
 const electricitySpeedFactor=(speed:number)=>speed===2?1.5:1;
 const electricityCostPerMinute=(s:GameState,speed:number)=>machines.reduce((sum,m)=>
-  sum+(s.lastOutput[m.id]>0?workingUnits(s,m.id)*ELECTRICITY_PER_MINUTE[m.id]*electricitySpeedFactor(speed):0),0);
+  sum+(s.lastOutput[m.id]>0?workingUnits(s,m.id)*ELECTRICITY_PER_MINUTE[m.id]*electricitySpeedFactor(speed)*powerCostMultiplier(s):0),0);
 
 const REPAIR_COSTS:Record<MachineId,number>={miner:40,smelter:65,press:90,assembler:130,copperMiner:85,copperSmelter:155,wiremill:230,circuitpress:340,beamMill:185,coilWinder:285};
 const repairCostFor=(id:MachineId,level:number)=>REPAIR_COSTS[id]+level*15;
@@ -388,7 +400,7 @@ export default function App(){
         if(boostActive.protection)break;
         for(let i=0;i<n[m.id];i++){
           if(n.unitFaults[m.id][i]>0)continue;
-          if(Math.random()>=.00065*(speed===2?4:1)*(1-reliabilityBonus))continue;
+          if(Math.random()>=.00065*(speed===2?4:1)*(1-reliabilityBonus)*Math.max(.4,1-n.capitalLevels.safetySystems*.1))continue;
           // Catastrophic failures are rare and limited to established factories.
           // Protect the only ore mine and enforce a long cooldown between losses.
           const eligible=n.contractClock>=n.nextWriteOffAt&&n.experience>=500&&n.reputation>=50&&
@@ -421,7 +433,7 @@ export default function App(){
         }
       });
       const researchOutput=(n.researched.includes('efficient-extraction')?1.15:1)*(n.researched.includes('precision-tooling')?1.3:1)*(n.researched.includes('smart-robotics')?1.2:1);
-      const rate=(id:MachineId,base:number)=>n.unitFaults[id].slice(0,n[id]).reduce((total,fault,i)=>total+(fault>0?0:(1+Math.max(0,n['tier_'+id]-(n.unitPenalties[id][i]||0))*.25)),0)*base*researchOutput*multiplier*(boostActive.production?2:1);
+      const rate=(id:MachineId,base:number)=>n.unitFaults[id].slice(0,n[id]).reduce((total,fault,i)=>total+(fault>0?0:(1+Math.max(0,n['tier_'+id]-(n.unitPenalties[id][i]||0))*.25)),0)*base*researchOutput*multiplier*(boostActive.production?2:1)*((id==='miner'||id==='copperMiner')?(1+n.capitalLevels.miningNetwork*.06):1);
       const oreMade=rate('miner',.35);
       const ingotsMade=Math.min(n.ore+oreMade,rate('smelter',.22));
       const availableIngots=downstreamMaterialAvailable(n,'ingot',n.ingot+ingotsMade,ingotsMade);
@@ -442,7 +454,7 @@ export default function App(){
         circuitpress:circuitsMade,beamMill:beamsMade,coilWinder:coilsMade
       };
       const powerBill=machines.reduce((sum,m)=>sum+(proposedOutput[m.id]>1e-8
-        ?workingUnits(n,m.id)*ELECTRICITY_PER_MINUTE[m.id]*electricitySpeedFactor(speed)/60:0),0);
+        ?workingUnits(n,m.id)*ELECTRICITY_PER_MINUTE[m.id]*electricitySpeedFactor(speed)*powerCostMultiplier(n)/60:0),0);
       const powerFunded=n.cash+n.starterPowerCredit+1e-8>=powerBill;
       if(powerFunded){
         const creditUsed=Math.min(n.starterPowerCredit,powerBill);
@@ -490,7 +502,7 @@ export default function App(){
           const stockFloor=manualFlow?0:contractStockTarget(n,item.id);
           const warehouseBuffer=(item.id==='ingot'||item.id==='wire')&&n.flowMode[item.id]==='balanced'?2:0;
           const availableToSell=Math.max(0,n[item.id]-Math.max(stockFloor,warehouseBuffer));
-          const amount=Math.min(availableToSell,count*.12*(n.researched.includes('dispatch-systems')?1.25:1)*multiplier*(boostActive.dispatch?2:1));
+          const amount=Math.min(availableToSell,count*.12*(n.researched.includes('dispatch-systems')?1.25:1)*(1+n.capitalLevels.freightNetwork*.1)*multiplier*(boostActive.dispatch?2:1));
           if(amount<=0)return;
           const revenue=amount*item.price*saleBonus;
           const total=n.salesXpProgress+revenue;
@@ -527,7 +539,7 @@ export default function App(){
     const manualFlow=(item.id==='ingot'||item.id==='wire')&&s.flowMode[item.id]==='feed';
     const stockFloor=manualFlow?0:contractStockTarget(s,item.id);
     const warehouseBuffer=(item.id==='ingot'||item.id==='wire')&&s.flowMode[item.id]==='balanced'?2:0;
-    const amount=Math.min(Math.max(0,s[item.id]-Math.max(stockFloor,warehouseBuffer)),assigned*.12*(s.researched.includes('dispatch-systems')?1.25:1)*speed*(s.boostSeconds.dispatch>0?2:1));
+    const amount=Math.min(Math.max(0,s[item.id]-Math.max(stockFloor,warehouseBuffer)),assigned*.12*(s.researched.includes('dispatch-systems')?1.25:1)*(1+s.capitalLevels.freightNetwork*.1)*speed*(s.boostSeconds.dispatch>0?2:1));
     return sum+amount*item.price*(s.researched.includes('market-intelligence')?1.2:1)*60;
   },0):0;
   const wagesPerMinute=economyActive&&payrollFunded?payroll:0;
@@ -798,6 +810,18 @@ export default function App(){
     setS(v=>v.researched.includes(id)?v:{...v,gears:v.gears-tech.cost,researched:[...v.researched,id]});
     setNotice(tech.name+' researched · '+tech.effect+'.');
   };
+  const buyCapital=(id:CapitalId)=>{
+    const project=CAPITAL_PROJECTS.find(p=>p.id===id)!;
+    const cost=capitalPrice(s,id);
+    if(s.capitalLevels[id]>=project.max){setNotice(project.name+' is fully upgraded.');return;}
+    if(s.cash<cost){setNotice('Need '+fmt(cost-s.cash)+' more Rivets to fund '+project.name+'.');return;}
+    setS(v=>{
+      if(v.capitalLevels[id]>=project.max||v.cash<capitalPrice(v,id))return v;
+      const price=capitalPrice(v,id);
+      return {...v,cash:v.cash-price,capitalSpent:v.capitalSpent+price,capitalLevels:{...v.capitalLevels,[id]:v.capitalLevels[id]+1}};
+    });
+    setNotice(project.name+' improved to level '+(s.capitalLevels[id]+1)+'. '+project.effect+'.');
+  };
   const buyBoost=(id:BoostId)=>{
     const offer=BOOSTS.find(b=>b.id===id);
     if(!offer)return;
@@ -823,6 +847,7 @@ export default function App(){
         <button className={page==='warehouse'?'active':''} onClick={()=>setPage('warehouse')}><Boxes size={16}/> Warehouse</button>
         <button className={page==='research'?'active':''} onClick={()=>setPage('research')}><FlaskConical size={16}/> Research <span>{s.researched.filter(id=>technologies.some(t=>t.id===id)).length}/{technologies.length}</span></button>
         <button className={page==='store'?'active':''} onClick={()=>setPage('store')}><Zap size={16}/> Boost Store</button>
+        <button className={page==='capital'?'active':''} onClick={()=>setPage('capital')}><TrendingUp size={16}/> Capital Projects</button>
       </nav>
       <aside className="mail-dock">
         <button className="mail-trigger" onClick={()=>setInboxOpen(v=>!v)} aria-expanded={inboxOpen}><span>✉</span><b>ORDER INBOX</b><em>{incomingMail.length}</em><small>{inboxOpen?'▲':'▼'}</small></button>
@@ -883,7 +908,7 @@ export default function App(){
             <MachineArt id={m.id} active={active} broken={failed>0} lights={lights} cycleSeconds={cycleSeconds} progress={s.visualProgress[m.id]}/>
             <div className="machine-info"><div><h3>{m.name}</h3><p>{m.desc}</p></div><span className="machine-level">LV {tier+1}</span></div>
             <div className="machine-details"><span>OUTPUT</span><b>{rateFor(m).toFixed(2)} / sec</b><span>RUNNING / OWNED</span><b>{active?unitsWorking:0} / {owned}</b></div>
-            <div className="machine-electricity"><Zap size={14}/><span>POWER · {ELECTRICITY_PER_MINUTE[m.id]} RVT/min per running unit</span><b>{active?(unitsWorking*ELECTRICITY_PER_MINUTE[m.id]*electricitySpeedFactor(speed)).toFixed(1):'0.0'} RVT/min</b></div>
+            <div className="machine-electricity"><Zap size={14}/><span>POWER · {ELECTRICITY_PER_MINUTE[m.id]} RVT/min per running unit</span><b>{active?(unitsWorking*ELECTRICITY_PER_MINUTE[m.id]*electricitySpeedFactor(speed)*powerCostMultiplier(s)).toFixed(1):'0.0'} RVT/min</b></div>
             {owned>0&&stopReason&&<div className="machine-stop-reason"><AlertTriangle size={13}/><span>{stopReason}</span></div>}
             {failed>0&&<div className="machine-repair"><span>{failed} broken unit{failed>1?'s':''} · {s.mechanicAssignments[m.id]>0?'mechanic repairing':'awaiting repair'}</span><button onClick={()=>{if(s.cash<repairCost){setNotice('Emergency repair costs '+repairCost+' Rivets per machine.');return;}const index=firstFault(s,m.id);if(index<0)return;setS(v=>({...repairUnit(v,m.id,index),cash:v.cash-repairCost}));setNotice(m.name+' unit '+(index+1)+' repaired.')}}>REPAIR ONE · {fmt(repairCost)} RVT</button></div>}
             <div className="machine-buttons">{owned===0?(!stageReached(machineStage[m.id])||s.experience<unlockAt[m.id]||s.reputation<reputationUnlock[m.id]?<div className="machine-locked-note">🔒 STAGE {machineStage[m.id]} · {unlockAt[m.id]} XP + {reputationUnlock[m.id]} REP</div>:<button className="primary-button" disabled={s.cash<cost} onClick={()=>buyMachine(m)}>BUILD MACHINE · {fmt(cost)} RVT</button>):<><button className="primary-button" disabled={owned>=MAX_MACHINE_UNITS||s.cash<cost} onClick={()=>buyMachine(m)}>{owned>=MAX_MACHINE_UNITS?'3/3 UNITS · MAX':'ADD UNIT '+(owned+1)+' · '+fmt(cost)+' RVT'}</button><button className="secondary-button" disabled={s.gears<(tier+1)*3} onClick={()=>upgradeMachine(m)}><ArrowUpRight size={15}/> UPGRADE · {(tier+1)*3} GEARS</button></>}</div>
@@ -909,6 +934,11 @@ export default function App(){
           {s.mechanics===0&&<div className="empty-hint"><Wrench size={17}/> Hire a mechanic above to unlock machine assignments.</div>}
         </section>
         <section className="sales-setup"><div className="sales-setup-title"><span className="role-icon"><Truck size={22}/></span><div><span className="eyebrow">DISPATCH SETTINGS</span><h2>Sales team assignments</h2><p>Assign your sales representatives to different goods. Each sells their assigned product independently.</p></div></div><div className="contract-summary"><span><b>{assignedSales}</b> ASSIGNED</span><span><b>{unassignedSales}</b> AVAILABLE</span><span><b>{s.salespeople}</b> TOTAL SALESPEOPLE</span></div><div className="assignment-list">{goods.filter(g=>s[contractProducer[g.id]]>0).map(g=><div className="assignment-row" key={g.id}><span className="assignment-machine">{g.emoji}</span><div className="assignment-copy"><b>{g.name}</b><small>{((s.salesAssignments[g.id]||0)*.12).toFixed(2)} units/sec when automatic sales are on</small></div><label><span>SALES STAFF</span><select value={s.salesAssignments[g.id]||0} onChange={e=>assignSales(g.id,Number(e.target.value))} disabled={s.salespeople===0}>{Array.from({length:s.salespeople+1},(_,i)=>i).map(i=><option key={i} value={i}>{i===0?'None':i+' assigned'}</option>)}</select></label></div>)}</div><div className="sales-controls"><label className="toggle-row"><input type="checkbox" checked={s.autoSell} disabled={s.salespeople===0} onChange={e=>setS(v=>({...v,autoSell:e.target.checked}))}/><span><b>Automatic sales</b><small>Each active salesperson sells 0.12 units/sec and earns bonus XP while shipping stock.</small></span></label></div></section>
+      </div>}
+      {page==='capital'&&<div className="page-content">
+        <section className="welcome-row"><div><span className="eyebrow">LONG-TERM INDUSTRIAL INVESTMENT</span><h1>Capital Projects</h1><p>Spend Rivets on permanent infrastructure that makes your factory more efficient and reliable. Prices rise with each level, and every purchase stays saved.</p></div><div className="staff-summary"><b>{fmt(s.capitalSpent)}</b><span>RIVETS INVESTED</span><small>{fmt(s.cash)} RVT currently available</small></div></section>
+        <section className="capital-grid">{CAPITAL_PROJECTS.map(project=>{const level=s.capitalLevels[project.id];const maxed=level>=project.max;const price=capitalPrice(s,project.id);return <article className={'capital-card '+(maxed?'capital-maxed':'')} key={project.id}><div className="capital-card-heading"><span className="capital-icon">{project.icon}</span><div><small>{project.subtitle}</small><h2>{project.name}</h2></div><span className="capital-level">LV {level}/{project.max}</span></div><p>{project.description}</p><div className="capital-effect"><CheckCircle2 size={15}/>{project.effect}</div><div className="capital-progress">{Array.from({length:project.max},(_,i)=><i key={i} className={i<level?'done':''}/>)}</div><button className="primary-button" disabled={maxed||s.cash<price} onClick={()=>buyCapital(project.id)}>{maxed?'PROJECT COMPLETE':s.cash<price?'SAVE '+fmt(price-s.cash)+' MORE RVT':'FUND LEVEL '+(level+1)+' · '+fmt(price)+' RVT'}</button></article>})}</section>
+        <div className="sales-note"><CircleDollarSign size={18}/> Capital investments cost only in-game Rivets. Upgrades are permanent, level costs grow sharply, and your progress is kept in existing saves. Energy savings, extraction, freight and safety upgrades apply automatically.</div>
       </div>}
       {page==='store'&&<div className="page-content">
         <section className="welcome-row"><div><span className="eyebrow">SHORT-TERM FACTORY ADVANTAGES</span><h1>Boost Store</h1><p>Spend Rivets on temporary boosts. No real-money purchases; every upgrade uses your in-game balance.</p></div><div className="staff-summary"><b>{fmt(s.cash)}</b><span>RIVETS AVAILABLE</span><small>Boost timers pause when production is paused or an incident stops the factory.</small></div></section>
