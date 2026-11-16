@@ -48,7 +48,7 @@ const machines:{id:MachineId;name:string;short:string;cost:number;desc:string;in
   {id:'circuitpress',name:'Circuit Board Line',short:'CIRCUITS',cost:12000,desc:'Builds circuit boards from precision electrical wire.',input:'Copper wire',output:'Circuit boards',rate:.07},
   {id:'beamMill',name:'Beam Rolling Mill',short:'STEEL BEAMS',cost:2500,desc:'Rolls iron ingots into structural steel beams.',input:'Iron ingots',output:'Steel beams',rate:.075},
   {id:'coilWinder',name:'Coil Winding Machine',short:'COPPER COILS',cost:8000,desc:'Winds copper wire into precision electrical coils.',input:'Copper wire',output:'Copper coils',rate:.065},
-  {id:'motorworks',name:'Electric Motor Works',short:'MOTOR WORKS',cost:170000,desc:'Heavy-duty assembly line. Each motor uses 2 Copper Coils and 1 Circuit Board. Uses substantial electricity.',input:'2 Copper Coils + 1 Circuit Board',output:'Electric Motors',rate:.04}
+  {id:'motorworks',name:'Electric Motor Works',short:'MOTOR WORKS',cost:120000,desc:'Heavy-duty assembly line. Each motor uses 2 Copper Coils and 1 Circuit Board. Uses substantial electricity.',input:'2 Copper Coils + 1 Circuit Board',output:'Electric Motors',rate:.04}
 ];
 const goods:{id:StockId;name:string;emoji:string;price:number;detail:string}[]=[
   {id:'ore',name:'Raw Ore',emoji:'🪨',price:5,detail:'Fresh from the mine'},
@@ -73,7 +73,7 @@ const contracts:{id:string;name:string;detail:string;good:StockId;qty:number;rew
   {id:'circuit-contract',name:'Circuit Board Supply',detail:'A technology manufacturer needs circuits.',good:'circuits',qty:4,reward:1800,rep:30,xp:80,minRep:60},
   {id:'structural-steel',name:'Construction Steel Order',detail:'A building contractor needs a shipment of Steel Beams for a major project.',good:'beams',qty:10,reward:1120,rep:12,xp:55,minRep:18},
   {id:'generator-coils',name:'Generator Coil Order',detail:'An energy equipment firm needs Copper Coils for electric motors.',good:'coils',qty:8,reward:1440,rep:18,xp:75,minRep:50},
-  {id:'motor-fleet',name:'Industrial Motor Fleet',detail:'An electrification programme needs six industrial electric motors for heavy machinery.',good:'motors',qty:6,reward:32000,rep:55,xp:220,minRep:220}
+  {id:'motor-fleet',name:'Industrial Motor Fleet',detail:'An electrification programme needs six industrial electric motors for heavy machinery.',good:'motors',qty:6,reward:32000,rep:55,xp:220,minRep:190}
 ];
 const contractProducer:Record<StockId,MachineId>={ore:'miner',ingot:'smelter',plate:'press',parts:'assembler',copperOre:'copperMiner',copperIngot:'copperSmelter',wire:'wiremill',circuits:'circuitpress',beams:'beamMill',coils:'coilWinder',motors:'motorworks'};
 type OrderLine={good:StockId;qty:number};
@@ -809,7 +809,7 @@ export default function App(){
   const progressionLevel=Math.max(1,Math.floor((1+Math.sqrt(1+4*s.experience/75))/2));
   const levelStart=xpForLevel(progressionLevel);
   const nextGoal=xpForLevel(progressionLevel+1);
-  const reputationUnlock:Record<MachineId,number>={miner:0,smelter:2,press:8,assembler:18,copperMiner:20,copperSmelter:35,wiremill:50,circuitpress:60,beamMill:18,coilWinder:50,motorworks:220};
+  const reputationUnlock:Record<MachineId,number>={miner:0,smelter:2,press:8,assembler:18,copperMiner:20,copperSmelter:35,wiremill:50,circuitpress:60,beamMill:18,coilWinder:50,motorworks:190};
   const machineTypesOwned=machines.filter(m=>s[m.id]>0).length;
   const companyRanks=[
     {name:'WORKSHOP',rep:0,xp:0,sales:0,machines:0},
