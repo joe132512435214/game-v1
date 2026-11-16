@@ -256,3 +256,14 @@ body{background:#171b19}.game{max-width:1240px}
 .boost-store-timer b{font:600 18px 'IBM Plex Mono',monospace;color:#e7c893}
 .boost-store-card button{width:100%;min-height:42px}
 @media(max-width:800px){.boost-store-grid{grid-template-columns:1fr}.boost-store-card{padding:15px}}
+
+
+/* Each of the three LEDs belongs to exactly one purchased machine unit.
+   Explicit specificity beats the legacy rule that lit all three at once. */
+.machine-art .art-lamp .unit-light{display:block;width:9px;height:9px;border-radius:50%;transition:background .15s,box-shadow .15s}
+.machine-art .art-lamp .unit-light.empty,
+.machine-art.running .art-lamp .unit-light.empty{background:#39443d;box-shadow:none;opacity:.55}
+.machine-art .art-lamp .unit-light.on,
+.machine-art.running .art-lamp .unit-light.on{background:#7be5a1;box-shadow:0 0 7px #54d987}
+.machine-art .art-lamp .unit-light.off,
+.machine-art.running .art-lamp .unit-light.off{background:#e66b63;box-shadow:0 0 7px #de4f4a}
