@@ -42,13 +42,13 @@ const machines:{id:MachineId;name:string;short:string;cost:number;desc:string;in
   {id:'smelter',name:'Blast Furnace',short:'SMELT',cost:180,desc:'Melts ore into iron ingots.',input:'Raw ore',output:'Iron ingots',rate:.16},
   {id:'press',name:'Stamping Press',short:'PRESS',cost:600,desc:'Shapes ingots into metal plates.',input:'Iron ingots',output:'Metal plates',rate:.09},
   {id:'assembler',name:'Mech Assembly',short:'ASSEMBLE',cost:1600,desc:'Builds finished precision parts.',input:'Metal plates',output:'Precision parts',rate:.055},
-  {id:'copperMiner',name:'Copper Excavator',short:'COPPER MINE',cost:1800,desc:'Extracts copper ore for the electrical production line.',input:'Copper seam',output:'Copper ore',rate:.26},
-  {id:'copperSmelter',name:'Copper Foundry',short:'COPPER SMELT',cost:5500,desc:'Refines copper ore into conductive ingots.',input:'Copper ore',output:'Copper ingots',rate:.18},
-  {id:'wiremill',name:'Wire Drawing Mill',short:'WIRE DRAW',cost:14000,desc:'Draws copper ingots into fine electrical wire.',input:'Copper ingots',output:'Copper wire',rate:.12},
-  {id:'circuitpress',name:'Circuit Board Line',short:'CIRCUITS',cost:30000,desc:'Builds circuit boards from precision electrical wire.',input:'Copper wire',output:'Circuit boards',rate:.07},
+  {id:'copperMiner',name:'Copper Excavator',short:'COPPER MINE',cost:1100,desc:'Extracts copper ore for the electrical production line.',input:'Copper seam',output:'Copper ore',rate:.26},
+  {id:'copperSmelter',name:'Copper Foundry',short:'COPPER SMELT',cost:2500,desc:'Refines copper ore into conductive ingots.',input:'Copper ore',output:'Copper ingots',rate:.18},
+  {id:'wiremill',name:'Wire Drawing Mill',short:'WIRE DRAW',cost:6000,desc:'Draws copper ingots into fine electrical wire.',input:'Copper ingots',output:'Copper wire',rate:.12},
+  {id:'circuitpress',name:'Circuit Board Line',short:'CIRCUITS',cost:12000,desc:'Builds circuit boards from precision electrical wire.',input:'Copper wire',output:'Circuit boards',rate:.07},
   {id:'beamMill',name:'Beam Rolling Mill',short:'STEEL BEAMS',cost:2500,desc:'Rolls iron ingots into structural steel beams.',input:'Iron ingots',output:'Steel beams',rate:.075},
-  {id:'coilWinder',name:'Coil Winding Machine',short:'COPPER COILS',cost:21000,desc:'Winds copper wire into precision electrical coils.',input:'Copper wire',output:'Copper coils',rate:.065},
-  {id:'motorworks',name:'Electric Motor Works',short:'MOTOR WORKS',cost:1000000,desc:'Heavy-duty assembly line. Each motor uses 2 Copper Coils and 1 Circuit Board. Uses substantial electricity.',input:'2 Copper Coils + 1 Circuit Board',output:'Electric Motors',rate:.04}
+  {id:'coilWinder',name:'Coil Winding Machine',short:'COPPER COILS',cost:8000,desc:'Winds copper wire into precision electrical coils.',input:'Copper wire',output:'Copper coils',rate:.065},
+  {id:'motorworks',name:'Electric Motor Works',short:'MOTOR WORKS',cost:170000,desc:'Heavy-duty assembly line. Each motor uses 2 Copper Coils and 1 Circuit Board. Uses substantial electricity.',input:'2 Copper Coils + 1 Circuit Board',output:'Electric Motors',rate:.04}
 ];
 const goods:{id:StockId;name:string;emoji:string;price:number;detail:string}[]=[
   {id:'ore',name:'Raw Ore',emoji:'🪨',price:5,detail:'Fresh from the mine'},
@@ -574,7 +574,7 @@ export default function App(){
         if(boostActive.protection)break;
         for(let i=0;i<n[m.id];i++){
           if(n.unitFaults[m.id][i]>0)continue;
-          if(Math.random()>=.00065*(speed===2?4:1)*(1-reliabilityBonus)*Math.max(.4,1-n.capitalLevels.safetySystems*.1))continue;
+          if(Math.random()>=.00022*(speed===2?2:1)*(1-reliabilityBonus)*Math.max(.4,1-n.capitalLevels.safetySystems*.1))continue;
           // Catastrophic failures are rare and limited to established factories.
           // Protect the only ore mine and enforce a long cooldown between losses.
           const eligible=n.contractClock>=n.nextWriteOffAt&&n.experience>=500&&n.reputation>=50&&
@@ -1281,7 +1281,7 @@ export default function App(){
           </article>;
         })}</section>
         <section className="achievement-panel"><div className="achievement-heading"><div><span className="eyebrow">MILESTONES</span><h2>Factory achievements</h2></div><span>{achievements.filter(a=>a.done).length}/{achievements.length} UNLOCKED</span></div><div className="achievement-grid">{achievements.map(a=><div className={'achievement '+(a.done?'earned':'')} key={a.name}><span>{a.icon}</span><div><b>{a.name}</b><small>{a.detail}</small></div><strong>{a.done?'✓':'LOCKED'}</strong></div>)}</div></section>
-        <section className="factory-footer"><div><Zap size={16}/><span>Production speed</span>{[1,2].map(x=><button key={x} className={speed===x?'selected':''} onClick={()=>setSpeed(x)} title={x===2?'Double output, 4× breakdown risk':'Normal speed and breakdown risk'}>{x}×</button>)}<small className="speed-risk-note">{speed===2?'⚠ 2× output · 4× breakdown risk':'1× output · normal breakdown risk'}</small></div><span className="saved"><CheckCircle2 size={14}/> Progress auto-saves</span></section>
+        <section className="factory-footer"><div><Zap size={16}/><span>Production speed</span>{[1,2].map(x=><button key={x} className={speed===x?'selected':''} onClick={()=>setSpeed(x)} title={x===2?'Double output, 2× breakdown risk':'Normal speed and breakdown risk'}>{x}×</button>)}<small className="speed-risk-note">{speed===2?'⚠ 2× output · 2× breakdown risk':'1× output · normal breakdown risk'}</small></div><span className="saved"><CheckCircle2 size={14}/> Progress auto-saves</span></section>
         </>}
       </div>}
       {page==='staff'&&<div className="page-content">
