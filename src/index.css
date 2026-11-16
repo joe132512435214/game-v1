@@ -1431,3 +1431,23 @@ button:focus-visible,select:focus-visible{outline:2px solid #f1c48d;outline-offs
   width:100%; height:100%; object-fit:contain; image-rendering:pixelated;
 }
 .machine-art, .machine-art * { animation:none !important; }
+/* Contract difficulty and small top-of-screen outcome signals. */
+.contract-difficulty{font-weight:700!important}
+.difficulty-easy{--contract-accent:#98c997}
+.difficulty-standard{--contract-accent:#d6bd88}
+.difficulty-hard{--contract-accent:#e9aa66}
+.difficulty-rush{--contract-accent:#ef9486}
+.mail-subject .contract-difficulty{color:var(--contract-accent)!important}
+.contract-terms{display:grid;gap:7px;padding:12px;border:1px solid var(--contract-accent);border-left:3px solid var(--contract-accent);border-radius:4px;background:#17211b}
+.contract-terms>b{font:700 10px 'IBM Plex Mono',monospace;color:var(--contract-accent)}
+.contract-terms>strong{font:700 20px 'IBM Plex Mono',monospace;color:#f0e4cc}
+.contract-terms>strong small{font-size:10px;font-weight:400}
+.contract-terms>span{font-size:11px;color:#d4dacb}
+.contract-terms>small{font-size:10px;line-height:1.5;color:#b6c1ad}
+.contract-mini-toast{position:fixed;z-index:100;top:150px;right:16px;display:flex;align-items:center;gap:9px;width:max-content;max-width:min(330px,calc(100vw - 24px));padding:10px 12px;background:#1c2922;border:1px solid #5c8e62;border-radius:7px;box-shadow:0 5px 18px #0006}
+.contract-mini-toast>span{display:grid;place-items:center;flex:0 0 24px;height:24px;border-radius:50%;background:#355a3b;color:#bcf3be;font-weight:800}
+.contract-mini-toast.bad{border-color:#a96358;background:#30231f}
+.contract-mini-toast.bad>span{background:#743c33;color:#ffd1c8}
+.contract-mini-toast p{margin:0;font-size:12px;line-height:1.4;color:#eee9dc}
+.contract-mini-toast button{flex-shrink:0;border:0;background:transparent;color:#c8c8bb;font-size:18px;padding:2px 4px}
+@media(max-width:620px){.contract-mini-toast{top:calc(176px + env(safe-area-inset-top,0px));right:12px;max-width:calc(100vw - 24px)}.contract-terms{padding:10px}}
