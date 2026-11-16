@@ -1327,3 +1327,13 @@ button:focus-visible,select:focus-visible{outline:2px solid #f1c48d;outline-offs
 .freight-drone-stepper{display:flex;gap:6px;align-items:center}
 .freight-drone-stepper>span{font:700 9px 'IBM Plex Mono',monospace;color:#ddc995}
 @media(max-width:650px){.freight-drone-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.freight-drone-buy{flex-wrap:wrap}.freight-drone-buy button{width:100%}.freight-allocations{width:100%;justify-content:flex-start}}
+
+
+/* Freight route upgrades and rush boosts */
+.freight-route-tuning{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:12px;background:rgba(17,30,25,.55);border:1px solid rgba(194,176,122,.25);border-radius:5px;flex-wrap:wrap}
+.freight-route-tuning-copy{display:flex;flex-direction:column;gap:5px;flex:1;min-width:180px}
+.freight-route-tuning-copy>b{font-size:11px;letter-spacing:.04em;color:#e8d9b1}
+.freight-route-tuning-copy>small{font-size:10px;color:#b7c6b5;line-height:1.5}
+.freight-route-tuning-buttons{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.freight-route-tuning-buttons button{display:inline-flex;align-items:center;justify-content:center;gap:5px;font-size:10px;white-space:nowrap}
+@media(max-width:650px){.freight-route-tuning-buttons{width:100%}.freight-route-tuning-buttons button{flex:1;min-width:130px}}
