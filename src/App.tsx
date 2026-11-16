@@ -256,7 +256,7 @@ export default function App(){
   const repProgress=Math.min(100,s.reputation>=90?100:s.reputation/nextRep*100);
   const nextGoal=progressionLevel*100;
   const goalProgress=Math.min(100,(s.experience-(progressionLevel-1)*100)/100*100);
-  const unlockAt:Record<MachineId,number>={miner:0,smelter:100,press:150,assembler:200,copperMiner:220,copperSmelter:350,wiremill:500,circuitpress:700};
+  const unlockAt:Record<MachineId,number>={miner:0,smelter:25,press:150,assembler:200,copperMiner:220,copperSmelter:350,wiremill:500,circuitpress:700};
   // Keep the floor focused: show every machine already owned and just the next milestone.
   const nextMachine=machines.filter(m=>s[m.id]===0).sort((a,b)=>unlockAt[a.id]-unlockAt[b.id])[0];
   const visibleMachines=machines.filter(m=>s[m.id]>0||m.id===nextMachine?.id);
