@@ -348,7 +348,8 @@ function MachineArt({id,active,broken,lights,cycleSeconds,progress,preview=false
  
  const bolt=(x:number,y:number)=><circle cx={x} cy={y} r="2.3" fill="#d7c9a8" stroke="#39453b" strokeWidth="1"/>;
  return <div className={'machine-art art-'+id+(electrical?' art-electrical':'')+(active?' running':'')+(preview?' art-preview':'')+(broken?' broken':'')+(spriteReady?' art-sprite-ready':'')} style={{'--machine-cycle':safeCycle+'s','--machine-offset':'-'+(Math.max(0,Math.min(1,progress))*safeCycle)+'s'} as CSSProperties}>
-  {spriteReady&&<div className="machine-sprite-layer" role="img" aria-label={machines.find(m=>m.id===id)?.name+' semi-pixel-art animated machine'} style={{backgroundImage:'url('+sprite.sheet+')'}}/>}
+  {id==='miner'&&<img className="machine-original-gif" src={active||preview?'/machines/pixel/miner-original.gif':'/machines/pixel/miner-pixel-mine-icon.png'} alt="Rockbreaker Mine pixel animation"/>}
+  {spriteReady&&id!=='miner'&&<div className="machine-sprite-layer" role="img" aria-label={machines.find(m=>m.id===id)?.name+' semi-pixel-art animated machine'} style={{backgroundImage:'url('+sprite.sheet+')'}}/>}
   <div className="art-backdrop"/>
   <svg viewBox="0 0 320 210" role="img" aria-label={machines.find(m=>m.id===id)?.name+' detailed industrial machine illustration'}>
    <defs>
