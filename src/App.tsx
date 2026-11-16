@@ -229,14 +229,25 @@ const charityMilestoneReward=(currentTotal:number,amount:number)=>
 const powerCostMultiplier=(v:GameState)=>Math.max(.52,1-v.capitalLevels.powerGrid*.08);
 const WAGES={mechanic:24,sales:36,cyber:60,driver:8} as const;
 const FREIGHT_TIERS=[
- {name:'Small Vans',capacity:.3,cost:0,description:'Cheap starter transport. Best for one small mine.'},
- {name:'Small Lorries',capacity:.9,cost:6500,description:'Triple the carrying capacity of each driver.'},
- {name:'Medium Lorries',capacity:2.1,cost:35000,description:'Move much larger loads between mines and the factory.'},
- {name:'Large Lorries',capacity:4.5,cost:175000,description:'High-volume transport for industrial mining operations.'}
+ {name:'Small Vans',capacity:.75,cost:0,description:'Starter vans can comfortably collect from one basic mine.'},
+ {name:'Small Lorries',capacity:1.8,cost:6500,description:'Move 2.4 times as much ore per driver.'},
+ {name:'Medium Lorries',capacity:4,cost:35000,description:'Move much larger loads between mines and the factory.'},
+ {name:'Large Lorries',capacity:9,cost:175000,description:'High-volume transport for industrial mining operations.'}
 ] as const;
 const driverHireCost=(v:GameState)=>Math.floor(150*Math.pow(1.7,v.drivers));
 const freightThroughput=(v:GameState,route:FreightRoute)=>
   v.driverAssignments[route]*FREIGHT_TIERS[v.freightTier].capacity;
+// Mine-site stock is a small loading buffer, not an unlimited second warehouse.
+// If the vans cannot collect quickly enough, miners automatically slow down.
+const MINE_BUFFER_SECONDS=30;
+const mineDelivery=(waiting:number,productionCapacity:number,haulCapacity:number)=>{
+  const backlog=Math.max(0,waiting);
+  const freight=Math.max(0,haulCapacity);
+  const buffer=Math.max(1,freight*MINE_BUFFER_SECONDS);
+  const made=Math.min(productionCapacity,Math.max(0,buffer-backlog)+freight);
+  const delivered=Math.min(backlog+made,freight);
+  return {made,delivered,waiting:Math.max(0,backlog+made-delivered)};
+};
 
 const payrollPerMinute=(v:GameState)=>v.mechanics*WAGES.mechanic+v.salespeople*WAGES.sales+v.cybersecuritySpecialists*WAGES.cyber+v.drivers*WAGES.driver;
 const ELECTRICITY_PER_MINUTE:Record<MachineId,number>={
@@ -571,17 +582,20 @@ export default function App(){
         }
       });
       const rate=(id:MachineId)=>machineCapacity(n,id,multiplier,boostActive.production);
-      const oreMade=rate('miner');
-      // Ore is produced at mine sites; only staffed transport reaches the factory.
-      const hauledOre=Math.min(n.oreAtMine+oreMade,
+      // Ore can pile up temporarily, but mines throttle rather than creating
+      // unlimited stranded inventory when transport cannot keep up.
+      const ironFreight=mineDelivery(n.oreAtMine,rate('miner'),
         freightThroughput(n,'iron')*(payrollFunded?1:0));
+      const oreMade=ironFreight.made;
+      const hauledOre=ironFreight.delivered;
       const ingotsMade=Math.min(n.ore+hauledOre,rate('smelter'));
       const availableIngots=downstreamMaterialAvailable(n,'ingot',n.ingot+ingotsMade,ingotsMade);
       const [platesMade,beamsMade]=splitMachineSupply(availableIngots,rate('press'),rate('beamMill'));
       const partsMade=Math.min(n.plate+platesMade,rate('assembler'));
-      const copperOreMade=rate('copperMiner');
-      const hauledCopper=Math.min(n.copperAtMine+copperOreMade,
+      const copperFreight=mineDelivery(n.copperAtMine,rate('copperMiner'),
         freightThroughput(n,'copper')*(payrollFunded?1:0));
+      const copperOreMade=copperFreight.made;
+      const hauledCopper=copperFreight.delivered;
       const copperIngotsMade=Math.min(n.copperOre+hauledCopper,rate('copperSmelter'));
       const wireMade=Math.min(n.copperIngot+copperIngotsMade,rate('wiremill'));
       const availableWire=downstreamMaterialAvailable(n,'wire',n.wire+wireMade,wireMade);
@@ -610,13 +624,13 @@ export default function App(){
         n.powerShortage=powerBill>0;
       }
       if(powerFunded){
-      n.oreAtMine=Math.max(0,n.oreAtMine+oreMade-hauledOre);
+      n.oreAtMine=ironFreight.waiting;
       n.ore=Math.max(0,n.ore+hauledOre-ingotsMade);
       n.ingot=Math.max(0,n.ingot+ingotsMade-platesMade-beamsMade);
       n.beams+=beamsMade;
       n.plate=Math.max(0,n.plate+platesMade-partsMade);
       n.parts+=partsMade;
-      n.copperAtMine=Math.max(0,n.copperAtMine+copperOreMade-hauledCopper);
+      n.copperAtMine=copperFreight.waiting;
       n.copperOre=Math.max(0,n.copperOre+hauledCopper-copperIngotsMade);
       n.copperIngot=Math.max(0,n.copperIngot+copperIngotsMade-wireMade);
       n.wire=Math.max(0,n.wire+wireMade-circuitsMade-coilsMade);
@@ -1219,7 +1233,7 @@ export default function App(){
           <div className="staff-tab-bar" role="tablist" aria-label="Staff departments"><button type="button" role="tab" aria-selected={staffTab==='maintenance'} className={staffTab==='maintenance'?'selected':''} onClick={()=>setStaffTab('maintenance')}><Wrench size={16}/> MAINTENANCE · {assignedTotal}/{s.mechanics}</button><button type="button" role="tab" aria-selected={staffTab==='dispatch'} className={staffTab==='dispatch'?'selected':''} onClick={()=>setStaffTab('dispatch')}><Truck size={16}/> DISPATCH · {assignedSales}/{s.salespeople}</button><button type="button" role="tab" aria-selected={staffTab==='haulage'} className={staffTab==='haulage'?'selected':''} onClick={()=>setStaffTab('haulage')}><Truck size={16}/> HAULAGE · {s.driverAssignments.iron+s.driverAssignments.copper}/{s.drivers}</button></div>
         </section>
         {staffTab==='haulage'&&<section className="freight-workshop">
-          <div className="freight-heading"><div><span className="eyebrow">MINE TO FACTORY</span><h2>Freight & Delivery Fleet</h2><p>Mining produces ore at the mine site. Drivers move iron and copper to your factory before furnaces can use it. Upgrade the vehicles when the mines are filling faster than you can collect.</p></div><div className="freight-driver-kpi"><span>ON PAYROLL</span><b>{s.drivers} DRIVERS</b><small>{s.drivers*WAGES.driver} RVT/min</small></div></div>
+          <div className="freight-heading"><div><span className="eyebrow">MINE TO FACTORY</span><h2>Freight & Delivery Fleet</h2><p>Drivers move ore to the factory. Starter vans now cover a basic mine; if your mine grows beyond its transport capacity, it slows down rather than building an endless pile of ore.</p></div><div className="freight-driver-kpi"><span>ON PAYROLL</span><b>{s.drivers} DRIVERS</b><small>{s.drivers*WAGES.driver} RVT/min</small></div></div>
           <div className="freight-current"><div className="freight-current-symbol"><Truck size={31}/></div><div><span className="eyebrow">CURRENT VEHICLE</span><h3>{currentFreight.name}</h3><p>{currentFreight.description}</p></div><b>{currentFreight.capacity.toFixed(1)} <small>ORE/SEC PER DRIVER</small></b></div>
           <div className="freight-route-list">
             {([{route:'iron' as FreightRoute,name:'IRON MINE',stock:s.oreAtMine,owned:s.miner},{route:'copper' as FreightRoute,name:'COPPER MINE',stock:s.copperAtMine,owned:s.copperMiner}] as const).map(item=><div className="freight-route" key={item.route}>
@@ -1228,8 +1242,8 @@ export default function App(){
               <div className="assignment-stepper" role="group" aria-label={item.name+' driver allocation'}><button type="button" aria-label={'Remove driver from '+item.name} disabled={s.driverAssignments[item.route]===0} onClick={()=>assignDriver(item.route,s.driverAssignments[item.route]-1)}>−</button><output>{s.driverAssignments[item.route]}</output><button type="button" aria-label={'Assign driver to '+item.name} disabled={availableDrivers===0} onClick={()=>assignDriver(item.route,s.driverAssignments[item.route]+1)}>+</button></div>
             </div>)}
           </div>
-          <div className="freight-actions"><div><span className="eyebrow">DRIVER ROSTER</span><strong>{availableDrivers} available</strong><small>Each driver costs {WAGES.driver} RVT per minute. Assign drivers above to move ore.</small></div><button className="primary-button" disabled={s.cash<driverHireCost(s)} onClick={hireDriver}>HIRE DRIVER · {fmt(driverHireCost(s))} RVT</button><button className="secondary-button" disabled={s.drivers===0} onClick={fireDriver}>FIRE ONE</button></div>
-          <div className="freight-upgrade"><div><span className="eyebrow">FLEET EXPANSION</span><h3>{s.freightTier<3?'Next: '+FREIGHT_TIERS[s.freightTier+1].name:'Largest lorries unlocked'}</h3><p>{s.freightTier<3?'Your current drivers each carry more ore per second after upgrading. No need to reassign them.':'Your fleet has reached maximum lorry capacity.'}</p></div><button className="primary-button" disabled={s.freightTier>=3||s.cash<(FREIGHT_TIERS[s.freightTier+1]?.cost??Infinity)} onClick={upgradeFreight}>{s.freightTier>=3?'FLEET MAXED':'UPGRADE · '+fmt(FREIGHT_TIERS[s.freightTier+1].cost)+' RVT'}</button></div>
+          <div className="freight-actions"><div><span className="eyebrow">DRIVER ROSTER</span><strong>{availableDrivers} available</strong><small>Each driver costs {WAGES.driver} RVT per minute. Assign them to collect ore; uncollected mine stock slows further mining.</small></div><button className="primary-button" disabled={s.cash<driverHireCost(s)} onClick={hireDriver}>HIRE DRIVER · {fmt(driverHireCost(s))} RVT</button><button className="secondary-button" disabled={s.drivers===0} onClick={fireDriver}>FIRE ONE</button></div>
+          <div className="freight-upgrade"><div><span className="eyebrow">FLEET EXPANSION</span><h3>{s.freightTier<3?'Next: '+FREIGHT_TIERS[s.freightTier+1].name:'Largest lorries unlocked'}</h3><p>{s.freightTier<3?'Your drivers carry more ore per second. If mine stock is building up, upgrade vehicles or add drivers.':'Your fleet has reached maximum lorry capacity.'}</p></div><button className="primary-button" disabled={s.freightTier>=3||s.cash<(FREIGHT_TIERS[s.freightTier+1]?.cost??Infinity)} onClick={upgradeFreight}>{s.freightTier>=3?'FLEET MAXED':'UPGRADE · '+fmt(FREIGHT_TIERS[s.freightTier+1].cost)+' RVT'}</button></div>
           <div className="freight-drone-locked"><span><Zap size={17}/><b>DRONE FREIGHT</b></span><small>COMING LATER · LOCKED</small></div>
         </section>}
         {staffTab==='maintenance'&&<section className="staff-assignments">
