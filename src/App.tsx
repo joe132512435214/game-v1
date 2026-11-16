@@ -518,6 +518,7 @@ export default function App(){
   const [page,setPage]=useState<Page>('factory');
   const [staffTab,setStaffTab]=useState<'maintenance'|'dispatch'|'haulage'>('maintenance');
   const [factoryView,setFactoryView]=useState<'overview'|'equipment'>('overview');
+  const [showDashboardDetails,setShowDashboardDetails]=useState(false);
   const [running,setRunning]=useState(true);
   const [speed,setSpeed]=useState(1);
   const [notice,setNotice]=useState('');
@@ -1180,15 +1181,14 @@ export default function App(){
             </div>
             <div className="ops-quick-actions">
               <button className="primary-button" onClick={()=>setFactoryView('equipment')}><Factory size={16}/> Manage machines</button>
-              <button className="secondary-button" onClick={()=>setInboxOpen(true)}><Truck size={16}/> Orders <span>{incomingMail.length}</span></button>
-              <button className="secondary-button" onClick={()=>setPage('warehouse')}><Boxes size={16}/> Warehouse</button>
+
             </div>
           </div>
           <div className="ops-kpi-grid">
             <div className="ops-kpi"><div className="ops-kpi-label"><Factory size={16}/> MACHINES OPERATING</div><strong>{machinesWorking}<small> / {machineCount}</small></strong><p>{brokenCount>0?brokenCount+' unit(s) need repairs':machineCount===0?'Build your first machine':'Installed units currently producing'}</p></div>
-            <div className="ops-kpi"><div className="ops-kpi-label"><Cog size={16}/> FACTORY OUTPUT</div><strong>{(machines.reduce((total,m)=>total+rateFor(m),0)*60).toFixed(1)}<small> / min</small></strong><p>Across every active production stage</p></div>
+
             <div className="ops-kpi"><div className="ops-kpi-label"><Truck size={16}/> CUSTOMER ORDERS</div><strong>{readyOrders}<small> ready</small></strong><p>{activeOrders} in progress · {incomingMail.length} in your inbox</p></div>
-            <div className="ops-kpi"><div className="ops-kpi-label"><Boxes size={16}/> INVENTORY VALUE</div><strong>{fmt(stockValue)}<small> RVT</small></strong><p>Stock available in your warehouse</p></div>
+
           </div>
           <div className="ops-command-grid">
             <div className="ops-growth">
@@ -1211,6 +1211,8 @@ export default function App(){
             </div>
           </div>
         </section>
+        <div className="ops-details-toggle"><button type="button" className="secondary-button" aria-expanded={showDashboardDetails} onClick={()=>setShowDashboardDetails(v=>!v)}>{showDashboardDetails?"HIDE EXTRA DETAILS":"SHOW MORE DETAILS"} <span aria-hidden="true">{showDashboardDetails?"−":"+"}</span></button></div>
+        {showDashboardDetails&&<>
         <section className="ops-roadmap" aria-label="Factory progression">
           <div className="ops-roadmap-heading"><b>PROGRESSION</b><span>Completed stages, current stage and your next milestone</span></div>
           <div className="ops-roadmap-steps">{FACTORY_STAGES.filter(stage=>stage.number<=currentStage.number+1).map(stage=><div key={stage.number} className={'ops-roadmap-step '+(stage.number===currentStage.number?'is-current':stage.number<currentStage.number?'is-done':'is-upcoming')}><span>{stage.number<currentStage.number?'✓':String(stage.number).padStart(2,'0')}</span><div><b>{stage.name}</b><small>{stage.number<currentStage.number?'COMPLETE':stage.number===currentStage.number?'IN PROGRESS':'NEXT UNLOCK'}</small></div></div>)}</div>
@@ -1219,10 +1221,11 @@ export default function App(){
           <div className="ops-machines-preview-head"><div><span className="eyebrow">MACHINE ROSTER</span><h2>Your equipment</h2><p>See what is running before opening the full factory floor.</p></div><button type="button" className="secondary-button" onClick={()=>setFactoryView('equipment')}>VIEW ALL MACHINES <ArrowUpRight size={15}/></button></div>
           <div className="ops-machine-tiles">{(visibleMachines.filter(m=>s[m.id]>0).length?visibleMachines.filter(m=>s[m.id]>0):visibleMachines.slice(0,1)).slice(0,5).map(m=><button type="button" key={m.id} className="ops-machine-tile" onClick={()=>setFactoryView('equipment')}><MachineIcon id={m.id} size={64}/><span className="ops-machine-tile-copy"><b>{m.name}</b><small>{s[m.id]===0?'READY TO BUILD':!running?'PAUSED':s.lastOutput[m.id]>0?'PRODUCING':'WAITING / STOPPED'}</small></span><ArrowUpRight size={14}/></button>)}</div>
         </section>
+        </>}
         {focusDelivery&&<section className="delivery-focus" aria-label="Next delivery progress"><div className="delivery-focus-header"><div><span className="eyebrow">YOUR NEXT PAYDAY</span><h2>{focusDelivery.name}</h2><p>Watch inventory build, then fulfil the order for {fmt(focusDelivery.reward)} RVT.</p></div><button type="button" className="secondary-button" onClick={()=>{setInboxOpen(true);setExpandedMail(focusDelivery.key)}}>{orderCompletion(focusDelivery)>=1?'DELIVER NOW':'VIEW ORDER'} <ArrowUpRight size={15}/></button></div><div className="delivery-focus-lines">{focusDelivery.items.map(line=><div className="delivery-focus-line" key={line.good}><div><b>{goods.find(g=>g.id===line.good)?.name}</b><span>{fmt(Math.min(s[line.good],line.qty))} / {line.qty}</span></div><div className="delivery-focus-track"><i style={{width:Math.min(100,(s[line.good]/line.qty)*100)+'%'}}/></div></div>)}</div><div className="delivery-focus-footer"><span>{Math.round(orderCompletion(focusDelivery)*100)}% READY</span><strong>{orderCompletion(focusDelivery)>=1?'✓ READY TO SHIP':fmt(Math.ceil(focusDelivery.items.reduce((missing,line)=>missing+Math.max(0,line.qty-s[line.good]),0)))+' UNITS TO GO'}</strong></div></section>}
         {((s.miner>0&&freightThroughput(s,'iron')===0)||(s.copperMiner>0&&freightThroughput(s,'copper')===0))&&<div className="freight-route-warning"><AlertTriangle size={18}/><span><b>Ore transport stopped.</b> {s.miner>0&&freightThroughput(s,'iron')===0?'Iron ':' '}{s.copperMiner>0&&freightThroughput(s,'copper')===0?'Copper ':''}mines need assigned drivers or drones before ore can reach your factory.</span><button type="button" onClick={()=>{setPage('staff');setStaffTab('haulage')}}>MANAGE FREIGHT</button></div>}
-        {constrainedMachines.length>0&&<section className="factory-flow-advisor"><div><span className="eyebrow">PRODUCTION ADVISOR</span><h2>Where should you expand?</h2><p>These machines have more capacity than their suppliers can feed. More of the same machine won't help yet.</p></div><div className="factory-flow-picks">{constrainedMachines.map(m=><button key={m.id} onClick={()=>setFactoryView('equipment')}><span><b>{m.name}</b><small>Improve: {upstreamAdvice[m.id]}</small></span><strong>{Math.round(utilizationOf(m.id)*100)}% USED</strong><ArrowUpRight size={15}/></button>)}</div></section>}
-        <section className="mission-panel"><div className="mission-heading"><div><span className="eyebrow">YOUR NEXT OBJECTIVE</span><h2>{activeMission?activeMission.title:'All missions complete!'}</h2><p>{activeMission?activeMission.detail:'You have completed the starter mission line. Keep expanding your factory.'}</p></div><span className="mission-count">{s.missionsClaimed.length}/{missions.length} COMPLETE</span></div>{activeMission?<><div className="mission-progress"><i style={{width:(activeMission.progress/activeMission.target*100)+'%'}}/></div><div className="mission-footer"><span>{activeMission.target>1?fmt(activeMission.progress)+' / '+fmt(activeMission.target):activeMission.progress>=1?'Objective complete':'Not complete yet'}</span><b>REWARD · {fmt(activeMission.rivets)} RVT · {activeMission.xp} XP{activeMission.gears?' + '+activeMission.gears+' GEARS':''}</b></div></>:<div className="mission-finished">Starter campaign finished. Your next challenge is to grow the factory your way.</div>}</section>
+        {showDashboardDetails&&constrainedMachines.length>0&&<section className="factory-flow-advisor"><div><span className="eyebrow">PRODUCTION ADVISOR</span><h2>Where should you expand?</h2><p>These machines have more capacity than their suppliers can feed. More of the same machine won't help yet.</p></div><div className="factory-flow-picks">{constrainedMachines.map(m=><button key={m.id} onClick={()=>setFactoryView('equipment')}><span><b>{m.name}</b><small>Improve: {upstreamAdvice[m.id]}</small></span><strong>{Math.round(utilizationOf(m.id)*100)}% USED</strong><ArrowUpRight size={15}/></button>)}</div></section>}
+        {showDashboardDetails&&<section className="mission-panel"><div className="mission-heading"><div><span className="eyebrow">YOUR NEXT OBJECTIVE</span><h2>{activeMission?activeMission.title:'All missions complete!'}</h2><p>{activeMission?activeMission.detail:'You have completed the starter mission line. Keep expanding your factory.'}</p></div><span className="mission-count">{s.missionsClaimed.length}/{missions.length} COMPLETE</span></div>{activeMission?<><div className="mission-progress"><i style={{width:(activeMission.progress/activeMission.target*100)+'%'}}/></div><div className="mission-footer"><span>{activeMission.target>1?fmt(activeMission.progress)+' / '+fmt(activeMission.target):activeMission.progress>=1?'Objective complete':'Not complete yet'}</span><b>REWARD · {fmt(activeMission.rivets)} RVT · {activeMission.xp} XP{activeMission.gears?' + '+activeMission.gears+' GEARS':''}</b></div></>:<div className="mission-finished">Starter campaign finished. Your next challenge is to grow the factory your way.</div>}</section>}
         {brokenCount>0&&<div className="alert-banner"><AlertTriangle size={18}/><span><b>{brokenCount} machine{brokenCount>1?'s':''} broken.</b> Visit Staff to assign a mechanic, or repair them here.</span><button onClick={()=>{setPage('staff');setStaffTab('maintenance')}}>MANAGE STAFF</button></div>}
         </>}
         {factoryView==='equipment'&&<>
