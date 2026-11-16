@@ -709,7 +709,6 @@ export default function App(){
   useEffect(()=>{if(page!=='extras'&&qcView){setQcView(null);setS(v=>({...v,qcSession:null}));}},[page,qcView]);
   const [staffTab,setStaffTab]=useState<'maintenance'|'dispatch'|'haulage'>('maintenance');
   const [factoryView,setFactoryView]=useState<'overview'|'equipment'>('overview');
-  const [showDashboardDetails,setShowDashboardDetails]=useState(false);
   const [running,setRunning]=useState(true);
   const [speed,setSpeed]=useState(1);
   const [notice,setNotice]=useState('');
@@ -998,11 +997,7 @@ export default function App(){
   const powerPerMinute=economyActive&&!s.powerShortage?electricityCostPerMinute(s,speed):0;
   const netPerMinute=autoIncomePerMinute-wagesPerMinute-powerPerMinute;
   const moneyPerMinute=(amount:number)=>Math.abs(amount).toFixed(1);
-  // XP requirements increase with each level; there is no artificial maximum.
-  const xpForLevel=(level:number)=>75*(level-1)*level;
   const progressionLevel=Math.max(1,Math.floor((1+Math.sqrt(1+4*s.experience/75))/2));
-  const levelStart=xpForLevel(progressionLevel);
-  const nextGoal=xpForLevel(progressionLevel+1);
   const reputationUnlock:Record<MachineId,number>={miner:0,smelter:2,press:8,assembler:18,copperMiner:20,copperSmelter:35,wiremill:50,circuitpress:60,beamMill:18,coilWinder:50,motorworks:190};
   const machineTypesOwned=machines.filter(m=>s[m.id]>0).length;
   const companyRanks=[
@@ -1016,10 +1011,7 @@ export default function App(){
   const rankUnlocked=(rank:typeof companyRanks[number])=>s.reputation>=rank.rep&&s.experience>=rank.xp&&s.sold>=rank.sales&&machineTypesOwned>=rank.machines;
   const currentRank=[...companyRanks].reverse().find(rankUnlocked)||companyRanks[0];
   const companyRank=currentRank.name;
-  const nextRank=companyRanks[companyRanks.indexOf(currentRank)+1];
   
-  const repProgress=nextRank?Math.min(100,s.reputation/Math.max(1,nextRank.rep)*100):100;
-  const goalProgress=Math.min(100,(s.experience-levelStart)/(nextGoal-levelStart)*100);
   const unlockAt:Record<MachineId,number>={miner:0,smelter:25,press:150,assembler:200,copperMiner:200,copperSmelter:350,wiremill:500,circuitpress:700,beamMill:260,coilWinder:650,motorworks:3500};
   // Keep the floor focused: show every machine already owned and just the next milestone.
   const stageReached=(stage:number)=>{
@@ -1028,7 +1020,6 @@ export default function App(){
     return stage===5?rankUnlocked(companyRanks[3]):stage===6?rankUnlocked(companyRanks[5]):true;
   };
   const currentStage=[...FACTORY_STAGES].reverse().find(stage=>stageReached(stage.number))||FACTORY_STAGES[0];
-  const nextStage=FACTORY_STAGES.find(stage=>stage.number===currentStage.number+1);
   const nextMachine=machines.filter(m=>s[m.id]===0).sort((a,b)=>unlockAt[a.id]-unlockAt[b.id])[0];
   const visibleMachines=machines.filter(m=>s[m.id]>0||(s.pendingReplacement[m.id]||0)>0||m.id===nextMachine?.id||(m.id==='beamMill'&&s.smelter>0)||(m.id==='coilWinder'&&s.wiremill>0));
   const visibleGoods=goods.filter((g)=>{
@@ -1073,16 +1064,12 @@ export default function App(){
   const readyOrders=visibleContracts.filter(c=>!s.contractsCompleted.includes(c.id)&&s.reputation>=c.minRep&&s[c.good]>=c.qty).length+repeatOrders.filter(c=>orderReady(s,c)).length;
   const activeOrders=visibleContracts.filter(c=>!s.contractsCompleted.includes(c.id)&&s.reputation>=c.minRep&&s[c.good]<c.qty).length+repeatOrders.filter(c=>!orderReady(s,c)).length;
   const capacityOf=(id:MachineId)=>machineCapacity(s,id,speed,s.boostSeconds.production>0);
-  const utilizationOf=(id:MachineId)=>capacityOf(id)>0?s.lastOutput[id]/capacityOf(id):0;
   const upstreamAdvice:Partial<Record<MachineId,string>>={
     smelter:'Rockbreaker Mine',press:'Blast Furnace',beamMill:'Blast Furnace',
     assembler:'Stamping Press',copperSmelter:'Copper Excavator',
     wiremill:'Copper Foundry',circuitpress:'Wire Drawing Mill',coilWinder:'Wire Drawing Mill',
     motorworks:'Coil Winding Machine + Circuit Board Line'
   };
-  const constrainedMachines=machines.filter(m=>s[m.id]>0&&workingUnits(s,m.id)>0&&
-    upstreamAdvice[m.id]&&utilizationOf(m.id)<.78)
-    .sort((a,b)=>utilizationOf(a.id)-utilizationOf(b.id)).slice(0,2);
   const completedOrders=s.contractsCompleted.length;
   const deliveryCandidates=[
     ...visibleContracts.filter(c=>s.reputation>=c.minRep).map(c=>({key:'story-'+c.id,name:c.name,items:[{good:c.good,qty:c.qty}],reward:c.reward,due:0})),
