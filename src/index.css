@@ -997,3 +997,74 @@ button:focus-visible,select:focus-visible{outline:2px solid #f1c48d;outline-offs
 @media(max-width:620px){
  .ops-machine-tile>.pixel-machine-fallback{width:56px!important;height:56px!important}
 }
+
+
+/* Charity giving: in-game Rivet spending and small, capped community reputation. */
+.charity-panel{
+  margin:20px 0 16px;padding:19px;
+  background:#202b23;border:1px solid #52644f;border-radius:5px;
+}
+.charity-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:22px;padding-bottom:16px;border-bottom:1px solid #405043}
+.charity-heading>div:first-child{flex:1;min-width:0}
+.charity-heading h2{display:flex;align-items:center;gap:10px;margin:6px 0 7px;color:#f0e5d4;font-size:23px;letter-spacing:-.5px}
+.charity-heading h2 svg{color:#ddae76;flex-shrink:0}
+.charity-heading p{max-width:700px;margin:0;color:#b5c3b5;font-size:11px;line-height:1.6}
+.charity-lifetime{display:flex;flex-direction:column;min-width:167px;padding:13px 15px;background:#17221c;border:1px solid #536851;border-radius:4px}
+.charity-lifetime>small{color:#a7b9a5;font:9px 'IBM Plex Mono',monospace}
+.charity-lifetime strong{margin:8px 0;font:600 25px 'IBM Plex Mono',monospace;color:#e6cb9a;white-space:nowrap}
+.charity-lifetime strong span{font-size:11px;color:#b6a37f}
+.charity-section-title{display:block;margin:17px 0 9px;font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.55px;color:#d9bb8f}
+.charity-causes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.charity-cause{
+  position:relative;display:flex;text-align:left;align-items:flex-start;gap:12px;min-width:0;
+  padding:15px 35px 15px 13px;background:#1b261e;border:1px solid #405341;
+  border-radius:4px;color:#e9e3d6;cursor:pointer;
+}
+.charity-cause:hover{background:#2b382d;border-color:#72866c}
+.charity-cause.selected{background:#303a2b;border-color:#bc9663;box-shadow:inset 0 0 0 1px #97784c}
+.charity-cause>svg:first-child{flex-shrink:0;color:#d7ae7c}
+.charity-cause>span{display:flex;flex-direction:column;gap:4px;min-width:0}
+.charity-cause small{font:9px 'IBM Plex Mono',monospace;letter-spacing:.4px;color:#d0bd9b}
+.charity-cause b{font-size:14px;letter-spacing:-.2px}
+.charity-cause em{font-size:11px;line-height:1.55;color:#b1beb0;font-style:normal}
+.charity-selected-icon{position:absolute;right:12px;top:12px;color:#dabb84}
+.charity-donate-bottom{display:grid;grid-template-columns:1fr 1fr;align-items:start;gap:22px;padding-top:6px}
+.charity-amount-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.charity-amount-grid button{
+  min-height:43px;border:1px solid #4c5f4e;background:#18241c;
+  border-radius:4px;color:#eadfc8;cursor:pointer;font:600 15px 'IBM Plex Mono',monospace;
+  white-space:nowrap
+}
+.charity-amount-grid button small{font-size:9px;color:#b1bda7}
+.charity-amount-grid button.selected{background:#bf9561;border-color:#d8b17c;color:#1c281e}
+.charity-amount-grid button.selected small{color:#394230}
+.charity-amount-grid button:hover:not(.selected){background:#2d3c30}
+.charity-action{display:flex;flex-direction:column;gap:8px;padding-top:7px}
+.charity-benefit{display:flex;align-items:center;gap:8px;color:#d7c2a2;font-size:11px;line-height:1.4}
+.charity-benefit svg{flex-shrink:0;color:#d0a879}
+.charity-action .primary-button{width:100%;min-height:42px}
+.charity-action>small{font-size:10px;color:#aab9a8;line-height:1.5}
+.charity-history{border-top:1px solid #405043;margin-top:17px}
+.charity-history>div{display:flex;gap:8px;flex-wrap:wrap}
+.charity-history>div>span{display:flex;flex:1;gap:6px;align-items:center;justify-content:space-between;min-width:170px;padding:10px 11px;background:#1a251e;border:1px solid #3d4e41;border-radius:3px}
+.charity-history b{font-size:10px;font-weight:600;color:#dfdfd1}
+.charity-history small{font:9px 'IBM Plex Mono',monospace;color:#d4b78a;white-space:nowrap}
+.charity-confirm-modal{width:100%;max-width:430px;background:#222e25;border:1px solid #94754f;padding:25px;border-radius:5px;box-shadow:0 18px 60px #0009}
+.charity-confirm-icon{display:grid;place-items:center;width:45px;height:45px;border-radius:5px;border:1px solid #91754c;background:#39392d;color:#e5bd85;margin-bottom:13px}
+.charity-confirm-modal h2{color:#f0e7d6;line-height:1.2;font-size:23px;margin:10px 0 9px}
+.charity-confirm-modal p{color:#b3c2b3;font-size:12px;line-height:1.7;margin-bottom:21px}
+.charity-confirm-modal p strong{color:#e8c999}
+.charity-confirm-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:820px){
+  .charity-heading{flex-direction:column}
+  .charity-lifetime{width:100%}
+  .charity-donate-bottom{grid-template-columns:1fr;gap:5px}
+}
+@media(max-width:560px){
+  .charity-panel{padding:12px}
+  .charity-causes{grid-template-columns:1fr}
+  .charity-heading h2{font-size:21px}
+  .charity-amount-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .charity-cause{padding:12px 35px 12px 11px}
+  .charity-history>div>span{min-width:100%}
+}
