@@ -13,7 +13,7 @@ type GameState = {
   miner:number; smelter:number; press:number; assembler:number; copperMiner:number; copperSmelter:number; wiremill:number; circuitpress:number;
   tier_miner:number; tier_smelter:number; tier_press:number; tier_assembler:number; tier_copperMiner:number; tier_copperSmelter:number; tier_wiremill:number; tier_circuitpress:number;
   level:number; experience:number; sold:number; xpMigrationVersion:number; salesXpProgress:number; autoSalesXpProgress:number; mechanics:number; salespeople:number; reputation:number; acceptedContracts:string[]; contractsCompleted:string[]; repeatContractRounds:number[];
-  broken:Record<MachineId,number>; mechanicAssignments:Record<MachineId,number>; breakdownEvent:MachineId|null; powerCutEvent:boolean; powerCutSeen:boolean; cyberAttackEvent:boolean; cyberAttackSeen:boolean; cybersecuritySpecialists:number;
+  broken:Record<MachineId,number>; unitFaults:Record<MachineId,number[]>; mechanicAssignments:Record<MachineId,number>; breakdownEvent:MachineId|null; powerCutEvent:boolean; powerCutSeen:boolean; cyberAttackEvent:boolean; cyberAttackSeen:boolean; cybersecuritySpecialists:number;
   salesTarget:StockId; autoSell:boolean; salesAssignments:Record<StockId,number>; boostSeconds:Record<BoostId,number>; missionsClaimed:number[]; researched:string[];
 };
 const SAVE_KEY = 'ironworks-tycoon-save-v2';
@@ -22,7 +22,7 @@ const fresh:GameState = {
   miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0,
   tier_miner:0,tier_smelter:0,tier_press:0,tier_assembler:0,tier_copperMiner:0,tier_copperSmelter:0,tier_wiremill:0,tier_circuitpress:0,
   level:1,experience:0,sold:0,xpMigrationVersion:1,salesXpProgress:0,autoSalesXpProgress:0,mechanics:0,salespeople:0,
-  broken:{miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0},
+  broken:{miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0},unitFaults:{miner:[],smelter:[],press:[],assembler:[],copperMiner:[],copperSmelter:[],wiremill:[],circuitpress:[]},
   mechanicAssignments:{miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0},breakdownEvent:null,powerCutEvent:false,powerCutSeen:false,cyberAttackEvent:false,cyberAttackSeen:false,cybersecuritySpecialists:0,
   salesTarget:'parts',autoSell:false,salesAssignments:{ore:0,ingot:0,plate:0,parts:0,copperOre:0,copperIngot:0,wire:0,circuits:0},boostSeconds:{production:0,dispatch:0,protection:0},missionsClaimed:[],researched:[],reputation:0,acceptedContracts:[],contractsCompleted:[],repeatContractRounds:[0,0,0]
 };
@@ -81,7 +81,7 @@ function loadGame():GameState{
     const legacyXpFromMissions=(Array.isArray(saved.missionsClaimed)?saved.missionsClaimed:[]).reduce((total:number,id:number)=>total+(missionXp[id]||0),0);
     const migratedExperience=saved.experience!==undefined?Math.max(0,Number(saved.experience)||0):Math.max(legacyXpFromContracts+legacyXpFromMissions,Number(saved.assembler)>0?270:Number(saved.press)>0?165:Number(saved.smelter)>0?60:Number(saved.miner)>0?25:0);
     const legacyShipmentXp=saved.xpMigrationVersion===undefined?Math.floor(Math.max(0,Number(saved.sold)||0)/500):0;
-    return {...fresh,...saved,xpMigrationVersion:1,salesXpProgress:Math.max(0,Number(saved.salesXpProgress)||0)%25,autoSalesXpProgress:Math.max(0,Number(saved.autoSalesXpProgress)||0)%60,broken:{...fresh.broken,...saved.broken},mechanicAssignments:{...fresh.mechanicAssignments,...saved.mechanicAssignments},breakdownEvent:saved.breakdownEvent??null,powerCutEvent:shouldRecoverPowerCut?true:(saved.powerCutEvent??false),powerCutSeen:shouldRecoverPowerCut?true:(saved.powerCutSeen??false),cyberAttackEvent:shouldRecoverCyberAttack?true:(saved.cyberAttackEvent??false),cyberAttackSeen:shouldRecoverCyberAttack?true:(saved.cyberAttackSeen??false),cybersecuritySpecialists:Math.max(0,Number(saved.cybersecuritySpecialists)||0),researched:Array.isArray(saved.researched)?saved.researched:[],acceptedContracts:Array.isArray(saved.acceptedContracts)?saved.acceptedContracts:[],contractsCompleted:completed,boostSeconds:{production:Math.max(0,Math.floor(Number(saved.boostSeconds?.production)||0)),dispatch:Math.max(0,Math.floor(Number(saved.boostSeconds?.dispatch)||0)),protection:Math.max(0,Math.floor(Number(saved.boostSeconds?.protection)||0))},salesAssignments:goods.reduce((result,g)=>({...result,[g.id]:Math.max(0,Math.floor(Number(saved.salesAssignments?.[g.id]??(!saved.salesAssignments&&saved.salesTarget===g.id?saved.salespeople:0))||0))}),{...fresh.salesAssignments}),repeatContractRounds:Array.from({length:3},(_,i)=>Math.max(0,Math.floor(Number(saved.repeatContractRounds?.[i])||0))),experience:migratedExperience+legacyShipmentXp,reputation:Math.max(0,Number(saved.reputation)||0)};
+    return {...fresh,...saved,xpMigrationVersion:1,salesXpProgress:Math.max(0,Number(saved.salesXpProgress)||0)%25,autoSalesXpProgress:Math.max(0,Number(saved.autoSalesXpProgress)||0)%60,broken:{...fresh.broken,...saved.broken},unitFaults:Object.fromEntries(machines.map(m=>[m.id,Array.from({length:Math.max(0,Number(saved[m.id])||0)},(_,i)=>Math.max(0,Number(saved.unitFaults?.[m.id]?.[i]??(i===0?saved.broken?.[m.id]:0))||0))])) as Record<MachineId,number[]>,mechanicAssignments:{...fresh.mechanicAssignments,...saved.mechanicAssignments},breakdownEvent:saved.breakdownEvent??null,powerCutEvent:shouldRecoverPowerCut?true:(saved.powerCutEvent??false),powerCutSeen:shouldRecoverPowerCut?true:(saved.powerCutSeen??false),cyberAttackEvent:shouldRecoverCyberAttack?true:(saved.cyberAttackEvent??false),cyberAttackSeen:shouldRecoverCyberAttack?true:(saved.cyberAttackSeen??false),cybersecuritySpecialists:Math.max(0,Number(saved.cybersecuritySpecialists)||0),researched:Array.isArray(saved.researched)?saved.researched:[],acceptedContracts:Array.isArray(saved.acceptedContracts)?saved.acceptedContracts:[],contractsCompleted:completed,boostSeconds:{production:Math.max(0,Math.floor(Number(saved.boostSeconds?.production)||0)),dispatch:Math.max(0,Math.floor(Number(saved.boostSeconds?.dispatch)||0)),protection:Math.max(0,Math.floor(Number(saved.boostSeconds?.protection)||0))},salesAssignments:goods.reduce((result,g)=>({...result,[g.id]:Math.max(0,Math.floor(Number(saved.salesAssignments?.[g.id]??(!saved.salesAssignments&&saved.salesTarget===g.id?saved.salespeople:0))||0))}),{...fresh.salesAssignments}),repeatContractRounds:Array.from({length:3},(_,i)=>Math.max(0,Math.floor(Number(saved.repeatContractRounds?.[i])||0))),experience:migratedExperience+legacyShipmentXp,reputation:Math.max(0,Number(saved.reputation)||0)};
   }catch{return fresh;}
 }
 const fmt=(n:number)=>Math.floor(n).toLocaleString();
@@ -92,6 +92,12 @@ const WAGES={mechanic:3,sales:5,cyber:8} as const;
 const payrollPerMinute=(v:GameState)=>v.mechanics*WAGES.mechanic+v.salespeople*WAGES.sales+v.cybersecuritySpecialists*WAGES.cyber;
 const REPAIR_COSTS:Record<MachineId,number>={miner:40,smelter:65,press:90,assembler:130,copperMiner:85,copperSmelter:155,wiremill:230,circuitpress:340};
 const repairCostFor=(id:MachineId,level:number)=>REPAIR_COSTS[id]+level*15;
+const MAX_MACHINE_UNITS=3;
+const faultCount=(v:GameState,id:MachineId)=>v.unitFaults[id].slice(0,v[id]).filter(f=>f>0).length;
+const workingUnits=(v:GameState,id:MachineId)=>Math.max(0,v[id]-faultCount(v,id));
+const firstFault=(v:GameState,id:MachineId)=>v.unitFaults[id].findIndex((f,i)=>i<v[id]&&f>0);
+const repairUnit=(v:GameState,id:MachineId,index:number)=>({...v,unitFaults:{...v.unitFaults,[id]:v.unitFaults[id].map((f,i)=>i===index?0:f)},broken:{...v.broken,[id]:0}});
+
 const BOOSTS:{id:BoostId;name:string;subtitle:string;description:string;cost:number;duration:number}[]=[
   {id:'production',name:'Production Overdrive',subtitle:'2× FACTORY OUTPUT',description:'Double every working machine’s output for three minutes. Does not increase breakdown risk.',cost:350,duration:180},
   {id:'dispatch',name:'Express Dispatch',subtitle:'2× AUTOMATIC SALES',description:'Salespeople ship twice as much stock for three minutes. Earn the normal XP from all those sales.',cost:250,duration:180},
@@ -99,7 +105,7 @@ const BOOSTS:{id:BoostId;name:string;subtitle:string;description:string;cost:num
 ];
 const boostClock=(seconds:number)=>`${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;
 
-function MachineArt({id,active,broken,cycle}:{id:MachineId;active:boolean;broken:boolean;cycle:number}){
+function MachineArt({id,active,broken,cycle,lights}:{id:MachineId;active:boolean;broken:boolean;cycle:number;lights:('on'|'off'|'empty')[]}){
  const beat=cycle%2?'cycle-b':'cycle-a';
  const electrical=['copperMiner','copperSmelter','wiremill','circuitpress'].includes(id);
  const copper=electrical?'#bd8054':'#bd985e';
@@ -212,7 +218,7 @@ function MachineArt({id,active,broken,cycle}:{id:MachineId;active:boolean;broken
    {active&&<g className="sparkles" fill="#f4d28f" stroke="#f4d28f"><path d="M42 39v-12m-6 6h12"/><path d="M279 83V71m-6 6h12"/><circle cx="291" cy="126" r="2.5"/></g>}
    {broken&&<path d="M151 27l-10 20h12l-7 18 22-26h-13l8-12z" fill="#d47b55" stroke="#ffe0aa" strokeWidth="2"/>}
   </svg>
-  <div className="machine-art-floor"/><span className="art-lamp"><i/><i/><i/></span>
+  <div className="machine-art-floor"/><span className="art-lamp" role="group" aria-label="Individual machine status lights">{lights.map((light,i)=><i key={i} className={"unit-light "+light} title={"Unit "+(i+1)+": "+(light==="on"?"running":light==="off"?"stopped":"not purchased")}/>)}</span>
   {broken&&<span className="broken-stamp"><AlertTriangle size={14}/> BROKEN</span>}{active&&<span className="art-status-dot"/>}
  </div>;
 }
@@ -230,7 +236,7 @@ export default function App(){
   useEffect(()=>{
     if(!running)return;
     const timer=window.setInterval(()=>{setCycle(c=>c+1);setS(v=>{
-      const n={...v,broken:{...v.broken}};
+      const n={...v,broken:{...v.broken},unitFaults:Object.fromEntries(machines.map(m=>[m.id,[...v.unitFaults[m.id]]])) as Record<MachineId,number[]>};
       if(n.breakdownEvent||n.powerCutEvent||n.cyberAttackEvent)return n;
       const boostActive={production:n.boostSeconds.production>0,dispatch:n.boostSeconds.dispatch>0,protection:n.boostSeconds.protection>0};
       n.boostSeconds={production:Math.max(0,n.boostSeconds.production-1),dispatch:Math.max(0,n.boostSeconds.dispatch-1),protection:Math.max(0,n.boostSeconds.protection-1)};
@@ -239,14 +245,26 @@ export default function App(){
       if(payrollFunded)n.cash=Math.max(0,n.cash-wages);
       const multiplier=speed;
       const reliabilityBonus=(n.researched.includes('reinforced-bearings')?.35:0)+(n.researched.includes('predictive-maintenance')?.2:0);
-      machines.forEach(m=>{if(!boostActive.protection&&n[m.id]>0&&n.broken[m.id]===0&&Math.random()<.00065*(speed===2?4:1)*(1-reliabilityBonus)){n.broken[m.id]=24;if(!n.breakdownEvent)n.breakdownEvent=m.id;}});
+      machines.forEach(m=>{
+        if(boostActive.protection)return;
+        for(let i=0;i<n[m.id];i++){
+          if(n.unitFaults[m.id][i]>0)continue;
+          if(Math.random()<.00065*(speed===2?4:1)*(1-reliabilityBonus)){
+            n.unitFaults[m.id][i]=24;
+            if(!n.breakdownEvent)n.breakdownEvent=m.id;
+          }
+        }
+      });
       if(n.breakdownEvent)return n;
       machines.forEach(m=>{
         const assigned=n.mechanicAssignments[m.id]||0;
-        if(payrollFunded&&n.broken[m.id]>0&&assigned>0)n.broken[m.id]=Math.max(0,n.broken[m.id]-assigned*multiplier);
+        if(payrollFunded&&assigned>0){
+          const i=firstFault(n,m.id);
+          if(i>=0)n.unitFaults[m.id][i]=Math.max(0,n.unitFaults[m.id][i]-assigned*multiplier);
+        }
       });
       const researchOutput=(n.researched.includes('efficient-extraction')?1.15:1)*(n.researched.includes('precision-tooling')?1.3:1)*(n.researched.includes('smart-robotics')?1.2:1);
-      const rate=(id:MachineId,base:number)=>n.broken[id]>0?0:n[id]*base*(1+n['tier_'+id]*.25)*researchOutput*multiplier*(boostActive.production?2:1);
+      const rate=(id:MachineId,base:number)=>workingUnits(n,id)*base*(1+n['tier_'+id]*.25)*researchOutput*multiplier*(boostActive.production?2:1);
       const oreMade=rate('miner',.35);
       const ingotsMade=Math.min(n.ore+oreMade,rate('smelter',.22));
       const platesMade=Math.min(n.ingot+ingotsMade,rate('press',.12));
@@ -291,7 +309,7 @@ export default function App(){
   },[running,speed]);
   const machineCount=machines.reduce((sum,m)=>sum+s[m.id],0);
   const stockValue=goods.reduce((sum,g)=>sum+s[g.id]*g.price,0);
-  const brokenCount=machines.filter(m=>s.broken[m.id]>0).length;
+  const brokenCount=machines.reduce((sum,m)=>sum+faultCount(s,m.id),0);
   const assignedTotal=machines.reduce((sum,m)=>sum+s.mechanicAssignments[m.id],0);
   const unassigned=s.mechanics-assignedTotal;
   const assignedSales=goods.reduce((sum,g)=>sum+(s.salesAssignments[g.id]||0),0);
@@ -366,11 +384,11 @@ export default function App(){
   },[s]);
   const researchOutput=(s.researched.includes('efficient-extraction')?1.15:1)*(s.researched.includes('precision-tooling')?1.3:1)*(s.researched.includes('smart-robotics')?1.2:1);
   const saleMultiplier=s.researched.includes('market-intelligence')?1.2:1;
-  const rateFor=(m:typeof machines[number])=>s.broken[m.id]>0?0:s[m.id]*m.rate*(1+s['tier_'+m.id]*.25)*researchOutput*(s.boostSeconds.production>0?2:1);
+  const rateFor=(m:typeof machines[number])=>workingUnits(s,m.id)*m.rate*(1+s['tier_'+m.id]*.25)*researchOutput*(s.boostSeconds.production>0?2:1);
   const resolvePowerCut=(hireMechanic:boolean)=>{
     if(!s.powerCutEvent)return;
     if(hireMechanic){
-      setS(v=>({...v,cash:v.cash-60,mechanics:v.mechanics+1,mechanicAssignments:{...v.mechanicAssignments,miner:v.mechanicAssignments.miner+1},broken:{...v.broken,miner:0},powerCutEvent:false}));
+      setS(v=>({...v,cash:v.cash-60,mechanics:v.mechanics+1,mechanicAssignments:{...v.mechanicAssignments,miner:v.mechanicAssignments.miner+1},broken:{...v.broken,miner:0},unitFaults:{...v.unitFaults,miner:v.unitFaults.miner.map(()=>0)},powerCutEvent:false}));
       setNotice('Mechanic hired on a first-day discount. The Rockbreaker Mine is repaired and back online.');
       return;
     }
@@ -392,17 +410,19 @@ export default function App(){
   const resolveBreakdown=(useMechanic:boolean)=>{
     const id=s.breakdownEvent;
     if(!id)return;
-    if(useMechanic&&s.mechanicAssignments[id]>0){setS(v=>({...v,broken:{...v.broken,[id]:0},breakdownEvent:null}));setNotice(machines.find(m=>m.id===id)!.name+' repaired by your assigned mechanic. Production is back online.');return;}
+    if(useMechanic&&s.mechanicAssignments[id]>0){setS(v=>({...repairUnit(v,id,firstFault(v,id)),breakdownEvent:null}));setNotice(machines.find(m=>m.id===id)!.name+' repaired by your assigned mechanic. Production is back online.');return;}
     const cost=repairCostFor(id,s['tier_'+id]);
-    if(s.cash>=cost){setS(v=>({...v,cash:v.cash-cost,broken:{...v.broken,[id]:0},breakdownEvent:null}));setNotice('Emergency repair complete · '+cost+' RVT spent. Production is back online.');return;}
+    if(s.cash>=cost){setS(v=>({...repairUnit(v,id,firstFault(v,id)),cash:v.cash-cost,breakdownEvent:null}));setNotice('Emergency repair complete · '+cost+' RVT spent. Production is back online.');return;}
     setS(v=>({...v,breakdownEvent:null}));setNotice('Emergency stop cleared. The machine remains broken until you assign a mechanic or save '+cost+' RVT for repairs.');
   };
   const buyMachine=(m:typeof machines[number])=>{
     if(m.id==='miner'&&s.miner===0&&!s.acceptedContracts.includes('first-ore')){setNotice('Accept your First Ore Delivery contract to receive the machine advance.');return;}
+    if(s[m.id]>=MAX_MACHINE_UNITS){setNotice('Maximum of three units reached for '+m.name+'.');return;}
+    if(s[m.id]===0&&(s.experience<unlockAt[m.id]||s.reputation<reputationUnlock[m.id])){setNotice('This machine type is not unlocked yet.');return;}
     const cost=machineCost(m,s);
     if(s.cash<cost){setNotice('Not enough Rivets. Ship some stock to raise funds.');return;}
-    setS(v=>({...v,cash:v.cash-cost,[m.id]:v[m.id]+1,...(m.id==='assembler'&&!v.cyberAttackSeen?{cyberAttackSeen:true,cyberAttackEvent:true}:{})}));
-    setNotice(m.id==='assembler'&&!s.cyberAttackSeen?'Mech Assembly commissioned. Security breach detected — the factory network is locked down.':m.name+' built and added to the factory.');
+    setS(v=>v[m.id]>=MAX_MACHINE_UNITS||v.cash<cost?v:{...v,cash:v.cash-cost,[m.id]:v[m.id]+1,unitFaults:{...v.unitFaults,[m.id]:[...v.unitFaults[m.id],0]},...(m.id==='assembler'&&!v.cyberAttackSeen?{cyberAttackSeen:true,cyberAttackEvent:true}:{})});
+    setNotice(m.id==='assembler'&&!s.cyberAttackSeen?'Mech Assembly commissioned. Security breach detected — the factory network is locked down.':m.name+' unit '+(s[m.id]+1)+' built and added to the factory.');
   };
   const upgradeMachine=(m:typeof machines[number])=>{
     const cost=(s['tier_'+m.id]+1)*3;
@@ -423,7 +443,7 @@ export default function App(){
     if(contract.id==='first-ore'&&!s.acceptedContracts.includes('first-ore')){setNotice('Accept the opening contract before delivering goods.');return;}
     if(s.reputation<contract.minRep){setNotice('Your company needs '+contract.minRep+' reputation.');return;}
     if(s[contract.good]<contract.qty){setNotice('You need '+contract.qty+' units in stock.');return;}
-    setS(v=>({...v,[contract.good]:v[contract.good]-contract.qty,cash:v.cash+contract.reward,reputation:v.reputation+contract.rep,experience:v.experience+contract.xp,contractsCompleted:[...v.contractsCompleted,contract.id],...(contract.id==='first-ore'&&!v.powerCutSeen?{powerCutSeen:true,powerCutEvent:true,broken:{...v.broken,miner:Math.max(v.broken.miner,30)}}:{})}));
+    setS(v=>({...v,[contract.good]:v[contract.good]-contract.qty,cash:v.cash+contract.reward,reputation:v.reputation+contract.rep,experience:v.experience+contract.xp,contractsCompleted:[...v.contractsCompleted,contract.id],...(contract.id==='first-ore'&&!v.powerCutSeen?{powerCutSeen:true,powerCutEvent:true,broken:{...v.broken,miner:Math.max(v.broken.miner,30)},unitFaults:{...v.unitFaults,miner:v.unitFaults.miner.map((fault,i)=>i===0?Math.max(fault,30):fault)}}:{})}));
     setNotice(contract.id==='first-ore'?'DELIVERY SIGNED OFF · +'+contract.xp+' XP — then the lights go out. The Rockbreaker Mine has lost power.':'Delivery signed off. +'+fmt(contract.reward)+' RVT · +'+contract.rep+' reputation · +'+contract.xp+' XP. The client says you are now their favourite supplier.');
   };
   const completeRepeatOrder=(order:RepeatOrder)=>{
