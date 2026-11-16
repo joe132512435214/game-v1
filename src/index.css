@@ -1337,3 +1337,19 @@ button:focus-visible,select:focus-visible{outline:2px solid #f1c48d;outline-offs
 .freight-route-tuning-buttons{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .freight-route-tuning-buttons button{display:inline-flex;align-items:center;justify-content:center;gap:5px;font-size:10px;white-space:nowrap}
 @media(max-width:650px){.freight-route-tuning-buttons{width:100%}.freight-route-tuning-buttons button{flex:1;min-width:130px}}
+
+
+/* Per-route production and delivery diagnostics */
+.freight-flow-panel{width:100%;padding:12px;background:rgba(12,29,24,.64);border:1px solid rgba(162,188,150,.22);border-radius:5px;display:flex;flex-direction:column;gap:9px}
+.freight-flow-heading,.freight-flow-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.freight-flow-heading>b,.freight-flow-foot{font:700 10px 'IBM Plex Mono',monospace;letter-spacing:.03em;color:#c3cdb8}
+.freight-flow-heading>span{font:700 10px 'IBM Plex Mono',monospace}
+.freight-flow-bad{color:#f2ae83}.freight-flow-good{color:#a4d3a7}
+.freight-flow-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.freight-flow-metrics>span{display:flex;flex-direction:column;gap:5px;padding:9px;background:rgba(48,69,55,.7);border-radius:3px}
+.freight-flow-metrics small{font-size:9px;color:#b8c8b7}
+.freight-flow-metrics strong{font:700 15px 'IBM Plex Mono',monospace;color:#f1dfb9}
+.freight-flow-track{height:7px;border-radius:6px;background:#1a2b22;overflow:hidden}
+.freight-flow-track i{display:block;height:100%;background:#b2cb84;transition:width .3s}
+.freight-flow-advice{font-size:11px;color:#c8d4c4;line-height:1.5;margin:0}
+@media(max-width:650px){.freight-flow-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
