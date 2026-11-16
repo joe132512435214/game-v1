@@ -1286,3 +1286,22 @@ button:focus-visible,select:focus-visible{outline:2px solid #f1c48d;outline-offs
  .freight-actions>.primary-button,.freight-actions>.secondary-button,.freight-upgrade>.primary-button{width:100%}
  .freight-drone-locked{flex-direction:column;align-items:flex-start}
 }
+
+
+.freight-inventory-note,.freight-route-warning{
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:13px 15px;margin:10px 0 16px;background:#26372b;
+  border:1px solid #5a805e;border-radius:4px;color:#e2e0d1
+}
+.freight-inventory-note>div:first-child{display:flex;align-items:center;gap:10px;flex:1;min-width:200px}
+.freight-inventory-note svg,.freight-route-warning svg{flex-shrink:0;color:#e3bb77}
+.freight-inventory-note strong{font:700 11px 'IBM Plex Mono',monospace}
+.freight-inventory-note small{display:block;margin-top:4px;color:#b8c8b7;font-size:10px;line-height:1.4}
+.freight-inventory-values{display:flex;gap:14px;flex-wrap:wrap}
+.freight-inventory-values span{font:600 10px 'IBM Plex Mono',monospace;color:#bbd0b9}
+.freight-inventory-values b{font:700 14px 'IBM Plex Mono',monospace;color:#efd0a0;padding-left:4px}
+.freight-inventory-note>.secondary-button{white-space:nowrap;width:auto}
+.freight-route-warning{background:#3a3226;border-color:#9e8054}
+.freight-route-warning>span{flex:1;font-size:11px;line-height:1.55;min-width:185px}
+.freight-route-warning>button{background:#a47d50;color:#fff3e3;border:0;padding:9px 12px;border-radius:4px;cursor:pointer;font-weight:700;font-size:10px}
+@media(max-width:620px){.freight-inventory-note>.secondary-button{width:100%}}
