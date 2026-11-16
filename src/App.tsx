@@ -319,8 +319,8 @@ const boostClock=(seconds:number)=>`${Math.floor(seconds/60)}:${String(seconds%6
 // a canvas: that kept the previous artwork and its smoke effects visible.
 // Serve the selected pixel pack directly; no ZIP download or photo fallback.
 const pixelMachineArt=(id:MachineId)=>({
-  sheet:'/machines/pixel/'+id+'-sheet.webp',
-  icon:'/machines/pixel/'+id+'-icon.png'
+  sheet:'/machines/pixel/'+(id==='miner'?'miner-pixel-mine':id)+'-sheet.webp',
+  icon:'/machines/pixel/'+(id==='miner'?'miner-pixel-mine':id)+'-icon.png'
 });
 // Products have their own flat, recognisable icons. Never reuse machine photos
 // as item artwork: an ingot should look like a material, not a blast furnace.
