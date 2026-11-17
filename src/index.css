@@ -1768,3 +1768,10 @@ body:has(.game[data-theme="copper"]){background:#2b1c18!important}
 
 /* Each supplied sheet is 700×100: seven square 100×100 frames. Keep the animated frame square and centred to match object-fit:contain stills. */
 .machine-art.art-sprite-ready .machine-original-animation{inset:auto;left:50%;top:50%;width:auto;height:100%;max-width:100%;aspect-ratio:1;transform:translate(-50%,-50%);background-size:700% 100%;}
+
+/* Approved staff pixel portraits */
+svg.staff-pixel-portrait{display:block;flex:none;width:48px;height:48px;padding:0;border:2px solid #c39563;border-radius:3px;background:#28283b;image-rendering:pixelated;box-shadow:2px 2px 0 #0e1a14;overflow:hidden}
+svg.staff-pixel-portrait::before,svg.staff-pixel-portrait::after{content:none;display:none}
+.freight-staff-heading{justify-content:flex-start;align-items:center;margin-bottom:8px}
+.freight-staff-heading h2{margin:2px 0 0!important}
+@media(max-width:400px){svg.staff-pixel-portrait{width:44px;height:44px}}
