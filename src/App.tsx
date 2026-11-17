@@ -395,7 +395,8 @@ function loadGame():GameState{
 }
 const fmt=(n:number)=>Math.floor(n).toLocaleString();
 
-const UPGRADE_CAP:Record<MachineId,number>={miner:3,smelter:3,press:3,assembler:3,copperMiner:3,copperSmelter:3,wiremill:5,circuitpress:6,beamMill:3,coilWinder:6,motorworks:6};
+// Master tiers are reserved for a later progression release. Basic -> Advanced only for now.
+const UPGRADE_CAP:Record<MachineId,number>={miner:1,smelter:1,press:1,assembler:1,copperMiner:1,copperSmelter:1,wiremill:1,circuitpress:1,beamMill:1,coilWinder:1,motorworks:1};
 const DOWNSTREAM_DEMAND:Partial<Record<MachineId,{id:MachineId;units:number}[]>>={
  miner:[{id:'smelter',units:1}],smelter:[{id:'press',units:1},{id:'beamMill',units:1}],press:[{id:'assembler',units:1}],
  copperMiner:[{id:'copperSmelter',units:1}],copperSmelter:[{id:'wiremill',units:1}],
@@ -411,7 +412,7 @@ const upgradeEligibility=(s:GameState,id:MachineId)=>{
  const demand=edges.reduce((total,e)=>total+(s[e.id]>0?machineCapacity(healthy,e.id,1,false)*e.units:0),0);
  const supply=machineCapacity(healthy,id,1,false);
  if(s[id]===0)return {allowed:false,reason:'Build this machine first.',demand,supply,cap};
- if(tier>=cap)return {allowed:false,reason:'MAX TIER — upgrade limit reached.',demand,supply,cap};
+ if(tier>=cap)return {allowed:false,reason:'MASTER LOCKED — advanced is the highest available tier for now.',demand,supply,cap};
  const product:Partial<Record<MachineId,StockId>>={assembler:'parts',beamMill:'beams',motorworks:'motors'};
  const finished=product[id];
  const contractDemand=edges.length===0&&!!finished&&s.contractsCompleted.some(c=>contracts.some(o=>o.id===c&&o.good===finished));
