@@ -108,16 +108,16 @@ const goods:{id:StockId;name:string;emoji:string;price:number;detail:string}[]=[
   {id:'motors',name:'Electric Motors',emoji:'⚙️',price:4200,detail:'Flagship high-power industrial electric motors'}
 ];
 const contracts:{id:string;name:string;detail:string;good:StockId;qty:number;reward:number;rep:number;xp:number;minRep:number}[]=[
-  {id:'first-ore',name:'First Ore Delivery',detail:'A nearby foundry advances your first machine purchase, then pays the balance when you deliver five raw ore.',good:'ore',qty:5,reward:85,rep:5,xp:25,minRep:0},
-  {id:'foundry-batch',name:'Foundry Batch',detail:'Supply a run of iron ingots.',good:'ingot',qty:8,reward:180,rep:7,xp:35,minRep:5},
-  {id:'steel-plates',name:'Steel Plate Consignment',detail:'A construction firm needs steel plates.',good:'plate',qty:6,reward:360,rep:10,xp:45,minRep:12},
-  {id:'precision-order',name:'Precision Components',detail:'A machinery customer wants precision parts.',good:'parts',qty:4,reward:650,rep:15,xp:60,minRep:22},
-  {id:'copper-delivery',name:'Copper Ore Delivery',detail:'An electrical foundry needs copper.',good:'copperOre',qty:10,reward:700,rep:12,xp:50,minRep:25},
-  {id:'wire-contract',name:'Electrical Wire Contract',detail:'Wire for a regional infrastructure project.',good:'wire',qty:6,reward:1100,rep:20,xp:65,minRep:40},
-  {id:'circuit-contract',name:'Circuit Board Supply',detail:'A technology manufacturer needs circuits.',good:'circuits',qty:4,reward:1800,rep:30,xp:80,minRep:60},
-  {id:'structural-steel',name:'Construction Steel Order',detail:'A building contractor needs a shipment of Steel Beams for a major project.',good:'beams',qty:10,reward:1120,rep:12,xp:55,minRep:18},
-  {id:'generator-coils',name:'Generator Coil Order',detail:'An energy equipment firm needs Copper Coils for electric motors.',good:'coils',qty:8,reward:1440,rep:18,xp:75,minRep:50},
-  {id:'motor-fleet',name:'Industrial Motor Fleet',detail:'An electrification programme needs six industrial electric motors for heavy machinery.',good:'motors',qty:6,reward:32000,rep:55,xp:220,minRep:190}
+  {id:'first-ore',name:'Miller’s Little Foundry · First Ore Run',detail:'A nearby foundry advances your first machine purchase, then pays the balance when you deliver five raw ore.',good:'ore',qty:5,reward:85,rep:5,xp:25,minRep:0},
+  {id:'foundry-batch',name:'Oak Lane Forge · Ingot Refill',detail:'Supply a run of iron ingots.',good:'ingot',qty:8,reward:180,rep:7,xp:35,minRep:5},
+  {id:'steel-plates',name:'Bramble & Sons Fabrication · Plate Order',detail:'A construction firm needs steel plates.',good:'plate',qty:6,reward:360,rep:10,xp:45,minRep:12},
+  {id:'precision-order',name:'Westfield Machine Shop · Precision Spares',detail:'A machinery customer wants precision parts.',good:'parts',qty:4,reward:650,rep:15,xp:60,minRep:22},
+  {id:'copper-delivery',name:'Redbank Copper Works · Ore Delivery',detail:'An electrical foundry needs copper.',good:'copperOre',qty:10,reward:700,rep:12,xp:50,minRep:25},
+  {id:'wire-contract',name:'Northline Electrical Supplies · Wiring Batch',detail:'Wire for a regional infrastructure project.',good:'wire',qty:6,reward:1100,rep:20,xp:65,minRep:40},
+  {id:'circuit-contract',name:'Meridian Control Systems · Circuit Supply',detail:'A technology manufacturer needs circuits.',good:'circuits',qty:4,reward:1800,rep:30,xp:80,minRep:60},
+  {id:'structural-steel',name:'Stonebridge Construction Group · Structural Steel',detail:'A building contractor needs a shipment of Steel Beams for a major project.',good:'beams',qty:10,reward:1120,rep:12,xp:55,minRep:18},
+  {id:'generator-coils',name:'Helix Energy Systems · Generator Coils',detail:'An energy equipment firm needs Copper Coils for electric motors.',good:'coils',qty:8,reward:1440,rep:18,xp:75,minRep:50},
+  {id:'motor-fleet',name:'Apex Global Industries · Motor Fleet',detail:'An electrification programme needs six industrial electric motors for heavy machinery.',good:'motors',qty:6,reward:32000,rep:55,xp:220,minRep:190}
 ];
 const contractProducer:Record<StockId,MachineId>={ore:'miner',ingot:'smelter',plate:'press',parts:'assembler',copperOre:'copperMiner',copperIngot:'copperSmelter',wire:'wiremill',circuits:'circuitpress',beams:'beamMill',coils:'coilWinder',motors:'motorworks'};
 type OrderLine={good:StockId;qty:number};
@@ -197,6 +197,19 @@ const contractBriefs:Record<StockId,ContractBrief[]>={
   coils:[{client:'Field & Rotor',title:'Generator winding kits',reason:'Copper coils are needed to rebuild industrial generators.'},{client:'Northern Electromagnets',title:'Magnet winding batch',reason:'Supply copper coils for industrial lifting magnets.'},{client:'Pump & Drive Services',title:'Motor rewinding stock',reason:'Replace worn copper coils during a motor overhaul.'}],
   motors:[{client:'Harbour Handling',title:'Conveyor drive replacement',reason:'Electric motors will replace failed warehouse conveyor drives.'},{client:'Civic Waterworks',title:'Pump drive upgrade',reason:'Supply electric motors for a pumping-station upgrade.'},{client:'Atlas Automation',title:'New production-cell drives',reason:'Our new automated production cells need electric motors.'}]
 };
+// Clients grow from tiny local workshops to national and global manufacturers.
+// Names are fictional; contract difficulty and rewards are unchanged.
+const clientCompanyTiers=[
+  {rep:0,names:['Moss Lane Workshop','Bert & Sons Repairs','Little Bridge Forge','Hillside Tool Shed','Oak Street Metalworks']},
+  {rep:25,names:['Pennyworth Engineering','Northbank Fabrication','Riverside Foundry Co.','Harbour Toolmakers','Stonebridge Metals']},
+  {rep:75,names:['Midlands Industrial Supply','Northline Manufacturing','Cedar Engineering Group','Regional Steelworks','Westgate Electrical Industries']},
+  {rep:160,names:['Atlas Manufacturing Group','Meridian Industrial Systems','Crown Infrastructure Ltd','Helix Energy Equipment','Sterling Precision Industries']},
+  {rep:300,names:['Apex Global Industries','Titan International Manufacturing','NovaSphere Technologies','Continental Engineering Holdings','OmniCore Industrial Corporation']}
+] as const;
+function contractClientName(state:GameState,round:number,slot:number){
+  const tier=[...clientCompanyTiers].reverse().find(t=>state.reputation>=t.rep)||clientCompanyTiers[0];
+  return tier.names[(round+slot)%tier.names.length];
+}
 function issueRepeatOrder(s:GameState,slot:number):RepeatOrder|null{
   if(!s.contractsCompleted.includes('first-ore')||s.powerShortage)return null;
   const available=goods.filter(g=>s[contractProducer[g.id]]>0&&
@@ -237,7 +250,7 @@ function issueRepeatOrder(s:GameState,slot:number):RepeatOrder|null{
   const list=items.map(line=>line.qty+' '+goods.find(g=>g.id===line.good)!.name.toLowerCase()).join(' and ');
   const detail=brief.reason+' Requested: '+list+'. '+(items.length>1?'Send both materials together as one shipment. ':'')+
     (difficulty==='rush'?'Our line is waiting: a rush premium is included.':difficulty==='easy'?'Flexible delivery window; a smaller, lower-paying job.':difficulty==='hard'?'A larger commitment with a higher payout and tighter schedule.':'A regular supply order with a balanced delivery window.');
-  return {id:slot+'-'+round,slot,round,name:brief.client+' · '+brief.title,detail,good:first.id,qty:items[0].qty,items,
+  return {id:slot+'-'+round,slot,round,name:contractClientName(s,round,slot)+' · '+brief.title,detail,good:first.id,qty:items[0].qty,items,
     reward:Math.ceil(items.reduce((v,line)=>v+line.qty*goods.find(g=>g.id===line.good)!.price,0)*terms.premium),
     rep:terms.rep,xp:Math.round(15+items.length*7+terms.work/12),kind:terms.label+' CONTRACT',difficulty,
     issuedAt:s.contractClock,estimatedSeconds:estimated,due:s.contractClock+duration,expiresAt:s.contractClock+duration+terms.grace};
