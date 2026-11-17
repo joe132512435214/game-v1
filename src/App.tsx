@@ -1411,36 +1411,20 @@ export default function App(){
         </section>
         <div className="factory-view-toolbar"><div><span className="eyebrow">FACTORY</span></div><div className="factory-view-switch" role="tablist" aria-label="Factory view"><button type="button" role="tab" aria-selected={factoryView==='overview'} className={factoryView==='overview'?'selected':''} onClick={()=>setFactoryView('overview')}><TrendingUp size={15}/> Dashboard</button><button type="button" role="tab" aria-selected={factoryView==='equipment'} className={factoryView==='equipment'?'selected':''} onClick={()=>setFactoryView('equipment')}><Factory size={15}/> Machines</button></div></div>
         {factoryView==='overview'&&<>
-        <section className="home-hero" aria-label="Factory at a glance">
-          <div className="home-hero-top"><div><span className="eyebrow">YOUR FACTORY · {companyRank}</span><h1>Your workshop</h1><p>Stage {currentStage.number} · {currentStage.name}</p></div><span className={'home-status '+(running&&!s.powerShortage&&!brokenCount?'is-running':'is-idle')}>{running&&!s.powerShortage&&!brokenCount?'● Producing':'● Needs attention'}</span></div>
-          <div className="home-factory-machines">{(visibleMachines.filter(m=>s[m.id]>0).length?visibleMachines.filter(m=>s[m.id]>0):visibleMachines.slice(0,1)).slice(0,4).map(m=><button type="button" className="home-machine" key={m.id} onClick={()=>setFactoryView('equipment')}><MachineIcon id={m.id} size={72}/><b>{m.name}</b></button>)}</div>
-          
-        </section>
-        <div className="home-stats" aria-label="Factory quick stats">
-          <div><small>Machines active</small><strong>{machinesWorking}<span> / {machineCount}</span></strong></div>
-          <div><small>Orders ready</small><strong>{readyOrders}</strong></div>
-          <div><small>Reputation</small><strong>{s.reputation}</strong></div>
+        <section className="overview-head"><div><span className="eyebrow">FACTORY CONTROL CENTRE</span><h1>Factory overview</h1><p>Stage {currentStage.number} · {currentStage.name} · {companyRank}</p></div><span className={'home-status '+(running&&!s.powerShortage?'is-running':'is-idle')}>{running&&!s.powerShortage?'● Production running':'● Production stopped'}</span></section>
+        <div className="overview-metrics" aria-label="Factory status">
+          <div><small>Machines operating</small><strong>{machinesWorking}<span> / {machineCount}</span></strong></div>
+          <div><small>Machines needing attention</small><strong>{machines.filter(m=>s[m.id]>0&&(faultCount(s,m.id)>0||(running&&!s.powerShortage&&s.lastOutput[m.id]<=0))).length}</strong></div>
+          <div><small>Factory reputation</small><strong>{s.reputation} REP</strong></div>
         </div>
-        <section className="home-next" aria-label="Your next action">
-          <div><span className="eyebrow">NEXT ACTION</span>
-          {s.powerShortage?<><h2>Restore power</h2><p>Sell stock to cover electricity.</p></>:
-          s.writeOffEvent?<><h2>Replace damaged equipment</h2><p>Resolve the incident to resume production.</p></>:
-          brokenCount>0?<><h2>Repair {brokenCount} machine{brokenCount===1?'':'s'}</h2><p>Assign maintenance to get production moving.</p></>:
-          readyOrders>0?<><h2>{readyOrders} order{readyOrders===1?'':'s'} ready</h2><p>Deliver stock and collect your reward.</p></>:
-          machineCount===0?<><h2>Build your first machine</h2><p>Accept your first order and start mining.</p></>:
-          unassigned>0?<><h2>Assign your mechanics</h2><p>{unassigned} mechanic{unassigned===1?' is':'s are'} waiting for work.</p></>:
-          <><h2>{activeMission?.title||'Expand your factory'}</h2><p>{activeMission?.detail||'Invest in your next upgrade.'}</p></>}
-          </div>
-          <button type="button" className="primary-button" onClick={()=>{
-            if(s.powerShortage){setPage('warehouse');return;}
-            if(s.writeOffEvent||machineCount===0){setFactoryView('equipment');return;}
-            if(brokenCount>0||unassigned>0){setPage('staff');setStaffTab('maintenance');return;}
-            if(readyOrders>0){setInboxOpen(true);return;}
-            setFactoryView('equipment');
-          }}>{s.powerShortage?'OPEN WAREHOUSE':brokenCount>0||unassigned>0?'MANAGE STAFF':readyOrders>0?'VIEW ORDERS':'VIEW MACHINES'} <ArrowUpRight size={16}/></button>
+        {(()=>{const next=companyRanks.find(rank=>rank.rep>currentRank.rep);const target=next?.rep||currentRank.rep;const base=currentRank.rep;const progress=next?Math.max(0,Math.min(100,100*(s.reputation-base)/(target-base))):100;return <section className="overview-reputation"><div className="overview-rep-top"><div><span className="eyebrow">REPUTATION PROGRESS</span><h2>{next?'Next: '+next.name:'Maximum reputation tier reached'}</h2></div><b>{next?fmt(s.reputation)+' / '+fmt(target)+' REP':'MAX'}</b></div><div className="overview-progress"><i style={{width:progress+'%'}}/></div>{next&&<small>{Math.max(0,target-s.reputation)} reputation to the next stage</small>}</section>})()}
+        <section className="overview-machine-panel"><div className="overview-section-head"><div><span className="eyebrow">LIVE MACHINE HEALTH</span><h2>Production overview</h2><p>Spot supply shortages, breakdowns and underused machines at a glance.</p></div><button type="button" className="secondary-button" onClick={()=>setFactoryView('equipment')}>MANAGE MACHINES <ArrowUpRight size={15}/></button></div>
+          <div className="overview-machine-list">{machines.filter(m=>s[m.id]>0).map(m=>{const working=workingUnits(s,m.id);const capacity=capacityOf(m.id);const output=s.lastOutput[m.id]||0;const usage=capacity>0?Math.min(100,Math.round(output/capacity*100)):0;const faults=faultCount(s,m.id);const blocked=!running||s.powerShortage||s.powerCutEvent||s.cyberAttackEvent||!!s.breakdownEvent;const status=faults>=s[m.id]?'BROKEN':blocked?'PAUSED':output<=0?'NO INPUT':usage<80?'SUPPLY LIMITED':'RUNNING';const issue=status==='BROKEN'||status==='NO INPUT'||status==='SUPPLY LIMITED';return <button type="button" className={'overview-machine-row '+(issue?'has-issue':'')} key={m.id} onClick={()=>setFactoryView('equipment')}><span className="overview-machine-icon"><MachineIcon id={m.id} size={34}/></span><span className="overview-machine-name"><b>{m.name}</b><small>{working}/{s[m.id]} units working · {output.toFixed(2)} units/sec</small></span><span className="overview-machine-util"><span className="overview-util-track"><i style={{width:usage+'%'}}/></span><small>{usage}% capacity</small></span><span className={'overview-machine-state '+(issue?'warning':'')}>{status}</span><ArrowUpRight size={15}/></button>})}</div>
+          {machineCount===0&&<div className="overview-empty"><p>No machines installed yet. Build your first mine to begin production.</p><button type="button" className="primary-button" onClick={()=>setFactoryView('equipment')}>VIEW FIRST MACHINE</button></div>}
         </section>
-        {focusDelivery&&<section className="home-delivery"><div><span className="eyebrow">CURRENT ORDER</span><h2>{focusDelivery.name}</h2><small>{Math.round(orderCompletion(focusDelivery)*100)}% ready</small></div><div className="home-delivery-track"><i style={{width:Math.round(orderCompletion(focusDelivery)*100)+'%'}}/></div><button type="button" className="secondary-button" onClick={()=>{setInboxOpen(true);setExpandedMail(focusDelivery.key)}}>{orderCompletion(focusDelivery)>=1?'DELIVER':'VIEW ORDER'}</button></section>}
-        <div className="home-secondary"><span>Level {progressionLevel} · {fmt(s.experience)} XP</span></div>
+        <section className="overview-bottlenecks"><div className="overview-section-head"><div><span className="eyebrow">WHAT NEEDS ATTENTION</span><h2>Factory bottlenecks</h2></div></div>
+          {s.powerShortage?<p>⚡ Electricity funding has stopped production. Sell spare stock to restore power.</p>:brokenCount>0?<p>🔧 {brokenCount} broken machine unit{brokenCount===1?'':'s'} need repairs. Open Staff → Maintenance.</p>:machines.some(m=>s[m.id]>0&&running&&s.lastOutput[m.id]<=0)?<p>⚠ Some machines are waiting for input. Check upstream production and haulage.</p>:machines.some(m=>s[m.id]>0&&running&&capacityOf(m.id)>0&&s.lastOutput[m.id]/capacityOf(m.id)<.8)?<p>⚠ Some machines are running below capacity. Check material supply and production priorities.</p>:<p>✓ No major production bottlenecks detected.</p>}
+        </section>
         </>}
         {factoryView==='equipment'&&<>
         <section className="line-panel"><div className="line-heading"><div><span className="eyebrow">LIVE PRODUCTION</span><h2>Assembly line</h2></div><span className="line-live"><i/> {running?'RUNNING':'PAUSED'}</span></div>
