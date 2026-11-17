@@ -110,6 +110,10 @@ const contracts:{id:string;name:string;detail:string;good:StockId;qty:number;rew
   {id:'circuit-contract',name:'Circuit Board Supply',detail:'A technology manufacturer needs circuits.',good:'circuits',qty:4,reward:1800,rep:30,xp:80,minRep:60},
   {id:'structural-steel',name:'Construction Steel Order',detail:'A building contractor needs a shipment of Steel Beams for a major project.',good:'beams',qty:10,reward:1120,rep:12,xp:55,minRep:18},
   {id:'generator-coils',name:'Generator Coil Order',detail:'An energy equipment firm needs Copper Coils for electric motors.',good:'coils',qty:8,reward:1440,rep:18,xp:75,minRep:50},
+  {id:'electronics-prototype',name:'Electronics Prototype Run',detail:'Supply circuit boards for programmable factory controllers.',good:'circuits',qty:8,reward:3800,rep:22,xp:105,minRep:75},
+  {id:'grid-coil-upgrade',name:'Grid Modernisation Coils',detail:'Deliver copper coils for industrial power-control systems.',good:'coils',qty:12,reward:3200,rep:20,xp:110,minRep:80},
+  {id:'control-board-fleet',name:'Industrial Control Boards',detail:'Build a batch of circuit boards for automation panels.',good:'circuits',qty:20,reward:10500,rep:35,xp:180,minRep:120},
+  {id:'robot-drive-coils',name:'Robotic Drive Coils',detail:'Wind coils for automated manufacturing equipment.',good:'coils',qty:24,reward:13000,rep:40,xp:200,minRep:145},
   {id:'motor-fleet',name:'Industrial Motor Fleet',detail:'An electrification programme needs six industrial electric motors for heavy machinery.',good:'motors',qty:6,reward:32000,rep:55,xp:220,minRep:190}
 ];
 const contractProducer:Record<StockId,MachineId>={ore:'miner',ingot:'smelter',plate:'press',parts:'assembler',copperOre:'copperMiner',copperIngot:'copperSmelter',wire:'wiremill',circuits:'circuitpress',beams:'beamMill',coils:'coilWinder',motors:'motorworks'};
@@ -390,6 +394,30 @@ function loadGame():GameState{
   }catch{return fresh;}
 }
 const fmt=(n:number)=>Math.floor(n).toLocaleString();
+
+const UPGRADE_CAP:Record<MachineId,number>={miner:3,smelter:3,press:3,assembler:3,copperMiner:3,copperSmelter:3,wiremill:5,circuitpress:6,beamMill:3,coilWinder:6,motorworks:6};
+const DOWNSTREAM_DEMAND:Partial<Record<MachineId,{id:MachineId;units:number}[]>>={
+ miner:[{id:'smelter',units:1}],smelter:[{id:'press',units:1},{id:'beamMill',units:1}],press:[{id:'assembler',units:1}],
+ copperMiner:[{id:'copperSmelter',units:1}],copperSmelter:[{id:'wiremill',units:1}],
+ wiremill:[{id:'circuitpress',units:1},{id:'coilWinder',units:1}],circuitpress:[{id:'motorworks',units:1}],
+ coilWinder:[{id:'motorworks',units:2}],assembler:[],beamMill:[],motorworks:[]
+};
+const upgradeCost=(s:GameState,id:MachineId)=>Math.ceil(3*Math.pow(1.65,Math.max(0,s[`tier_${id}`])));
+const upgradeEligibility=(s:GameState,id:MachineId)=>{
+ const tier=s[`tier_${id}`],cap=UPGRADE_CAP[id];
+ const edges=DOWNSTREAM_DEMAND[id]||[];
+ const demand=edges.reduce((total,e)=>total+(s[e.id]>0?machineCapacity(s,e.id,1,false)*e.units:0),0);
+ const supply=machineCapacity(s,id,1,false);
+ if(s[id]===0)return {allowed:false,reason:'Build this machine first.',demand,supply,cap};
+ if(tier>=cap)return {allowed:false,reason:'MAX TIER — upgrade limit reached.',demand,supply,cap};
+ const product:Partial<Record<MachineId,StockId>>={assembler:'parts',beamMill:'beams',motorworks:'motors'};
+ const finished=product[id];
+ const contractDemand=edges.length===0&&!!finished&&s.contractsCompleted.some(c=>contracts.some(o=>o.id===c&&o.good===finished));
+ const allowed=demand>Math.max(.005,supply*1.04)||contractDemand;
+ return {allowed,reason:allowed?'Demand exceeds supply — upgrade available.':edges.length===0?
+  'Complete a finished-product contract to unlock upgrades.':'Next production stage must exceed this machine capacity to unlock upgrades.',demand,supply,cap};
+};
+
 const machineCost=(m:typeof machines[number],s:GameState)=>Math.floor(m.cost*Math.pow(1.48,s[m.id]));
 const mechanicCost=(s:GameState)=>Math.floor(900*Math.pow(2,s.mechanics));
 const salesCost=(s:GameState)=>s.salespeople===0?150:Math.floor(1350*Math.pow(2,s.salespeople-1));
@@ -1136,9 +1164,12 @@ export default function App(){
     celebrate('New machine online!',m.name+' · unit '+(s[m.id]+1),'upgrade');
   };
   const upgradeMachine=(m:typeof machines[number])=>{
-    const cost=(s[`tier_${m.id}`]+1)*3;
+    const status=upgradeEligibility(s,m.id);
+    if(!status.allowed){setNotice(status.reason);return;}
+    const cost=upgradeCost(s,m.id);
     if(s.gears<cost){setNotice('You need '+cost+' Gears for this upgrade.');return;}
-    setS(v=>({...v,gears:v.gears-cost,[`tier_${m.id}`]:v[`tier_${m.id}`]+1}));
+    setS(v=>upgradeEligibility(v,m.id).allowed&&v.gears>=upgradeCost(v,m.id)?
+      {...v,gears:v.gears-upgradeCost(v,m.id),[`tier_${m.id}`]:v[`tier_${m.id}`]+1}:v);
     setNotice(m.name+' upgraded. Output increased by 25%.');
     celebrate('Production upgraded!',m.name+' · +25% output','upgrade');
   };
@@ -1431,6 +1462,8 @@ export default function App(){
           const cost=machineCost(m,s);
           const tier=s[`tier_${m.id}`];
           const repairCost=repairCostFor(m.id,tier);
+           const upgrade=upgradeEligibility(s,m.id);
+           const gearPrice=upgradeCost(s,m.id);
           return <article className={'machine-card '+(owned?'owned':'locked')+(failed>0?' is-broken':'')} key={m.id}>
             <div className="machine-card-head"><span className="machine-number"><MachineIcon id={m.id} size={26}/> 0{machines.indexOf(m)+1} · {m.short}</span><span className={'status '+(unitsWorking===0&&owned>0?'bad':active?'good':'idle')}>{machineStatus}</span></div>
             <MachineArt id={m.id} active={active} broken={failed>0} lights={lights} cycleSeconds={cycleSeconds} progress={s.visualProgress[m.id]}/>
@@ -1441,8 +1474,9 @@ export default function App(){
              {owned>0&&<div className="machine-overclock-row"><div><b><Zap size={14}/> OVERCLOCK</b><small>+50% machine speed · 3× electricity while producing</small></div><button type="button" role="switch" className={'dashboard-switch '+(overclock?'is-on':'')} aria-label={'Overclock '+m.name} aria-checked={overclock} onClick={()=>setS(v=>({...v,overclocked:{...v.overclocked,[m.id]:!v.overclocked[m.id]}}))}><i/></button></div>}
             {owned>0&&stopReason&&<div className="machine-stop-reason"><AlertTriangle size={13}/><span>{stopReason}</span></div>}
             {failed>0&&<div className="machine-repair"><span>{failed} broken unit{failed>1?'s':''} · {s.mechanicAssignments[m.id]>0?'mechanic repairing':'awaiting repair'}</span><button onClick={()=>{if(s.cash<repairCost){setNotice('Emergency repair costs '+repairCost+' Rivets per machine.');return;}const index=firstFault(s,m.id);if(index<0)return;setS(v=>({...repairUnit(v,m.id,index),cash:v.cash-repairCost}));setNotice(m.name+' unit '+(index+1)+' repaired.')}}>REPAIR ONE · {fmt(repairCost)} RVT</button></div>}
-            <div className="machine-buttons">{owned===0?(!(s.pendingReplacement[m.id]>0)&&(!stageReached(machineStage[m.id])||s.experience<unlockAt[m.id]||s.reputation<reputationUnlock[m.id])?<div className="machine-locked-note">🔒 STAGE {machineStage[m.id]} · {unlockAt[m.id]} XP + {reputationUnlock[m.id]} REP</div>:<button className="primary-button" disabled={s.cash<cost} onClick={()=>buyMachine(m)}>{(s.pendingReplacement[m.id]||0)>0?'REPLACE DESTROYED UNIT':'BUILD MACHINE'} · {fmt(cost)} RVT</button>):<><button className="primary-button" disabled={owned>=MAX_MACHINE_UNITS||s.cash<cost} onClick={()=>buyMachine(m)}>{owned>=MAX_MACHINE_UNITS?'5/5 UNITS · MAX':'ADD UNIT '+(owned+1)+' · '+fmt(cost)+' RVT'}</button><button className="secondary-button" disabled={s.gears<(tier+1)*3} onClick={()=>upgradeMachine(m)}><ArrowUpRight size={15}/> UPGRADE · {(tier+1)*3} GEARS</button></>}</div>
-            {owned>0&&<small className="machine-footnote">+25% output per upgrade · {m.output} · {owned}/{MAX_MACHINE_UNITS} units installed{(s.pendingReplacement[m.id]||0)>0?' · REPLACEMENT NEEDED':''}</small>}
+            <div className="machine-buttons">{owned===0?(!(s.pendingReplacement[m.id]>0)&&(!stageReached(machineStage[m.id])||s.experience<unlockAt[m.id]||s.reputation<reputationUnlock[m.id])?<div className="machine-locked-note">🔒 STAGE {machineStage[m.id]} · {unlockAt[m.id]} XP + {reputationUnlock[m.id]} REP</div>:<button className="primary-button" disabled={s.cash<cost} onClick={()=>buyMachine(m)}>{(s.pendingReplacement[m.id]||0)>0?'REPLACE DESTROYED UNIT':'BUILD MACHINE'} · {fmt(cost)} RVT</button>):<><button className="primary-button" disabled={owned>=MAX_MACHINE_UNITS||s.cash<cost} onClick={()=>buyMachine(m)}>{owned>=MAX_MACHINE_UNITS?'5/5 UNITS · MAX':'ADD UNIT '+(owned+1)+' · '+fmt(cost)+' RVT'}</button><button className="secondary-button" disabled={!upgrade.allowed||s.gears<gearPrice} onClick={()=>upgradeMachine(m)}><ArrowUpRight size={15}/> {tier>=upgrade.cap?'MAX TIER':upgrade.allowed?'UPGRADE · '+gearPrice+' GEARS':'AWAITING DEMAND'}</button></>}</div>
+            {owned>0&&<div className="machine-stop-reason"><TrendingUp size={13}/><span>{upgrade.reason} · {tier}/{upgrade.cap} upgrades · downstream {upgrade.demand.toFixed(2)}/sec vs capacity {upgrade.supply.toFixed(2)}/sec</span></div>}
+             {owned>0&&<small className="machine-footnote">+25% output per upgrade · {m.output} · {owned}/{MAX_MACHINE_UNITS} units installed{(s.pendingReplacement[m.id]||0)>0?' · REPLACEMENT NEEDED':''}</small>}
             {owned>0&&s.unitPenalties[m.id].some(p=>p>0)&&<div className="machine-replacement-levels">UNIT LEVELS: {s.unitPenalties[m.id].slice(0,owned).map((pen,i)=>'Unit '+(i+1)+' LV '+(Math.max(0,tier-pen)+1)).join(' · ')} · replacement units are up to 5 levels lower</div>}
           </article>;
         })}</section>
