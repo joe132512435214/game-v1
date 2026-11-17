@@ -1949,3 +1949,13 @@ svg.staff-pixel-portrait::before,svg.staff-pixel-portrait::after{content:none;di
 .machine-paint-card small{color:#b7c3b9;font-size:12px}
 .machine-paint-card button{margin-top:auto;min-height:38px;font-size:12px}
 @media(max-width:540px){.machine-paint-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.machine-paint-card{padding:10px}.machine-paint-card button{font-size:11px}}
+
+
+/* Collection achievement badges, matching the compact industrial UI */
+.collection-badges{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;min-width:0}
+.collection-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border:1px solid #a68c53;border-radius:5px;background:linear-gradient(135deg,#3c3826,#242d25);color:#f2d9a2;font-size:10px;font-weight:800;letter-spacing:.055em;white-space:nowrap;box-shadow:inset 0 1px #ffffff18}
+.collection-badge.collection-master{border-color:#ab8ab9;background:linear-gradient(135deg,#44344d,#292b38);color:#e8cbfa}
+.collection-progress{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 18px}
+.collection-progress>div{display:flex;align-items:center;gap:8px;border:1px solid #697b6b66;border-radius:6px;background:#1c2923;padding:8px 11px;color:#cbd6c7;font-size:11px;font-weight:700;letter-spacing:.03em}
+.collection-progress b{color:#edcb88;font-variant-numeric:tabular-nums}
+@media(max-width:760px){.collection-badges{order:3;width:100%;justify-content:flex-start}.collection-badge{font-size:9px;padding:4px 6px}}
