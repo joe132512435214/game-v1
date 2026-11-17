@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import {
-  Factory, Cog, Pause, Play, RotateCcw, Wrench, Store, Truck, Users, AlertTriangle,
+  Award, Factory, Cog, Pause, Play, RotateCcw, Wrench, Store, Truck, Users, AlertTriangle,
   CheckCircle2, ArrowUpRight, Zap, Boxes, CircleDollarSign, FlaskConical, ShieldCheck, TrendingUp, Cpu, HeartHandshake, GraduationCap, Sprout, LifeBuoy, Heart, Gem, Layers, Cable, CircuitBoard, Construction, Fan, Package
 } from 'lucide-react';
 import { Analytics } from '@vercel/analytics/react';
