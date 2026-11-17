@@ -15,3 +15,35 @@
 .wirecut-middle{padding-top:27px;display:flex;flex-direction:column;gap:12px}.wirecut-line{height:42px;display:flex;align-items:center;justify-content:center}.wirecut-line span{width:100%;border-top:3px dashed #34565c}.wirecut-line.connected span{border-top:4px solid var(--wire);box-shadow:0 0 8px var(--wire)}
 .wirecut-instructions{text-align:center;font-size:13px;color:#e5d9ac;min-height:35px;margin:15px 0 3px}.wirecut-error{text-align:center;color:#ff9b86;font-size:12px;margin:0 0 9px}.wirecut-footer{border-top:1px solid #345256;padding-top:15px;margin-top:10px;color:#b8c8c6;font-size:10px}.wirecut-footer b{color:#8fe9b4}
 @media(max-width:520px){.wirecut-panel{padding:13px}.wirecut-board{grid-template-columns:minmax(0,1fr) 22px minmax(0,1fr);padding:8px;gap:5px}.wirecut-terminal{font-size:10px;height:39px;gap:4px}.wirecut-bank,.wirecut-middle{gap:8px}.wirecut-line{height:39px}.wirecut-footer{flex-direction:column;align-items:flex-start}}
+
+
+/* V2 — industrial pixel-console wiring puzzle. The wire paths sit behind the terminals. */
+.wirecut-overlay{background:radial-gradient(circle at 50% 42%,rgba(35,67,67,.28),rgba(0,7,10,.96) 72%);padding:22px}
+.wirecut-panel{width:min(100%,760px);position:relative;overflow:hidden;border:3px solid #66858a;border-radius:7px;background:repeating-linear-gradient(0deg,transparent 0 5px,rgba(0,0,0,.06) 5px 6px),#10272b;box-shadow:0 0 0 5px #071416,0 0 0 8px #324d51,0 28px 100px #000e;padding:25px 30px 22px}
+.wirecut-panel:before,.wirecut-panel:after{content:"";position:absolute;top:10px;bottom:10px;width:5px;background:repeating-linear-gradient(180deg,#b58431 0 11px,#152b2d 11px 19px);opacity:.65}
+.wirecut-panel:before{left:7px}.wirecut-panel:after{right:7px}
+.wirecut-header{font-family:monospace;color:#c7dbd6}
+.wirecut-warning-strip{display:flex;align-items:center;justify-content:center;gap:25px;color:#f2bd61;font:800 10px monospace;letter-spacing:.17em;margin:12px auto 0}
+.wirecut-spark{width:66px;height:66px;display:grid;place-items:center;background:#172f33;border:3px solid #c68b3d;box-shadow:inset 0 0 0 4px #07191d,0 0 23px #e58b3226;color:#ffc55c;font-size:35px;clip-path:polygon(16% 0,84% 0,100% 16%,100% 84%,84% 100%,16% 100%,0 84%,0 16%);animation:wirecut-pulse 2s ease-in-out infinite}
+@keyframes wirecut-pulse{50%{filter:brightness(1.4);box-shadow:0 0 25px #e58b3288}}
+.wirecut-panel h2{font-family:monospace;font-weight:900;font-size:clamp(29px,5vw,45px);margin:6px 0 6px}
+.wirecut-story{font-size:13px;margin-bottom:16px}
+.wirecut-progress{height:16px;background:#081719;border:2px solid #587074;padding:3px;box-shadow:inset 0 2px 6px #000}
+.wirecut-progress span{background:repeating-linear-gradient(90deg,#81e5a5 0 13px,#4cbf7d 13px 16px);box-shadow:0 0 10px #67e89a77}
+.wirecut-board{position:relative;isolation:isolate;grid-template-columns:minmax(0,1fr) minmax(55px,1.1fr) minmax(0,1fr);min-height:350px;gap:4px;padding:48px 16px 19px;border:3px solid #567176;background:repeating-linear-gradient(90deg,transparent 0 31px,#102b302a 31px 32px),repeating-linear-gradient(0deg,transparent 0 31px,#102b302a 31px 32px),#06191d;box-shadow:inset 0 0 0 5px #0c282c,inset 0 0 35px #0008}
+.wirecut-board-top{position:absolute;top:12px;left:17px;right:17px;display:flex;justify-content:space-between;gap:8px;color:#91b3b3;font:700 11px monospace;letter-spacing:.1em;z-index:2}
+.wirecut-board-top .offline{color:#ff8c73;animation:wirecut-blink 1.5s steps(2,end) infinite}.wirecut-board-top .online{color:#80e9ac}
+.wirecut-cable-layer{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.95}
+.wirecut-bank{z-index:2;gap:12px;justify-content:flex-start}
+.wirecut-bank-label{font:800 10px monospace;letter-spacing:.1em;color:#d7b77c;margin-bottom:7px;background:#0a2023;padding:6px 2px;border:1px solid #385157}
+.wirecut-terminal{height:58px;position:relative;z-index:2;border:2px solid #567078;background:linear-gradient(180deg,#29464b,#182e32);font:800 12px monospace;letter-spacing:.04em;box-shadow:inset 0 0 0 3px #10252a,0 3px 0 #071316;transition:border-color .15s,transform .15s,background .15s}
+.wirecut-terminal i{width:16px;height:16px;border:3px solid #081b1e;border-radius:50%;box-shadow:0 0 0 2px var(--wire),0 0 12px var(--wire)}
+.wirecut-terminal.selected{transform:translateY(-2px);box-shadow:0 0 0 2px var(--wire),0 0 16px var(--wire)}
+.wirecut-terminal.connected{border-color:#5fba8a;background:#153c2e}
+.wirecut-middle{position:relative;z-index:1;display:grid;place-items:center;padding:0}
+.wirecut-core{display:grid;place-items:center;width:68px;height:84px;background:#173239;border:3px solid #bd8b42;box-shadow:0 0 0 5px #071a1d,0 0 25px #000b;color:#ffc65c;font-size:27px;text-align:center;line-height:1}
+.wirecut-core small{font:800 9px monospace;color:#bed2cc;line-height:1.2}
+.wirecut-instructions{font:700 12px monospace;line-height:1.6}
+.wirecut-footer{font-family:monospace;letter-spacing:0}
+@media(max-width:520px){.wirecut-panel{padding:14px 15px}.wirecut-warning-strip{gap:10px;font-size:8px}.wirecut-spark{width:50px;height:50px;font-size:27px}.wirecut-board{grid-template-columns:minmax(0,1fr) 34px minmax(0,1fr);min-height:300px;padding:42px 7px 10px}.wirecut-bank{gap:9px}.wirecut-bank-label{font-size:8px;margin-bottom:5px}.wirecut-terminal{height:48px;font-size:9px;gap:3px}.wirecut-terminal i{width:12px;height:12px}.wirecut-core{width:33px;height:60px;font-size:18px}.wirecut-core small{font-size:7px}.wirecut-board-top{font-size:8px;left:10px;right:10px}.wirecut-story{font-size:12px}.wirecut-footer{font-size:9px}}
+@media(prefers-reduced-motion:reduce){.wirecut-alert,.wirecut-spark,.wirecut-board-top .offline{animation:none}.wirecut-terminal{transition:none}}
