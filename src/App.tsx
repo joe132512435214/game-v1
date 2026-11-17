@@ -500,9 +500,10 @@ const boostClock=(seconds:number)=>`${Math.floor(seconds/60)}:${String(seconds%6
 // Pixel art comes from the supplied ZIP. Never redraw old machine photos in
 // a canvas: that kept the previous artwork and its smoke effects visible.
 // The uploaded GIF contains six different machines; each uses its own still.
-const selectedStillMachines:MachineId[]=['miner','smelter','press','assembler','copperMiner','copperSmelter'];
+// Use the dedicated transparent pixel-art PNGs for all machine cards.
+// The older *-still.webp and *-sheet.webp assets depict a different art style.
 const pixelMachineArt=(id:MachineId)=>({
-  icon:selectedStillMachines.includes(id)?'/machines/pixel/'+id+'-still.webp':'/machines/pixel/'+id+'-icon.png'
+  icon:'/machines/pixel/'+(id==='miner'?'miner-pixel-mine-icon':''+id+'-icon')+'.png'
 });
 // Products have their own flat, recognisable icons. Never reuse machine photos
 // as item artwork: an ingot should look like a material, not a blast furnace.
@@ -522,7 +523,7 @@ function MachineIcon({id,size=36}:{id:MachineId;size?:number}){
 function MachineArt({id,active,broken,lights,cycleSeconds,progress}:{id:MachineId;active:boolean;broken:boolean;lights:('on'|'off'|'empty')[];cycleSeconds:number;progress:number}){
  const sprite=pixelMachineArt(id);
  const spriteReady=id!=='motorworks';
- const hasOriginalAnimation=id!=='motorworks';
+ const hasOriginalAnimation=false; // Old animation sheets use the superseded machine artwork.
  const safeCycle=cycleSeconds>0?cycleSeconds:8;
  const electrical=['copperMiner','copperSmelter','wiremill','circuitpress','coilWinder','motorworks'].includes(id);
  const copper=electrical?'#bd8054':'#bd985e';
