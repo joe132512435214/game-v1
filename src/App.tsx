@@ -406,8 +406,10 @@ const upgradeCost=(s:GameState,id:MachineId)=>Math.ceil(3*Math.pow(1.65,Math.max
 const upgradeEligibility=(s:GameState,id:MachineId)=>{
  const tier=s[`tier_${id}`],cap=UPGRADE_CAP[id];
  const edges=DOWNSTREAM_DEMAND[id]||[];
- const demand=edges.reduce((total,e)=>total+(s[e.id]>0?machineCapacity(s,e.id,1,false)*e.units:0),0);
- const supply=machineCapacity(s,id,1,false);
+ // Compare theoretical installed capacity, not temporary outages or broken units.
+ const healthy={...s,unitFaults:Object.fromEntries(machines.map(m=>[m.id,Array.from({length:s[m.id]},()=>0)])) as Record<MachineId,number[]>};
+ const demand=edges.reduce((total,e)=>total+(s[e.id]>0?machineCapacity(healthy,e.id,1,false)*e.units:0),0);
+ const supply=machineCapacity(healthy,id,1,false);
  if(s[id]===0)return {allowed:false,reason:'Build this machine first.',demand,supply,cap};
  if(tier>=cap)return {allowed:false,reason:'MAX TIER — upgrade limit reached.',demand,supply,cap};
  const product:Partial<Record<MachineId,StockId>>={assembler:'parts',beamMill:'beams',motorworks:'motors'};
