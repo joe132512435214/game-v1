@@ -1955,3 +1955,15 @@ svg.staff-pixel-portrait::before,svg.staff-pixel-portrait::after{content:none;di
 .progression-requirements span.ready{border-color:#7ca77c70;color:#b7d6a6;background:#24412b60}
 .progression-next button{min-height:32px;white-space:nowrap;font-size:11px}
 @media(max-width:600px){.progression-spotlight{padding:12px}.progression-spotlight h2{font-size:17px}.progression-next>span{flex-basis:100%}}
+
+
+/* Compact, always-visible order fulfilment switch */
+.auto-order-toggle{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;cursor:pointer;padding:5px 8px;border:1px solid #3b6062;border-radius:7px;background:#102a30;color:#d8eeee;font:700 10px/1.2 monospace;letter-spacing:.02em}
+.auto-order-toggle input{appearance:none;-webkit-appearance:none;width:26px;height:15px;min-width:26px;margin:0;border:1px solid #698185;border-radius:12px;background:#43585c;position:relative;cursor:pointer}
+.auto-order-toggle input::before{content:'';position:absolute;top:2px;left:2px;width:9px;height:9px;border-radius:50%;background:#dce8e6;transition:transform .16s ease}
+.auto-order-toggle input:checked{background:#26734e;border-color:#78e3a2}
+.auto-order-toggle input:checked::before{transform:translateX(11px);background:#c6ffe0}
+.auto-order-toggle input:focus-visible{outline:2px solid #ffe08a;outline-offset:2px}
+.auto-order-toggle b{font-size:9px;color:#a9b7ba}
+.auto-order-toggle:has(input:checked) b{color:#7be4a3}
+@media(max-width:680px){.auto-order-toggle{padding:4px 5px;gap:4px;font-size:9px}.auto-order-toggle b{display:none}}
