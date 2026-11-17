@@ -1937,3 +1937,15 @@ svg.staff-pixel-portrait::before,svg.staff-pixel-portrait::after{content:none;di
 @keyframes qc-reject-exit{0%{transform:translate(0,0) rotate(0);opacity:1}100%{transform:translate(-12%,30%) rotate(-12deg);opacity:.12}}
 @media(max-width:650px){.qc-v2 .qc-training-examples{grid-template-columns:repeat(2,minmax(0,1fr))}.qc-v2 .qc-training-examples>div:first-child{grid-column:1/-1}.qc-v2 .qc-training-examples svg{max-width:120px}}
 @media(prefers-reduced-motion:reduce){.qc-v2 .qc-conveyor.qc-plate-approved .qc-plate-carriage,.qc-v2 .qc-conveyor.qc-plate-rejected .qc-plate-carriage{animation:none!important}}
+
+
+/* Cosmetic machine paint shop — no gameplay effects */
+.machine-paint-shop{margin-top:24px}
+.machine-paint-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:12px;margin-top:16px}
+.machine-paint-card{display:flex;flex-direction:column;gap:10px;align-items:stretch;padding:14px;background:var(--surface,#1d2a23);border:1px solid #6e796a66;border-radius:9px;min-width:0}
+.machine-paint-swatch{display:block;height:50px;border:3px solid #ffffff26;border-radius:6px;box-shadow:inset 0 10px 16px #ffffff18,inset 0 -10px 15px #00000035}
+.machine-paint-card>div{display:flex;flex-direction:column;gap:4px}
+.machine-paint-card strong{font-size:14px}
+.machine-paint-card small{color:#b7c3b9;font-size:12px}
+.machine-paint-card button{margin-top:auto;min-height:38px;font-size:12px}
+@media(max-width:540px){.machine-paint-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.machine-paint-card{padding:10px}.machine-paint-card button{font-size:11px}}
