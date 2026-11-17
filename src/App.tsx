@@ -518,7 +518,7 @@ const boostClock=(seconds:number)=>`${Math.floor(seconds/60)}:${String(seconds%6
 // The uploaded GIF contains six different machines; each uses its own still.
 const selectedStillMachines:MachineId[]=['miner','smelter','press','assembler','copperMiner','copperSmelter'];
 const pixelMachineArt=(id:MachineId)=>({
-  icon:selectedStillMachines.includes(id)?'/machines/pixel/'+id+'-still.webp':'/machines/pixel/'+id+'-icon.png'
+  icon:id==='miner'?'/machines/pixel/miner-pixel-mine-icon.png':selectedStillMachines.includes(id)?'/machines/pixel/'+id+'-still.webp':'/machines/pixel/'+id+'-icon.png'
 });
 // Products have their own flat, recognisable icons. Never reuse machine photos
 // as item artwork: an ingot should look like a material, not a blast furnace.
@@ -548,7 +548,7 @@ function MachineArt({id,active,broken,lights,cycleSeconds,progress,paint}:{id:Ma
  
  const bolt=(x:number,y:number)=><circle cx={x} cy={y} r="2.3" fill="#d7c9a8" stroke="#39453b" strokeWidth="1"/>;
  return <div className={'machine-art art-'+id+(electrical?' art-electrical':'')+(active?' running':'')+(broken?' broken':'')+(spriteReady?' art-sprite-ready':'')} style={{'--machine-cycle':safeCycle+'s','--machine-offset':'-'+(Math.max(0,Math.min(1,progress))*safeCycle)+'s'} as CSSProperties}>
-  {spriteReady&&<><img className="machine-still-image" style={{filter:paintFilter}} src={sprite.icon} alt={machines.find(m=>m.id===id)?.name+' original pixel artwork'}/>{hasOriginalAnimation&&<div className="machine-original-animation" aria-hidden="true" style={{backgroundImage:'url(/machines/pixel/'+id+'-sheet.webp)',filter:paintFilter}}/>}</>}
+  {spriteReady&&<><img className="machine-still-image" style={{filter:paintFilter}} src={sprite.icon} alt={machines.find(m=>m.id===id)?.name+' original pixel artwork'}/>{hasOriginalAnimation&&<div className="machine-original-animation" aria-hidden="true" style={{backgroundImage:'url(/machines/pixel/'+(id==='miner'?'miner-pixel-mine':id)+'-sheet.webp)',filter:paintFilter}}/>}</>}
 
   <div className="art-backdrop"/>
   <svg viewBox="0 0 320 210" role="img" aria-label={machines.find(m=>m.id===id)?.name+' detailed industrial machine illustration'}>
