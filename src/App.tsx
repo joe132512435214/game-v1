@@ -28,10 +28,10 @@ const FACTORY_THEMES:{id:FactoryTheme;name:string;colours:string[];cost:number}[
 type MachinePaint='original'|'steelblue'|'ember'|'violet'|'mint';
 const MACHINE_PAINTS:{id:MachinePaint;name:string;cost:number;swatch:string;filter:string}[]=[
  {id:'original',name:'Original Steel',cost:0,swatch:'#89998e',filter:'none'},
- {id:'steelblue',name:'Arctic Blue',cost:2,swatch:'#6facc8',filter:'sepia(.28) saturate(1.6) hue-rotate(145deg)'},
- {id:'ember',name:'Ember Red',cost:2,swatch:'#c16e5a',filter:'sepia(.55) saturate(1.8) hue-rotate(310deg)'},
- {id:'violet',name:'Royal Violet',cost:3,swatch:'#a18acb',filter:'sepia(.4) saturate(1.5) hue-rotate(195deg)'},
- {id:'mint',name:'Mint Green',cost:2,swatch:'#85b9a1',filter:'sepia(.28) saturate(1.3) hue-rotate(75deg)'}
+ {id:'steelblue',name:'Arctic Blue',cost:4,swatch:'#6facc8',filter:'sepia(.28) saturate(1.6) hue-rotate(145deg)'},
+ {id:'ember',name:'Ember Red',cost:4,swatch:'#c16e5a',filter:'sepia(.55) saturate(1.8) hue-rotate(310deg)'},
+ {id:'violet',name:'Royal Violet',cost:4,swatch:'#a18acb',filter:'sepia(.4) saturate(1.5) hue-rotate(195deg)'},
+ {id:'mint',name:'Mint Green',cost:4,swatch:'#85b9a1',filter:'sepia(.28) saturate(1.3) hue-rotate(75deg)'}
 ];
 function buyMachinePaint(s:GameState,id:MachinePaint):GameState{
  const paint=MACHINE_PAINTS.find(p=>p.id===id);if(!paint)return s;
