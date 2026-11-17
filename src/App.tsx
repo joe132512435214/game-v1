@@ -413,6 +413,8 @@ const upgradeEligibility=(s:GameState,id:MachineId)=>{
  const supply=machineCapacity(healthy,id,1,false);
  if(s[id]===0)return {allowed:false,reason:'Build this machine first.',demand,supply,cap};
  if(tier>=cap)return {allowed:false,reason:'MASTER LOCKED — advanced is the highest available tier for now.',demand,supply,cap};
+ // Expansion comes first: exhaust the available machine slots before improving their tier.
+ if(s[id]<MAX_MACHINE_UNITS)return {allowed:false,reason:'BUILD MORE UNITS FIRST — '+s[id]+'/'+MAX_MACHINE_UNITS+' installed. Upgrade unlocks after all slots are filled.',demand,supply,cap};
  const product:Partial<Record<MachineId,StockId>>={assembler:'parts',beamMill:'beams',motorworks:'motors'};
  const finished=product[id];
  const contractDemand=edges.length===0&&!!finished&&s.contractsCompleted.some(c=>contracts.some(o=>o.id===c&&o.good===finished));
