@@ -1955,3 +1955,26 @@ svg.staff-pixel-portrait::before,svg.staff-pixel-portrait::after{content:none;di
 .progression-requirements span.ready{border-color:#7ca77c70;color:#b7d6a6;background:#24412b60}
 .progression-next button{min-height:32px;white-space:nowrap;font-size:11px}
 @media(max-width:600px){.progression-spotlight{padding:12px}.progression-spotlight h2{font-size:17px}.progression-next>span{flex-basis:100%}}
+
+/* Basic machine art: single source of truth for every purchased/unpurchased unit.
+   Animated WebP runs only while production is active; otherwise show its matched still. */
+.machine-art.art-sprite-ready .machine-still-image{
+  position:absolute;inset:0;display:block;width:100%;height:100%;
+  object-fit:contain;image-rendering:pixelated;z-index:5;
+}
+.machine-upgrade-coming{
+  display:inline-flex;align-items:center;justify-content:center;text-align:center;
+  border:1px dashed #a48e6666;border-radius:5px;padding:10px 11px;
+  color:#c1ac86;background:#272a2544;font:700 10px/1.3 var(--font-ui);
+  letter-spacing:.35px;min-height:38px;
+}
+@media(max-width:620px){.machine-upgrade-coming{padding:8px;font-size:9px}}
+
+
+/* Put realisable stock-sale income next to each product's base value. */
+.stock-revenue{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:9px 0}
+.stock-revenue>span{display:flex;flex-direction:column;gap:5px;padding:8px 9px;background:#1429206e;border:1px solid #66826b43;border-radius:6px}
+.stock-revenue small{font-size:9px;font-weight:700;letter-spacing:.5px;color:#bbcbb5}
+.stock-revenue strong{font-size:13px;font-variant-numeric:tabular-nums;color:#d3e3bc;overflow-wrap:anywhere}
+.stock-revenue>span:last-child strong{color:#edcd84}
+@media(max-width:450px){.stock-revenue{gap:5px}.stock-revenue>span{padding:7px}.stock-revenue strong{font-size:12px}}
