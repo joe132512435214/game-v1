@@ -1,0 +1,17 @@
+.wirecut-overlay{position:fixed;inset:0;z-index:100000;background:rgba(1,9,13,.91);display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto;backdrop-filter:blur(6px)}
+.wirecut-panel{width:min(100%,670px);background:#102326;border:3px solid #477077;box-shadow:0 0 0 5px #071519,0 22px 70px #000b;color:#edf3e9;padding:22px;font-family:inherit}
+.wirecut-header,.wirecut-footer,.wirecut-meter{display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:11px;letter-spacing:.1em;font-weight:800}
+.wirecut-header{border-bottom:1px solid #345256;padding-bottom:12px;color:#b9d3cc}
+.wirecut-alert{color:#ff8469;animation:wirecut-blink 1.2s steps(2,end) infinite}
+@keyframes wirecut-blink{50%{opacity:.35}}
+.wirecut-symbol{text-align:center;color:#ffb74f;font-size:35px;margin-top:10px}
+.wirecut-panel h2{text-align:center;color:#ffc16d;font-size:clamp(28px,5vw,43px);letter-spacing:.11em;margin:0 0 8px;text-shadow:3px 3px #492e21}
+.wirecut-story{text-align:center;max-width:500px;margin:0 auto 20px;line-height:1.55;color:#c8d4d0;font-size:14px}
+.wirecut-meter{color:#c9e2d4;margin-bottom:8px}.wirecut-meter b{color:#ffd07e}
+.wirecut-progress{height:12px;background:#061518;border:1px solid #5a7670;margin-bottom:18px;padding:2px}.wirecut-progress span{display:block;height:100%;background:#7ce6a7;transition:width .2s}
+.wirecut-board{display:grid;grid-template-columns:minmax(0,1fr) 70px minmax(0,1fr);gap:10px;padding:16px;background:#071b20;border:2px solid #3c555b}
+.wirecut-bank{display:flex;flex-direction:column;gap:12px;min-width:0}.wirecut-bank-label{text-align:center;font-size:10px;letter-spacing:.07em;color:#b2c8c5;font-weight:800;margin-bottom:2px}
+.wirecut-terminal{display:flex;align-items:center;justify-content:center;gap:7px;height:42px;border:2px solid #567178;background:#1c3135;color:#f0f5ee;font:800 12px inherit;letter-spacing:.03em;cursor:pointer;min-width:0}.wirecut-terminal i{width:11px;height:11px;flex-shrink:0;background:var(--wire);box-shadow:0 0 0 2px #071b20,0 0 0 3px var(--wire)}.wirecut-terminal:hover:not(:disabled),.wirecut-terminal.selected{border-color:var(--wire);background:#29444a}.wirecut-terminal.connected{border-color:#5c9c78;background:#193e2f;color:#b4f4c9;cursor:default}
+.wirecut-middle{padding-top:27px;display:flex;flex-direction:column;gap:12px}.wirecut-line{height:42px;display:flex;align-items:center;justify-content:center}.wirecut-line span{width:100%;border-top:3px dashed #34565c}.wirecut-line.connected span{border-top:4px solid var(--wire);box-shadow:0 0 8px var(--wire)}
+.wirecut-instructions{text-align:center;font-size:13px;color:#e5d9ac;min-height:35px;margin:15px 0 3px}.wirecut-error{text-align:center;color:#ff9b86;font-size:12px;margin:0 0 9px}.wirecut-footer{border-top:1px solid #345256;padding-top:15px;margin-top:10px;color:#b8c8c6;font-size:10px}.wirecut-footer b{color:#8fe9b4}
+@media(max-width:520px){.wirecut-panel{padding:13px}.wirecut-board{grid-template-columns:minmax(0,1fr) 22px minmax(0,1fr);padding:8px;gap:5px}.wirecut-terminal{font-size:10px;height:39px;gap:4px}.wirecut-bank,.wirecut-middle{gap:8px}.wirecut-line{height:39px}.wirecut-footer{flex-direction:column;align-items:flex-start}}
