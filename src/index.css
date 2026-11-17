@@ -1800,3 +1800,10 @@ body:has(.game[data-theme="copper"]){background:#2b1c18!important}
  .game .home-next>.primary-button{min-width:145px;padding:10px 12px}
  .game .home-factory-machines{grid-template-columns:repeat(auto-fill,minmax(140px,180px))}
 }
+
+/* Approved staff portraits */
+svg.staff-pixel-portrait{display:block;flex:none;width:48px;height:48px;padding:0;border:2px solid #c39563;border-radius:3px;background:#28283b;image-rendering:pixelated;box-shadow:2px 2px 0 #0e1a14;overflow:hidden}
+svg.staff-pixel-portrait::before,svg.staff-pixel-portrait::after{content:none;display:none}
+.freight-staff-heading{justify-content:flex-start;align-items:center;margin-bottom:8px}
+.freight-staff-heading h2{margin:2px 0 0!important}
+@media(max-width:400px){svg.staff-pixel-portrait{width:44px;height:44px}}
