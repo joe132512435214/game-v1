@@ -559,6 +559,7 @@ function MachineIcon({id,size=36}:{id:MachineId;size?:number}){
 function MachineArt({id,active,broken,lights,cycleSeconds,progress}:{id:MachineId;active:boolean;broken:boolean;lights:('on'|'off'|'empty')[];cycleSeconds:number;progress:number}){
  const sprite=pixelMachineArt(id);
  const spriteReady=id!=='motorworks';
+ const hasOriginalAnimation=id!=='motorworks';
  const safeCycle=cycleSeconds>0?cycleSeconds:8;
  const electrical=['copperMiner','copperSmelter','wiremill','circuitpress','coilWinder','motorworks'].includes(id);
  const copper=electrical?'#bd8054':'#bd985e';
@@ -567,7 +568,7 @@ function MachineArt({id,active,broken,lights,cycleSeconds,progress}:{id:MachineI
  
  const bolt=(x:number,y:number)=><circle cx={x} cy={y} r="2.3" fill="#d7c9a8" stroke="#39453b" strokeWidth="1"/>;
  return <div className={'machine-art art-'+id+(electrical?' art-electrical':'')+(active?' running':'')+(broken?' broken':'')+(spriteReady?' art-sprite-ready':'')} style={{'--machine-cycle':safeCycle+'s','--machine-offset':'-'+(Math.max(0,Math.min(1,progress))*safeCycle)+'s'} as CSSProperties}>
-  {spriteReady&&<img className="machine-still-image" src={sprite.icon} alt={machines.find(m=>m.id===id)?.name+' pixel artwork'}/>}
+  {spriteReady&&<><img className="machine-still-image" src={sprite.icon} alt={machines.find(m=>m.id===id)?.name+' original pixel artwork'}/>{hasOriginalAnimation&&<div className="machine-original-animation" aria-hidden="true" style={{backgroundImage:'url(/machines/pixel/'+id+'-sheet.webp)'}}/>}</>}
 
   <div className="art-backdrop"/>
   <svg viewBox="0 0 320 210" role="img" aria-label={machines.find(m=>m.id===id)?.name+' detailed industrial machine illustration'}>
