@@ -6,7 +6,7 @@ import {
 import { Analytics } from '@vercel/analytics/react';
 import { QualityControlGame } from './QualityControlGame';
 import { StaffPortrait } from './StaffPortrait';
-import { stampingPressArt } from './stampingPressArt';
+import { stampingPressTierArtwork } from './stampingPressTiers';
 
 type MachineId = 'miner' | 'smelter' | 'press' | 'assembler' | 'copperMiner' | 'copperSmelter' | 'wiremill' | 'circuitpress' | 'beamMill' | 'coilWinder' | 'motorworks';
 type StockId = 'ore' | 'ingot' | 'plate' | 'parts' | 'copperOre' | 'copperIngot' | 'wire' | 'circuits' | 'beams' | 'coils' | 'motors';
@@ -503,7 +503,7 @@ const boostClock=(seconds:number)=>`${Math.floor(seconds/60)}:${String(seconds%6
 // The uploaded GIF contains six different machines; each uses its own still.
 const selectedStillMachines:MachineId[]=['miner','smelter','press','assembler','copperMiner','copperSmelter'];
 const pixelMachineArt=(id:MachineId)=>({
-  icon:id==='press'?stampingPressArt:(selectedStillMachines.includes(id)?'/machines/pixel/'+id+'-still.webp':'/machines/pixel/'+id+'-icon.png')
+  icon:id==='press'?stampingPressTierArtwork.basic:(selectedStillMachines.includes(id)?'/machines/pixel/'+id+'-still.webp':'/machines/pixel/'+id+'-icon.png')
 });
 // Products have their own flat, recognisable icons. Never reuse machine photos
 // as item artwork: an ingot should look like a material, not a blast furnace.
