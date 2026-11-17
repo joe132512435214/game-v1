@@ -1008,8 +1008,7 @@ export default function App(){
   const powerPerMinute=economyActive&&!s.powerShortage?electricityCostPerMinute(s,speed):0;
   const netPerMinute=autoIncomePerMinute-wagesPerMinute-powerPerMinute;
   const moneyPerMinute=(amount:number)=>Math.abs(amount).toFixed(1);
-  const progressionLevel=Math.max(1,Math.floor((1+Math.sqrt(1+4*s.experience/75))/2));
-  const reputationUnlock:Record<MachineId,number>={miner:0,smelter:2,press:8,assembler:18,copperMiner:20,copperSmelter:35,wiremill:50,circuitpress:60,beamMill:18,coilWinder:50,motorworks:190};
+    const reputationUnlock:Record<MachineId,number>={miner:0,smelter:2,press:8,assembler:18,copperMiner:20,copperSmelter:35,wiremill:50,circuitpress:60,beamMill:18,coilWinder:50,motorworks:190};
   const machineTypesOwned=machines.filter(m=>s[m.id]>0).length;
   const companyRanks=[
     {name:'WORKSHOP',rep:0,xp:0,sales:0,machines:0},
@@ -1083,8 +1082,7 @@ export default function App(){
     {id:13,title:'Power the future',detail:'Build your first Wire Drawing Mill.',progress:s.wiremill>0?1:0,target:1,done:s.wiremill>0,rivets:700,gears:8,xp:50},
     {id:14,title:'Electronics manufacturer',detail:'Build your first Circuit Board Line.',progress:s.circuitpress>0?1:0,target:1,done:s.circuitpress>0,rivets:900,gears:12,xp:60}
   ];
-  const activeMission=missions.find(m=>!s.missionsClaimed.includes(m.id));
-  const visibleContracts=contracts.filter(c=>!s.contractsCompleted.includes(c.id)&&s.contractClock>=(s.storyNextAt[c.id]||0)&&(c.id==='first-ore'||(s.reputation>=c.minRep&&s[contractProducer[c.good]]>0&&Number.isFinite(estimateContractSeconds(s,[{good:c.good,qty:c.qty}],false)))));
+    const visibleContracts=contracts.filter(c=>!s.contractsCompleted.includes(c.id)&&s.contractClock>=(s.storyNextAt[c.id]||0)&&(c.id==='first-ore'||(s.reputation>=c.minRep&&s[contractProducer[c.good]]>0&&Number.isFinite(estimateContractSeconds(s,[{good:c.good,qty:c.qty}],false)))));
   const repeatOrders=generateRepeatOrders(s);
   const qualityMail=qaComplaintPending(s)?[{key:'quality-complaint',title:'Quality complaint · action required',from:'Construction Accounts',detail:'The last steel plate consignment had inconsistent finishing. Please appoint a Quality Assurance inspector before we accept another precision order.',good:'plate' as StockId,qty:0,items:[] as OrderLine[],kind:'CUSTOMER COMPLAINT',due:0}]:[];
   const incomingMailRaw=[...qualityMail,...visibleContracts.map(c=>({key:'story-'+c.id,title:c.name,from:'Contract Office',detail:c.detail,good:c.good,qty:c.qty,items:[{good:c.good,qty:c.qty}],kind:'STORY ORDER',due:0})),...repeatOrders.map(o=>({key:'repeat-'+o.id,title:o.name,from:o.name,detail:o.detail,good:o.good,qty:o.qty,items:o.items,kind:o.kind,due:o.due}))];
@@ -1103,14 +1101,6 @@ export default function App(){
     motorworks:'Coil Winding Machine + Circuit Board Line'
   };
   const completedOrders=s.contractsCompleted.length;
-  const deliveryCandidates=[
-    ...visibleContracts.filter(c=>s.reputation>=c.minRep).map(c=>({key:'story-'+c.id,name:c.name,items:[{good:c.good,qty:c.qty}],reward:c.reward,due:0})),
-    ...repeatOrders.map(o=>({key:'repeat-'+o.id,name:o.name,items:o.items,reward:orderPayout(o,s.contractClock),due:o.due}))
-  ];
-  const orderCompletion=(order:typeof deliveryCandidates[number])=>
-    order.items.reduce((total,line)=>total+Math.min(1,Math.max(0,s[line.good]/line.qty)),0)/order.items.length;
-  const focusDelivery=[...deliveryCandidates].sort((a,b)=>orderCompletion(b)-orderCompletion(a))[0]||null;
-
   const noticeTitle=notice.toLowerCase().includes('contract fulfilled')||notice.toLowerCase().includes('delivery signed off')?'Order complete · lovely stuff':notice.toLowerCase().includes('contract accepted')||notice.toLowerCase().includes('order accepted')?'New order · no pressure (some pressure)':notice.toLowerCase().includes('not enough')||notice.toLowerCase().includes('need ')||notice.toLowerCase().includes('no full units')?'Small snag · the numbers say no':notice.toLowerCase().includes('repaired')?'Back in business':notice.toLowerCase().includes('shipped')?'Out the loading bay':notice.toLowerCase().includes('built')?'Fresh machinery':notice.toLowerCase().includes('mission complete')?'Milestone smashed':'Workshop update';
   const noticeKind=notice.toLowerCase().includes('contract')||notice.toLowerCase().includes('order accepted')||notice.toLowerCase().includes('delivery signed off')?'ORDER DESK':notice.toLowerCase().includes('not enough')||notice.toLowerCase().includes('need ')?'QUICK HEADS-UP':'FACTORY NOTICE';
   useEffect(()=>{
