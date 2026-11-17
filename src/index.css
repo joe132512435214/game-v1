@@ -1919,3 +1919,21 @@ svg.staff-pixel-portrait::before,svg.staff-pixel-portrait::after{content:none;di
   .qc-v2 .qc-result{animation:none}
   .qc-shift-track>div{transition:none}
 }
+
+/* QC v3: short industrial training, visible outcomes, restrained motion */
+.qc-v2 .qc-tutorial{padding:20px 4px 8px;text-align:center}
+.qc-v2 .qc-tutorial h3{margin:8px 0;font-size:clamp(19px,2.3vw,25px);color:#f1e3c7}
+.qc-v2 .qc-tutorial p{max-width:650px;margin:10px auto 16px;color:#c9d7c9;font-size:13px;line-height:1.55}
+.qc-v2 .qc-training-examples{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;margin:18px auto;max-width:850px}
+.qc-v2 .qc-training-examples>div{min-width:0;padding:10px 6px 12px;background:#1a2923;border:1px solid #4b5d50;border-radius:5px;display:flex;flex-direction:column;align-items:center;gap:5px}
+.qc-v2 .qc-training-examples svg{display:block;width:100%;max-width:150px;height:auto}
+.qc-v2 .qc-training-examples strong{color:#d6aa79;font-size:12px;letter-spacing:.08em}
+.qc-v2 .qc-training-examples>div:first-child strong{color:#a2c9a6}
+.qc-v2 .qc-training-examples small{color:#b8c8bb;font-size:11px;line-height:1.35}
+.qc-v2 .qc-tutorial>.primary-button{min-width:190px}
+.qc-v2 .qc-conveyor.qc-plate-approved .qc-plate-carriage{animation:qc-approve-exit .52s ease-in forwards}
+.qc-v2 .qc-conveyor.qc-plate-rejected .qc-plate-carriage{animation:qc-reject-exit .52s ease-in forwards}
+@keyframes qc-approve-exit{0%{transform:translateX(0);opacity:1}100%{transform:translateX(36%);opacity:.15}}
+@keyframes qc-reject-exit{0%{transform:translate(0,0) rotate(0);opacity:1}100%{transform:translate(-12%,30%) rotate(-12deg);opacity:.12}}
+@media(max-width:650px){.qc-v2 .qc-training-examples{grid-template-columns:repeat(2,minmax(0,1fr))}.qc-v2 .qc-training-examples>div:first-child{grid-column:1/-1}.qc-v2 .qc-training-examples svg{max-width:120px}}
+@media(prefers-reduced-motion:reduce){.qc-v2 .qc-conveyor.qc-plate-approved .qc-plate-carriage,.qc-v2 .qc-conveyor.qc-plate-rejected .qc-plate-carriage{animation:none!important}}

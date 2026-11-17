@@ -6,7 +6,7 @@ type Round = { index: number; correct: number; mistakes: number; streak: number;
 type Feedback = { positive: boolean; timedOut: boolean; headline: string; detail: string };
 type Props = { session: string; playing: boolean; onFinish: (session: string, correct: number) => void; onClose: () => void };
 
-const INSPECTION_MS = 4000;
+const inspectionTime = (index: number) => index < 3 ? 5500 : index < 7 ? 4700 : 4000;
 const FEEDBACK_MS = 520;
 const tokenReward = (score: number) => score === 10 ? 2 : score >= 7 ? 1 : 0;
 
@@ -62,9 +62,10 @@ function PlateIllustration({ defect }: { defect: Defect }) {
 
 export function QualityControlGame({ session, playing, onFinish, onClose }: Props) {
   const [plates] = useState(preparePlates);
+  const [tutorialOpen, setTutorialOpen] = useState(true);
   const [round, setRound] = useState<Round>({ index: 0, correct: 0, mistakes: 0, streak: 0, bestStreak: 0, done: false });
   const [feedback, setFeedback] = useState<Feedback | null>(null);
-  const remaining = useRef(INSPECTION_MS);
+  const remaining = useRef(inspectionTime(0));
   const locked = useRef(false);
   const countdown = useRef<ReturnType<typeof setTimeout> | null>(null);
   const transition = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -73,7 +74,7 @@ export function QualityControlGame({ session, playing, onFinish, onClose }: Prop
   const plate = plates[Math.min(9, round.index)];
 
   const decide = (reject: boolean | null) => {
-    if (!playing || round.done || feedback || locked.current) return;
+    if (!playing || tutorialOpen || round.done || feedback || locked.current) return;
     locked.current = true;
     decisionStarted.current = true;
     if (countdown.current) clearTimeout(countdown.current);
@@ -90,9 +91,9 @@ export function QualityControlGame({ session, playing, onFinish, onClose }: Prop
   };
 
   // Reset the countdown for the next plate. Pause safely if factory production pauses.
-  useEffect(() => { remaining.current = INSPECTION_MS; }, [round.index]);
+  useEffect(() => { remaining.current = inspectionTime(round.index); }, [round.index]);
   useEffect(() => {
-    if (!playing || round.done || feedback) return;
+    if (!playing || tutorialOpen || round.done || feedback) return;
     const started = Date.now();
     const id = setTimeout(() => decide(null), remaining.current);
     countdown.current = id;
@@ -100,7 +101,7 @@ export function QualityControlGame({ session, playing, onFinish, onClose }: Prop
       clearTimeout(id);
       if (!decisionStarted.current) remaining.current = Math.max(0, remaining.current - (Date.now() - started));
     };
-  }, [round.index, round.done, playing, feedback]);
+  }, [round.index, round.done, playing, feedback, tutorialOpen]);
 
   useEffect(() => {
     if (round.done && !rewardSent.current) {
@@ -110,7 +111,7 @@ export function QualityControlGame({ session, playing, onFinish, onClose }: Prop
   }, [round.done, round.correct, onFinish, session]);
 
   useEffect(() => {
-    if (round.done) return;
+    if (round.done || tutorialOpen) return;
     const handleKey = (event: KeyboardEvent) => {
       if (event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
       const target = event.target as HTMLElement | null;
@@ -120,7 +121,7 @@ export function QualityControlGame({ session, playing, onFinish, onClose }: Prop
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [round.index, round.done, playing, feedback]);
+  }, [round.index, round.done, playing, feedback, tutorialOpen]);
 
   useEffect(() => () => {
     if (countdown.current) clearTimeout(countdown.current);
@@ -135,7 +136,7 @@ export function QualityControlGame({ session, playing, onFinish, onClose }: Prop
       <div><span className="eyebrow">INSPECTION BAY · SHIFT 01</span><h2>{round.done ? 'Shift complete' : 'Quality Control'}</h2></div>
       <button type="button" className="secondary-button" onClick={onClose}>{round.done ? 'BACK TO THEMES' : 'LEAVE SHIFT'}</button>
     </div>
-    {round.done
+    {tutorialOpen && !round.done ? <div className="qc-tutorial" aria-label="Inspection training"><span className="eyebrow">BEFORE YOUR SHIFT</span><h3>Spot the defect. Make the call.</h3><p>Inspect each metal plate for damage. Reject faulty parts and keep clean ones. You get three mistakes before your shift ends.</p><div className="qc-training-examples"><div><PlateIllustration defect={null}/><strong>KEEP</strong><small>Even panel, four bolts</small></div><div><PlateIllustration defect="crack"/><strong>REJECT</strong><small>Cracks</small></div><div><PlateIllustration defect="bolt"/><strong>REJECT</strong><small>Missing bolts</small></div><div><PlateIllustration defect="dent"/><strong>REJECT</strong><small>Dented edges</small></div><div><PlateIllustration defect="misalign"/><strong>REJECT</strong><small>Shifted panels</small></div></div><p>First three plates: 5.5 seconds each. The belt speeds up gradually, ending at 4 seconds. Use A / ← to reject and D / → to keep.</p><button type="button" className="primary-button" onClick={() => setTutorialOpen(false)}>START INSPECTION</button></div> : round.done
       ? <div className="qc-result" role="status">
           <div className="qc-result-icon" aria-hidden="true">{round.correct === 10 ? '★' : round.correct >= 7 ? '✓' : '⚙'}</div>
           <span className="eyebrow">INSPECTION REPORT</span>
@@ -149,21 +150,21 @@ export function QualityControlGame({ session, playing, onFinish, onClose }: Prop
           <p className="qc-instructions">Inspect each plate. <strong>REJECT</strong> defects or <strong>KEEP</strong> clean parts. Three misses end your shift.</p>
           <div className="qc-score"><span>PLATE <b>{round.index + 1}/10</b></span><span>✓ <b>{round.correct}</b> CORRECT</span><span>⚡ <b>{round.streak}</b> STREAK</span><span>♥ <b>{3 - round.mistakes}</b> LIVES</span></div>
           <div className="qc-shift-progress" aria-label={`Shift ${completion}% complete`}><span>SHIFT PROGRESS</span><div className="qc-shift-track"><div style={{ width: `${completion}%` }} /></div><b>{inspected}/10</b></div>
-          <div className="qc-timer"><div className="qc-timer-track"><div key={round.index} className="qc-timer-fill" style={{ animationPlayState: playing && !feedback ? 'running' : 'paused' }} /></div><span>4 SEC / PLATE</span></div>
-          <div className={`qc-conveyor ${feedback ? (feedback.positive ? 'is-success' : 'is-error') : ''} ${playing ? '' : 'is-paused'}`}>
+          <div className="qc-timer"><div className="qc-timer-track"><div key={round.index} className="qc-timer-fill" style={{ animationDuration: `${inspectionTime(round.index)}ms`, animationPlayState: playing && !feedback ? 'running' : 'paused' }} /></div><span>{(inspectionTime(round.index)/1000).toFixed(1)} SEC / PLATE</span></div>
+          <div className={`qc-conveyor ${feedback ? (feedback.positive ? 'is-success' : 'is-error') : ''} ${feedback ? (feedback.positive ? 'qc-plate-approved' : 'qc-plate-rejected') : ''} ${playing ? '' : 'is-paused'}`}>
             <div className="qc-station-marker">SCAN ZONE <span aria-hidden="true">◆</span> 01</div>
             <span className="qc-station-side-label" aria-hidden="true">IN → INSPECT → OUT</span>
             <div className="qc-conveyor-rail qc-rail-top" aria-hidden="true" />
             <div className="qc-conveyor-rail qc-rail-bottom" aria-hidden="true" />
             <div key={round.index} className="qc-plate-carriage"><PlateIllustration defect={plate.defect} /></div>
             {feedback && <div className={`qc-feedback ${feedback.positive ? 'positive' : 'negative'}`} role="status"><strong>{feedback.positive ? '✓' : '✕'} {feedback.headline}</strong><span>{feedback.detail}</span></div>}
-            <span className="qc-accessible-defect">{plate.defect === 'crack' ? 'Crack through the plate' : plate.defect === 'bolt' ? 'Bottom-right bolt is missing' : plate.defect === 'dent' ? 'Dented metal edge' : plate.defect === 'misalign' ? 'Misaligned center panel' : 'All bolts present; no cracks or dents'}</span>
+            <span className="qc-accessible-defect">{plate.defect === 'crack' ? 'Visible crack' : plate.defect === 'bolt' ? 'One bolt is missing' : plate.defect === 'dent' ? 'Dented edge' : plate.defect === 'misalign' ? 'Shifted panel' : 'Intact metal plate'}</span>
           </div>
           <div className="qc-actions">
             <button type="button" disabled={!playing || !!feedback} className="qc-reject" onClick={() => decide(true)}><span aria-hidden="true">✕</span><b>REJECT</b><small>Damaged · A / ←</small></button>
             <button type="button" disabled={!playing || !!feedback} className="qc-keep" onClick={() => decide(false)}><span aria-hidden="true">✓</span><b>KEEP</b><small>Good part · D / →</small></button>
           </div>
-          <p className="qc-help" role="status">{!playing ? 'Production paused · resume to continue.' : feedback ? feedback.headline : round.streak >= 3 ? `Great rhythm · ${round.streak} clean calls in a row.` : 'Look for cracks, missing bolts, dents and shifted panels.'}</p>
+          <p className="qc-help" role="status">{!playing ? 'Production paused · resume to continue.' : feedback ? feedback.headline : round.streak >= 3 ? `Great rhythm · ${round.streak} clean calls in a row.` : 'Inspect the metal plate and decide before it leaves the bay.'}</p>
         </>}
   </section>;
 }
