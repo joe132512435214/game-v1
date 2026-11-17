@@ -21,7 +21,7 @@ type CapitalId = 'powerGrid' | 'miningNetwork' | 'freightNetwork' | 'safetySyste
 type CharityId = 'apprenticeships' | 'community' | 'environment' | 'relief';
 type CharityDonation = {cause:CharityId;amount:number;rep:number;at:number};
 type BoostId = 'production' | 'dispatch' | 'protection';
-type StockFlowMode = 'balanced' | 'stockpile' | 'feed';
+type StockFlowMode = 'auto' | 'hold';
 type IntermediateStock = 'ingot' | 'wire';
 type FreightRoute='iron'|'copper';
 type VehicleTier=0|1|2|3;
@@ -69,7 +69,7 @@ type GameState = {
 const SAVE_KEY = 'ironworks-tycoon-save-v2';
 const fresh:GameState = {
   styleTokens:0,unlockedThemes:['workshop'],theme:'workshop',qcReadyAt:0,qcSession:null,qualityInspectors:0,
-  flowMode:{ingot:'balanced',wire:'balanced'},freightTier:0,drivers:0,driverAssignments:{iron:0,copper:0},oreAtMine:0,copperAtMine:0,drones:0,droneAssignments:{iron:0,copper:0},freightRouteLevels:{iron:0,copper:0},freightBoostSeconds:{iron:0,copper:0},freightBoostReadyAt:{iron:0,copper:0},freightLastMined:{iron:0,copper:0},freightLastDelivered:{iron:0,copper:0},cash:0,gears:0,starterPowerCredit:15,powerShortage:false,gearShipmentProgress:0,ore:0,beams:0,coils:0,motors:0,ingot:0,plate:0,parts:0,copperOre:0,copperIngot:0,wire:0,circuits:0,
+  flowMode:{ingot:'auto',wire:'auto'},freightTier:0,drivers:0,driverAssignments:{iron:0,copper:0},oreAtMine:0,copperAtMine:0,drones:0,droneAssignments:{iron:0,copper:0},freightRouteLevels:{iron:0,copper:0},freightBoostSeconds:{iron:0,copper:0},freightBoostReadyAt:{iron:0,copper:0},freightLastMined:{iron:0,copper:0},freightLastDelivered:{iron:0,copper:0},cash:0,gears:0,starterPowerCredit:15,powerShortage:false,gearShipmentProgress:0,ore:0,beams:0,coils:0,motors:0,ingot:0,plate:0,parts:0,copperOre:0,copperIngot:0,wire:0,circuits:0,
   miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0,beamMill:0,coilWinder:0,motorworks:0,
   tier_miner:0,tier_smelter:0,tier_press:0,tier_assembler:0,tier_copperMiner:0,tier_copperSmelter:0,tier_wiremill:0,tier_circuitpress:0,tier_beamMill:0,tier_coilWinder:0,tier_motorworks:0,
   level:1,experience:0,sold:0,xpMigrationVersion:1,salesXpProgress:0,autoSalesXpProgress:0,mechanics:0,salespeople:0,
@@ -165,14 +165,12 @@ function estimateContractSeconds(s:GameState,items:OrderLine[],commitments=true)
     }
     if(rate<=0)return false;
     for(const line of contractRecipes[id]||[]){
-      if((line.good==='ingot'||line.good==='wire')&&s.flowMode[line.good]==='stockpile'){
+      if((line.good==='ingot'||line.good==='wire')&&s.flowMode[line.good]==='hold'){
         if(stock[line.good]+1e-7<missing*line.qty)return false;
       }
       if(!make(line.good,missing*line.qty))return false;
     }
-    // Shared ingot/wire lines must share their upstream output.
-    if(id==='plate'||id==='beams')rate*=s.flowMode.ingot==='balanced'?.45:1;
-    if(id==='circuits'||id==='coils')rate*=s.flowMode.wire==='balanced'?.45:1;
+    // The live simulation shares available materials by actual machine capacity.
     seconds+=missing/rate;
     return true;
   };
@@ -201,7 +199,7 @@ const contractBriefs:Record<StockId,ContractBrief[]>={
 function issueRepeatOrder(s:GameState,slot:number):RepeatOrder|null{
   if(!s.contractsCompleted.includes('first-ore')||s.powerShortage)return null;
   const available=goods.filter(g=>s[contractProducer[g.id]]>0&&
-    !((g.id==='ingot'||g.id==='wire')&&s.flowMode[g.id]==='feed')&&
+    !((g.id==='ingot'||g.id==='wire')&&s.flowMode[g.id]==='hold')&&
     Number.isFinite(estimateContractSeconds(s,[{good:g.id,qty:2}],false)));
   if(!available.length)return null;
   const round=s.repeatContractRounds[slot]||0;
@@ -317,15 +315,11 @@ function sellSurplusStock(state:GameState):GameState{
   for(const item of batch.items)next[item.good]-=item.qty;
   return next;
 }
-const downstreamMaterialAvailable=(state:GameState,id:IntermediateStock,amount:number,made:number)=>{
-  const mode=state.flowMode[id]||'balanced';
-  if(mode==='stockpile')return 0;
-  if(mode==='feed')return amount;
-  // In Split mode, save 55% of newly made material while filling a contract
-  // or a two-unit warehouse buffer. The other 45% keeps the line moving.
-  const target=Math.max(2,contractStockTarget(state,id));
-  const surplus=Math.max(0,amount-target);
-  return Math.min(amount,surplus+Math.min(made*.45,amount));
+const downstreamMaterialAvailable=(state:GameState,id:IntermediateStock,amount:number)=>{
+  if(state.flowMode[id]==='hold')return 0;
+  // Never spend inventory committed to an accepted contract.
+  // All unreserved inventory is available to installed downstream machines.
+  return Math.max(0,amount-contractStockTarget(state,id));
 };
 // Two lines share the same input fairly according to installed productive capacity.
 // When one line is slower, its unused allocation flows to the other line.
@@ -392,7 +386,7 @@ function loadGame():GameState{
       charityCount:Math.max(0,Math.floor(Number(saved.charityCount)||0)),
       charityMilestonesClaimed:Math.floor(Math.max(0,Number(saved.charityTotal)||0)/100000),
       charityHistory:Array.isArray(saved.charityHistory)?saved.charityHistory.filter((entry:any)=>entry&&['apprenticeships','community','environment','relief'].includes(entry.cause)&&Number(entry.amount)>0).slice(-5).map((entry:any)=>({cause:entry.cause,amount:Math.max(0,Math.floor(Number(entry.amount)||0)),rep:Math.max(0,Math.floor(Number(entry.rep)||0)),at:Math.max(0,Math.floor(Number(entry.at)||0))})):[],
-      flowMode:{ingot:['balanced','stockpile','feed'].includes(saved.flowMode?.ingot)?saved.flowMode.ingot:'balanced',wire:['balanced','stockpile','feed'].includes(saved.flowMode?.wire)?saved.flowMode.wire:'balanced'},starterPowerCredit:Math.max(0,Number(saved.starterPowerCredit??15)||0),powerShortage:Boolean(saved.powerShortage),xpMigrationVersion:1,gearShipmentProgress:Math.max(0,Number(saved.gearShipmentProgress)||0)%GEARS_PER_FINISHED_UNITS,salesXpProgress:Math.max(0,Number(saved.salesXpProgress)||0)%25,autoSalesXpProgress:Math.max(0,Number(saved.autoSalesXpProgress)||0)%60,lastOutput:{...fresh.lastOutput,...saved.lastOutput},visualProgress:{...fresh.visualProgress,...saved.visualProgress},overclocked:Object.fromEntries(machines.map(m=>[m.id,Boolean(saved.overclocked?.[m.id])])) as Record<MachineId,boolean>,unitPenalties:Object.fromEntries(machines.map(m=>[m.id,Array.from({length:Math.max(0,Number(saved[m.id])||0)},(_,i)=>Math.max(0,Number(saved.unitPenalties?.[m.id]?.[i])||0))])) as Record<MachineId,number[]>,pendingReplacement:{...fresh.pendingReplacement,...saved.pendingReplacement},writeOffEvent:saved.writeOffEvent??null,nextWriteOffAt:Math.max(900,Number(saved.nextWriteOffAt)||900),broken:{...fresh.broken,...saved.broken},unitFaults:Object.fromEntries(machines.map(m=>[m.id,Array.from({length:Math.max(0,Number(saved[m.id])||0)},(_,i)=>Math.max(0,Number(saved.unitFaults?.[m.id]?.[i]??(i===0?saved.broken?.[m.id]:0))||0))])) as Record<MachineId,number[]>,mechanicAssignments:{...fresh.mechanicAssignments,...saved.mechanicAssignments},breakdownEvent:saved.breakdownEvent??null,powerCutEvent:shouldRecoverPowerCut?true:(saved.powerCutEvent??false),powerCutSeen:shouldRecoverPowerCut?true:(saved.powerCutSeen??false),wireRepairEvent:Boolean(saved.wireRepairEvent),wireRepairCount:Math.max(0,Math.floor(Number(saved.wireRepairCount)||0)),nextWireRepairAt:Math.max(0,Math.floor(Number(saved.nextWireRepairAt)||0)),cyberAttackEvent:shouldRecoverCyberAttack?true:(saved.cyberAttackEvent??false),cyberAttackSeen:shouldRecoverCyberAttack?true:(saved.cyberAttackSeen??false),cybersecuritySpecialists:Math.max(0,Number(saved.cybersecuritySpecialists)||0),researched:Array.isArray(saved.researched)?saved.researched:[],acceptedContracts:Array.isArray(saved.acceptedContracts)?saved.acceptedContracts:[],contractsCompleted:completed,repeatOffers:Array.from({length:3},(_,i)=>saved.repeatOffers?.[i]&&Array.isArray(saved.repeatOffers[i].items)?saved.repeatOffers[i]:null),contractHistory:Array.isArray(saved.contractHistory)?saved.contractHistory.slice(-6):[],storyNextAt:saved.storyNextAt&&typeof saved.storyNextAt==='object'?saved.storyNextAt:{},boostSeconds:{production:Math.max(0,Math.floor(Number(saved.boostSeconds?.production)||0)),dispatch:Math.max(0,Math.floor(Number(saved.boostSeconds?.dispatch)||0)),protection:Math.max(0,Math.floor(Number(saved.boostSeconds?.protection)||0))},salesAssignments:goods.reduce((result,g)=>({...result,[g.id]:Math.max(0,Math.floor(Number(saved.salesAssignments?.[g.id]??(!saved.salesAssignments&&saved.salesTarget===g.id?saved.salespeople:0))||0))}),{...fresh.salesAssignments}),repeatContractRounds:Array.from({length:3},(_,i)=>Math.max(0,Math.floor(Number(saved.repeatContractRounds?.[i])||0))),contractClock:Math.max(0,Math.floor(Number(saved.contractClock)||0)),nextContractOfferAt:Math.max(0,Number(saved.nextContractOfferAt??((Number(saved.contractClock)||0)+120))||0),contractAlert:undefined,repeatNextAt:Array.from({length:3},(_,i)=>Math.max(0,Math.floor(Number(saved.repeatNextAt?.[i]??(180+i*180))||0))),repeatDeadline:Array.from({length:3},(_,i)=>Math.max(0,Math.floor(Number(saved.repeatDeadline?.[i])||0))),experience:migratedExperience+legacyShipmentXp,reputation:Math.max(0,Number(saved.reputation)||0)+(saved.charityMilestonesClaimed===undefined?Math.floor(Math.max(0,Number(saved.charityTotal)||0)/100000)*200:0)};
+      flowMode:{ingot:['hold','stockpile'].includes(saved.flowMode?.ingot)?'hold':'auto',wire:['hold','stockpile'].includes(saved.flowMode?.wire)?'hold':'auto'},starterPowerCredit:Math.max(0,Number(saved.starterPowerCredit??15)||0),powerShortage:Boolean(saved.powerShortage),xpMigrationVersion:1,gearShipmentProgress:Math.max(0,Number(saved.gearShipmentProgress)||0)%GEARS_PER_FINISHED_UNITS,salesXpProgress:Math.max(0,Number(saved.salesXpProgress)||0)%25,autoSalesXpProgress:Math.max(0,Number(saved.autoSalesXpProgress)||0)%60,lastOutput:{...fresh.lastOutput,...saved.lastOutput},visualProgress:{...fresh.visualProgress,...saved.visualProgress},overclocked:Object.fromEntries(machines.map(m=>[m.id,Boolean(saved.overclocked?.[m.id])])) as Record<MachineId,boolean>,unitPenalties:Object.fromEntries(machines.map(m=>[m.id,Array.from({length:Math.max(0,Number(saved[m.id])||0)},(_,i)=>Math.max(0,Number(saved.unitPenalties?.[m.id]?.[i])||0))])) as Record<MachineId,number[]>,pendingReplacement:{...fresh.pendingReplacement,...saved.pendingReplacement},writeOffEvent:saved.writeOffEvent??null,nextWriteOffAt:Math.max(900,Number(saved.nextWriteOffAt)||900),broken:{...fresh.broken,...saved.broken},unitFaults:Object.fromEntries(machines.map(m=>[m.id,Array.from({length:Math.max(0,Number(saved[m.id])||0)},(_,i)=>Math.max(0,Number(saved.unitFaults?.[m.id]?.[i]??(i===0?saved.broken?.[m.id]:0))||0))])) as Record<MachineId,number[]>,mechanicAssignments:{...fresh.mechanicAssignments,...saved.mechanicAssignments},breakdownEvent:saved.breakdownEvent??null,powerCutEvent:shouldRecoverPowerCut?true:(saved.powerCutEvent??false),powerCutSeen:shouldRecoverPowerCut?true:(saved.powerCutSeen??false),wireRepairEvent:Boolean(saved.wireRepairEvent),wireRepairCount:Math.max(0,Math.floor(Number(saved.wireRepairCount)||0)),nextWireRepairAt:Math.max(0,Math.floor(Number(saved.nextWireRepairAt)||0)),cyberAttackEvent:shouldRecoverCyberAttack?true:(saved.cyberAttackEvent??false),cyberAttackSeen:shouldRecoverCyberAttack?true:(saved.cyberAttackSeen??false),cybersecuritySpecialists:Math.max(0,Number(saved.cybersecuritySpecialists)||0),researched:Array.isArray(saved.researched)?saved.researched:[],acceptedContracts:Array.isArray(saved.acceptedContracts)?saved.acceptedContracts:[],contractsCompleted:completed,repeatOffers:Array.from({length:3},(_,i)=>saved.repeatOffers?.[i]&&Array.isArray(saved.repeatOffers[i].items)?saved.repeatOffers[i]:null),contractHistory:Array.isArray(saved.contractHistory)?saved.contractHistory.slice(-6):[],storyNextAt:saved.storyNextAt&&typeof saved.storyNextAt==='object'?saved.storyNextAt:{},boostSeconds:{production:Math.max(0,Math.floor(Number(saved.boostSeconds?.production)||0)),dispatch:Math.max(0,Math.floor(Number(saved.boostSeconds?.dispatch)||0)),protection:Math.max(0,Math.floor(Number(saved.boostSeconds?.protection)||0))},salesAssignments:goods.reduce((result,g)=>({...result,[g.id]:Math.max(0,Math.floor(Number(saved.salesAssignments?.[g.id]??(!saved.salesAssignments&&saved.salesTarget===g.id?saved.salespeople:0))||0))}),{...fresh.salesAssignments}),repeatContractRounds:Array.from({length:3},(_,i)=>Math.max(0,Math.floor(Number(saved.repeatContractRounds?.[i])||0))),contractClock:Math.max(0,Math.floor(Number(saved.contractClock)||0)),nextContractOfferAt:Math.max(0,Number(saved.nextContractOfferAt??((Number(saved.contractClock)||0)+120))||0),contractAlert:undefined,repeatNextAt:Array.from({length:3},(_,i)=>Math.max(0,Math.floor(Number(saved.repeatNextAt?.[i]??(180+i*180))||0))),repeatDeadline:Array.from({length:3},(_,i)=>Math.max(0,Math.floor(Number(saved.repeatDeadline?.[i])||0))),experience:migratedExperience+legacyShipmentXp,reputation:Math.max(0,Number(saved.reputation)||0)+(saved.charityMilestonesClaimed===undefined?Math.floor(Math.max(0,Number(saved.charityTotal)||0)/100000)*200:0)};
   }catch{return fresh;}
 }
 const fmt=(n:number)=>Math.floor(n).toLocaleString();
@@ -785,7 +779,7 @@ export default function App(){
       const oreMade=ironFreight.made;
       const hauledOre=ironFreight.delivered;
       const ingotsMade=Math.min(Math.max(0,n.ore+hauledOre-contractStockTarget(n,'ore')),rate('smelter'));
-      const availableIngots=downstreamMaterialAvailable(n,'ingot',n.ingot+ingotsMade,ingotsMade);
+      const availableIngots=downstreamMaterialAvailable(n,'ingot',n.ingot+ingotsMade);
       const [platesMade,beamsMade]=splitMachineSupply(availableIngots,rate('press'),rate('beamMill'));
       const partsMade=Math.min(Math.max(0,n.plate+platesMade-contractStockTarget(n,'plate')),rate('assembler'));
       const copperFreight=mineDelivery(n.copperAtMine,rate('copperMiner'),
@@ -794,7 +788,7 @@ export default function App(){
       const hauledCopper=copperFreight.delivered;
       const copperIngotsMade=Math.min(Math.max(0,n.copperOre+hauledCopper-contractStockTarget(n,'copperOre')),rate('copperSmelter'));
       const wireMade=Math.min(Math.max(0,n.copperIngot+copperIngotsMade-contractStockTarget(n,'copperIngot')),rate('wiremill'));
-      const availableWire=downstreamMaterialAvailable(n,'wire',n.wire+wireMade,wireMade);
+      const availableWire=downstreamMaterialAvailable(n,'wire',n.wire+wireMade);
       const [circuitsMade,coilsMade]=splitMachineSupply(availableWire,rate('circuitpress'),rate('coilWinder'));
       // Motor assembly uses two coils and one circuit board, including goods
       // finished earlier in this tick. Protect material reserved by open orders.
@@ -860,10 +854,8 @@ export default function App(){
           const count=Math.min(n.salespeople,Math.max(0,n.salesAssignments[item.id]||0));
           if(count<=0)return;
           // Automatic sales must not take goods reserved for active customer contracts.
-          const manualFlow=(item.id==='ingot'||item.id==='wire')&&n.flowMode[item.id]==='feed';
-          const stockFloor=manualFlow?0:contractStockTarget(n,item.id);
-          const warehouseBuffer=(item.id==='ingot'||item.id==='wire')&&n.flowMode[item.id]==='balanced'?2:0;
-          const availableToSell=Math.max(0,n[item.id]-Math.max(stockFloor,warehouseBuffer));
+          const stockFloor=contractStockTarget(n,item.id);
+          const availableToSell=Math.max(0,n[item.id]-stockFloor);
           const amount=Math.min(availableToSell,count*SALES_UNITS_PER_SECOND*(n.researched.includes('dispatch-systems')?1.25:1)*(1+n.capitalLevels.freightNetwork*.1)*multiplier*(boostActive.dispatch?1.3:1));
           if(amount<=0)return;
           const revenue=amount*item.price*saleBonus;
@@ -1575,7 +1567,13 @@ export default function App(){
         <section className="welcome-row"><div><span className="eyebrow">STORAGE & DISPATCH</span><h1>Warehouse</h1><p>Keep an eye on your stock and decide when to turn it into Rivets.</p></div><div className="warehouse-total"><small>TOTAL STOCK VALUE</small><b>{fmt(stockValue)} RVT</b><button type="button" className="primary-button" disabled={saleReminder.units===0} onClick={shipSurplus}>SELL SURPLUS · {fmt(saleReminder.value)} RVT</button><small>Keeps goods reserved for current contracts. Full units only.</small><button className="primary-button" disabled={!goods.some(g=>s[g.id]>=1)} onClick={shipAllStock}>SHIP ALL PRODUCTS · {fmt(goods.reduce((total,g)=>total+Math.floor(s[g.id])*g.price*saleMultiplier,0))} RVT</button></div></section>
         <div className="gear-banner"><Cog size={21}/><span><b>{fmt(s.gears)} Gears</b><small>Earn 1 Gear per 12 total finished goods shipped (Precision Parts, Circuit Boards, Steel Beams or Copper Coils). Current progress: {s.gearShipmentProgress.toFixed(1)}/12. Mission rewards also grant Gears.</small></span></div>
         {(s.miner>0||s.copperMiner>0)&&<section className="freight-inventory-note"><div><Truck size={19}/><span><strong>ORE WAITING AT THE MINES</strong><small>Drivers collect this ore. Mines slow down if the queue gets too large; add drivers or upgrade the fleet to restore full output.</small></span></div><div className="freight-inventory-values">{s.miner>0&&<span>IRON <b>{s.oreAtMine.toFixed(1)}</b></span>}{s.copperMiner>0&&<span>COPPER <b>{s.copperAtMine.toFixed(1)}</b></span>}</div><button type="button" className="secondary-button" onClick={()=>{setPage('staff');setStaffTab('haulage')}}>MANAGE DRIVERS</button></section>}
-        <section className="warehouse-grid">{visibleGoods.map(g=><article className="stock-card" key={g.id}><span className="stock-emoji"><ProductIcon id={g.id} size={43}/></span><div><h3>{g.name}</h3><p>{g.detail} · {g.price} RVT each</p><b>{fmt(s[g.id])} <small>IN STOCK</small></b>{(g.id==='ingot'||g.id==='wire')&&<div className="stock-flow-control"><div className="stock-flow-head"><span>WHERE SHOULD IT GO?</span><b>{s.flowMode[g.id as IntermediateStock]==='stockpile'?'STOCKPILE':s.flowMode[g.id as IntermediateStock]==='feed'?'PRODUCTION':'BALANCED'}</b></div><div className="stock-flow-switch" role="group" aria-label={g.name+' material routing'}>{([{id:'stockpile',label:'Store',hint:'Keep everything for orders'},{id:'balanced',label:'Split',hint:'Protect orders and feed machines'},{id:'feed',label:'Use',hint:'Send it to production'}] as const).map(option=><button key={option.id} type="button" aria-pressed={s.flowMode[g.id as IntermediateStock]===option.id} title={option.hint} className={s.flowMode[g.id as IntermediateStock]===option.id?'is-selected':''} onClick={()=>setS(v=>({...v,flowMode:{...v.flowMode,[g.id]:option.id}}))}>{option.label}</button>)}</div><small>{s.flowMode[g.id as IntermediateStock]==='stockpile'?'Save all new stock for shipping or contracts.':s.flowMode[g.id as IntermediateStock]==='feed'?'Other machines can use all available stock.':'Reserve contract quantities and keep production flowing.'}</small></div>}</div><button disabled={s[g.id]<1} onClick={()=>sellStock(g.id)}>SHIP ALL · {fmt(Math.floor(s[g.id])*g.price)} RVT</button></article>)}</section>
+        <section className="warehouse-grid">{visibleGoods.map(g=><article className="stock-card" key={g.id}><span className="stock-emoji"><ProductIcon id={g.id} size={43}/></span><div><h3>{g.name}</h3><p>{g.detail} · {g.price} RVT each</p><b>{fmt(s[g.id])} <small>IN STOCK</small></b>{(g.id==='ingot'||g.id==='wire')&&<div className="stock-flow-control">
+  <div className="stock-flow-head"><span>MATERIAL ROUTING</span><b>{s.flowMode[g.id as IntermediateStock]==='hold'?'ON HOLD':'AUTO FEED'}</b></div>
+  <div className="stock-flow-switch" role="group" aria-label={g.name+' material routing'}>
+    {([{id:'auto',label:'Auto Feed',hint:'Supply machines automatically, protecting accepted contract stock'},{id:'hold',label:'Hold Stock',hint:'Keep all stock in the warehouse until released'}] as const).map(option=><button key={option.id} type="button" aria-pressed={s.flowMode[g.id as IntermediateStock]===option.id} title={option.hint} className={s.flowMode[g.id as IntermediateStock]===option.id?'is-selected':''} onClick={()=>setS(v=>({...v,flowMode:{...v.flowMode,[g.id]:option.id}}))}>{option.label}</button>)}
+  </div>
+  <small>{s.flowMode[g.id as IntermediateStock]==='hold'?'Warehouse hold: downstream machines wait until Auto Feed is selected.':'Unreserved stock automatically feeds downstream machines. Accepted contract quantities stay protected.'}</small>
+</div>}</div><button disabled={s[g.id]<1} onClick={()=>sellStock(g.id)}>SHIP ALL · {fmt(Math.floor(s[g.id])*g.price)} RVT</button></article>)}</section>
         <section className="contracts-panel"><div className="section-heading"><div><span className="eyebrow">CUSTOMER EMAILS</span><h2>Order Desk</h2><p>Easy, Standard, Hard and Rush orders arrive in the Order Inbox. Late orders pay less and cost 2 reputation; expired orders disappear and cost 3 in total. New offers are spaced at least 2½ minutes apart.</p></div><button className="primary-button" onClick={()=>setInboxOpen(true)}>OPEN INBOX · {incomingMail.length}</button></div><div className="contract-summary"><span><b>{readyOrders}</b> READY</span><span><b>{activeOrders}</b> PREPARING</span><span><b>{completedOrders}</b> STORY DELIVERIES</span></div></section>
         <div className="sales-note"><CircleDollarSign size={18}/> {s.salespeople>0&&s.autoSell?'Your assigned sales team is automatically dispatching stock.':'Hire sales staff and enable automatic sales from the Staff page to automate dispatch.'}</div>
       </div>}
