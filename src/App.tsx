@@ -25,12 +25,28 @@ const FACTORY_THEMES:{id:FactoryTheme;name:string;colours:string[];cost:number}[
  {id:'violet',name:'Midnight Violet',colours:['#211a30','#44345b','#d3b5f5'],cost:2},
  {id:'copper',name:'Copper Works',colours:['#2b1c18','#55372b','#efba83'],cost:2}
 ];
+type MachinePaint='original'|'steelblue'|'ember'|'violet'|'mint';
+const MACHINE_PAINTS:{id:MachinePaint;name:string;cost:number;swatch:string;filter:string}[]=[
+ {id:'original',name:'Original Steel',cost:0,swatch:'#89998e',filter:'none'},
+ {id:'steelblue',name:'Arctic Blue',cost:2,swatch:'#6facc8',filter:'sepia(.28) saturate(1.6) hue-rotate(145deg)'},
+ {id:'ember',name:'Ember Red',cost:2,swatch:'#c16e5a',filter:'sepia(.55) saturate(1.8) hue-rotate(310deg)'},
+ {id:'violet',name:'Royal Violet',cost:3,swatch:'#a18acb',filter:'sepia(.4) saturate(1.5) hue-rotate(195deg)'},
+ {id:'mint',name:'Mint Green',cost:2,swatch:'#85b9a1',filter:'sepia(.28) saturate(1.3) hue-rotate(75deg)'}
+];
+function buyMachinePaint(s:GameState,id:MachinePaint):GameState{
+ const paint=MACHINE_PAINTS.find(p=>p.id===id);if(!paint)return s;
+ if(s.unlockedMachinePaints.includes(id))return {...s,machinePaint:id};
+ if(s.styleTokens<paint.cost)return s;
+ return {...s,styleTokens:s.styleTokens-paint.cost,unlockedMachinePaints:[...s.unlockedMachinePaints,id],machinePaint:id};
+}
 const QC_COOLDOWN=180;
 const qcTokenReward=(correct:number)=>correct===10?2:correct>=7?1:0;
 function normaliseStyle(saved:any){
  const unlockedThemes:FactoryTheme[]=['workshop',...FACTORY_THEMES.filter(t=>t.id!=='workshop'&&Array.isArray(saved.unlockedThemes)&&saved.unlockedThemes.includes(t.id)).map(t=>t.id)];
  const theme:FactoryTheme=unlockedThemes.includes(saved.theme)?saved.theme:'workshop';
- return {styleTokens:Math.max(0,Math.floor(Number(saved.styleTokens)||0)),unlockedThemes,theme,
+ const unlockedMachinePaints:MachinePaint[]=['original',...MACHINE_PAINTS.filter(p=>p.id!=='original'&&Array.isArray(saved.unlockedMachinePaints)&&saved.unlockedMachinePaints.includes(p.id)).map(p=>p.id)];
+ const machinePaint:MachinePaint=unlockedMachinePaints.includes(saved.machinePaint)?saved.machinePaint:'original';
+ return {styleTokens:Math.max(0,Math.floor(Number(saved.styleTokens)||0)),unlockedThemes,theme,unlockedMachinePaints,machinePaint,
    qcReadyAt:Math.max(0,Number(saved.qcReadyAt)||0),qcSession:null as string|null};
 }
 function buyFactoryTheme(s:GameState,id:FactoryTheme):GameState{
@@ -49,7 +65,7 @@ function finishQualityControl(s:GameState,id:string,correct:number):GameState{
  return {...s,qcSession:null,styleTokens:s.styleTokens+qcTokenReward(score)};
 }
 type GameState = {
-  styleTokens:number; unlockedThemes:FactoryTheme[]; theme:FactoryTheme; qcReadyAt:number; qcSession:string|null;
+  styleTokens:number; unlockedThemes:FactoryTheme[]; theme:FactoryTheme; unlockedMachinePaints:MachinePaint[]; machinePaint:MachinePaint; qcReadyAt:number; qcSession:string|null;
   qualityInspectors:number;
   flowMode:Record<IntermediateStock,StockFlowMode>; freightTier:VehicleTier; drivers:number; driverAssignments:Record<FreightRoute,number>; oreAtMine:number; copperAtMine:number; drones:number; droneAssignments:Record<FreightRoute,number>; freightRouteLevels:Record<FreightRoute,number>; freightBoostSeconds:Record<FreightRoute,number>; freightBoostReadyAt:Record<FreightRoute,number>; freightLastMined:Record<FreightRoute,number>; freightLastDelivered:Record<FreightRoute,number>; cash:number; gears:number; starterPowerCredit:number; powerShortage:boolean; gearShipmentProgress:number; ore:number; beams:number; coils:number; motors:number; ingot:number; plate:number; parts:number; copperOre:number; copperIngot:number; wire:number; circuits:number;
   miner:number; smelter:number; press:number; assembler:number; copperMiner:number; copperSmelter:number; wiremill:number; circuitpress:number; beamMill:number; coilWinder:number; motorworks:number;
@@ -61,7 +77,7 @@ type GameState = {
 };
 const SAVE_KEY = 'ironworks-tycoon-save-v2';
 const fresh:GameState = {
-  styleTokens:0,unlockedThemes:['workshop'],theme:'workshop',qcReadyAt:0,qcSession:null,qualityInspectors:0,
+  styleTokens:0,unlockedThemes:['workshop'],theme:'workshop',unlockedMachinePaints:['original'],machinePaint:'original',qcReadyAt:0,qcSession:null,qualityInspectors:0,
   flowMode:{ingot:'balanced',wire:'balanced'},freightTier:0,drivers:0,driverAssignments:{iron:0,copper:0},oreAtMine:0,copperAtMine:0,drones:0,droneAssignments:{iron:0,copper:0},freightRouteLevels:{iron:0,copper:0},freightBoostSeconds:{iron:0,copper:0},freightBoostReadyAt:{iron:0,copper:0},freightLastMined:{iron:0,copper:0},freightLastDelivered:{iron:0,copper:0},cash:0,gears:0,starterPowerCredit:15,powerShortage:false,gearShipmentProgress:0,ore:0,beams:0,coils:0,motors:0,ingot:0,plate:0,parts:0,copperOre:0,copperIngot:0,wire:0,circuits:0,
   miner:0,smelter:0,press:0,assembler:0,copperMiner:0,copperSmelter:0,wiremill:0,circuitpress:0,beamMill:0,coilWinder:0,motorworks:0,
   tier_miner:0,tier_smelter:0,tier_press:0,tier_assembler:0,tier_copperMiner:0,tier_copperSmelter:0,tier_wiremill:0,tier_circuitpress:0,tier_beamMill:0,tier_coilWinder:0,tier_motorworks:0,
@@ -519,8 +535,9 @@ function MachineIcon({id,size=36}:{id:MachineId;size?:number}){
   return <img className="pixel-machine-icon" src={pixelMachineArt(id).icon} alt={machines.find(m=>m.id===id)?.name||'Machine'} width={size} height={size}/>;
 }
 
-function MachineArt({id,active,broken,lights,cycleSeconds,progress}:{id:MachineId;active:boolean;broken:boolean;lights:('on'|'off'|'empty')[];cycleSeconds:number;progress:number}){
+function MachineArt({id,active,broken,lights,cycleSeconds,progress,paint}:{id:MachineId;active:boolean;broken:boolean;lights:('on'|'off'|'empty')[];cycleSeconds:number;progress:number;paint:MachinePaint}){
  const sprite=pixelMachineArt(id);
+ const paintFilter=MACHINE_PAINTS.find(p=>p.id===paint)?.filter||'none';
  const spriteReady=id!=='motorworks';
  const hasOriginalAnimation=id!=='motorworks';
  const safeCycle=cycleSeconds>0?cycleSeconds:8;
@@ -531,7 +548,7 @@ function MachineArt({id,active,broken,lights,cycleSeconds,progress}:{id:MachineI
  
  const bolt=(x:number,y:number)=><circle cx={x} cy={y} r="2.3" fill="#d7c9a8" stroke="#39453b" strokeWidth="1"/>;
  return <div className={'machine-art art-'+id+(electrical?' art-electrical':'')+(active?' running':'')+(broken?' broken':'')+(spriteReady?' art-sprite-ready':'')} style={{'--machine-cycle':safeCycle+'s','--machine-offset':'-'+(Math.max(0,Math.min(1,progress))*safeCycle)+'s'} as CSSProperties}>
-  {spriteReady&&<><img className="machine-still-image" src={sprite.icon} alt={machines.find(m=>m.id===id)?.name+' original pixel artwork'}/>{hasOriginalAnimation&&<div className="machine-original-animation" aria-hidden="true" style={{backgroundImage:'url(/machines/pixel/'+id+'-sheet.webp)'}}/>}</>}
+  {spriteReady&&<><img className="machine-still-image" style={{filter:paintFilter}} src={sprite.icon} alt={machines.find(m=>m.id===id)?.name+' original pixel artwork'}/>{hasOriginalAnimation&&<div className="machine-original-animation" aria-hidden="true" style={{backgroundImage:'url(/machines/pixel/'+id+'-sheet.webp)',filter:paintFilter}}/>}</>}
 
   <div className="art-backdrop"/>
   <svg viewBox="0 0 320 210" role="img" aria-label={machines.find(m=>m.id===id)?.name+' detailed industrial machine illustration'}>
@@ -1337,6 +1354,7 @@ export default function App(){
         <div className="welcome-row"><div><span className="eyebrow">AFTER-HOURS EXTRAS</span><h1>Quality & Themes</h1><p>Earn cosmetic rewards by inspecting products. Themes never affect production, prices or difficulty.</p></div><div className="staff-summary"><b>{s.styleTokens}</b><span>STYLE TOKENS</span></div></div>
         {qcView?<QualityControlGame key={qcView} session={qcView} playing={economyActive&&!s.powerShortage} onFinish={(id,correct)=>setS(v=>finishQualityControl(v,id,correct))} onClose={()=>{setQcView(null);setS(v=>({...v,qcSession:null}));}}/>:<section className="qc-invite"><div><span className="eyebrow">OPTIONAL · ABOUT 40 SECONDS</span><h2>Quality Control</h2><p>Inspect 10 plates as they move along the belt. Catch cracks, missing bolts, dents and shifted panels. Three mistakes end your shift. Get 7 correct for 1 Style Token, or all 10 for 2.</p><small>One shift every 3 game minutes. Leaving or reloading ends the shift without a reward; no money or reputation is lost.</small></div><button type="button" className="primary-button" disabled={s.miner===0||!economyActive||s.powerShortage||s.contractClock<s.qcReadyAt} onClick={()=>{if(s.miner===0||!economyActive||s.powerShortage||s.contractClock<s.qcReadyAt)return;const id=Date.now()+'-'+Math.random();setS(v=>startQualityControl(v,id));setQcView(id);}}>{s.miner===0?'BUILD YOUR FIRST MINE':s.contractClock<s.qcReadyAt?'NEXT SHIFT · '+boostClock(s.qcReadyAt-s.contractClock):!economyActive||s.powerShortage?'RESUME PRODUCTION TO PLAY':'START QUALITY CHECK'}</button></section>}
         <section className="theme-shop"><div className="section-heading"><div><span className="eyebrow">FACTORY COLOURS</span><h2>Choose your theme</h2><p>Unlock a colour scheme once, then switch whenever you like. Themes and tokens stay with your save, even after a factory reset.</p></div></div><div className="theme-grid">{FACTORY_THEMES.map(theme=>{const owned=s.unlockedThemes.includes(theme.id);return <article className="theme-card" key={theme.id}><div className="theme-swatches" aria-hidden="true">{theme.colours.map(colour=><span key={colour} style={{background:colour}}/>)}</div><h3>{theme.name}</h3><button type="button" className={s.theme===theme.id?'primary-button':'secondary-button'} aria-pressed={s.theme===theme.id} disabled={!owned&&s.styleTokens<theme.cost} onClick={()=>setS(v=>buyFactoryTheme(v,theme.id))}>{s.theme===theme.id?'SELECTED':owned?'USE THEME':'UNLOCK · '+theme.cost+' STYLE TOKENS'}</button></article>})}</div></section>
+<section className="machine-paint-shop"><div className="section-heading"><div><span className="eyebrow">MACHINE PAINT SHOP</span><h2>Paint your machines</h2><p>Unlock a finish with Style Tokens from Quality Control. Applies to your machine artwork and animated frames, without changing production. Unlocks are permanent.</p></div></div><div className="machine-paint-grid">{MACHINE_PAINTS.map(paint=>{const owned=s.unlockedMachinePaints.includes(paint.id);return <article className="machine-paint-card" key={paint.id}><span className="machine-paint-swatch" style={{background:paint.swatch}} aria-hidden="true"/><div><strong>{paint.name}</strong><small>{paint.cost===0?'Included':paint.cost+' Style Tokens'}</small></div><button type="button" className={s.machinePaint===paint.id?'primary-button':'secondary-button'} aria-pressed={s.machinePaint===paint.id} disabled={!owned&&s.styleTokens<paint.cost} onClick={()=>setS(v=>buyMachinePaint(v,paint.id))}>{s.machinePaint===paint.id?'EQUIPPED':owned?'EQUIP':'UNLOCK'}</button></article>})}</div></section>
       </div>}
       {page==='factory'&&<div className="page-content">
         <div className="factory-view-toolbar"><div><span className="eyebrow">FACTORY</span></div><div className="factory-view-switch" role="tablist" aria-label="Factory view"><button type="button" role="tab" aria-selected={factoryView==='overview'} className={factoryView==='overview'?'selected':''} onClick={()=>setFactoryView('overview')}><TrendingUp size={15}/> Dashboard</button><button type="button" role="tab" aria-selected={factoryView==='equipment'} className={factoryView==='equipment'?'selected':''} onClick={()=>setFactoryView('equipment')}><Factory size={15}/> Machines</button></div></div>
@@ -1407,7 +1425,7 @@ export default function App(){
           const repairCost=repairCostFor(m.id,tier);
           return <article className={'machine-card '+(owned?'owned':'locked')+(failed>0?' is-broken':'')} key={m.id}>
             <div className="machine-card-head"><span className="machine-number"><MachineIcon id={m.id} size={26}/> 0{machines.indexOf(m)+1} · {m.short}</span><span className={'status '+(unitsWorking===0&&owned>0?'bad':active?'good':'idle')}>{machineStatus}</span></div>
-            <MachineArt id={m.id} active={active} broken={failed>0} lights={lights} cycleSeconds={cycleSeconds} progress={s.visualProgress[m.id]}/>
+            <MachineArt id={m.id} active={active} broken={failed>0} lights={lights} cycleSeconds={cycleSeconds} progress={s.visualProgress[m.id]} paint={s.machinePaint}/>
             <div className="machine-info"><div><h3>{m.name}</h3><p>{m.desc}</p></div><span className="machine-level">LV {tier+1}</span></div>
             <div className="machine-details"><span>OUTPUT</span><b>{rateFor(m).toFixed(2)} / sec</b><span>RUNNING / OWNED</span><b>{active?unitsWorking:0} / {owned}</b></div>
             <div className="machine-electricity"><Zap size={14}/><span>POWER · {ELECTRICITY_PER_MINUTE[m.id]} RVT/min/unit {overclock?'· 3× OVERCLOCK':''}</span><b>{active?(unitsWorking*ELECTRICITY_PER_MINUTE[m.id]*electricitySpeedFactor(speed)*machinePowerFactor(s,m.id)*powerCostMultiplier(s)).toFixed(1):'0.0'} RVT/min</b></div>
