@@ -959,9 +959,8 @@ export default function App(){
   const autoIncomePerMinute=economyActive&&payrollFunded&&s.autoSell?goods.reduce((sum,item)=>{
     const assigned=Math.min(s.salespeople,Math.max(0,s.salesAssignments[item.id]||0));
     // Estimate the next minute from the current one-second dispatch rate.
-    const manualFlow=(item.id==='ingot'||item.id==='wire')&&s.flowMode[item.id]==='feed';
-    const stockFloor=manualFlow?0:contractStockTarget(s,item.id);
-    const warehouseBuffer=(item.id==='ingot'||item.id==='wire')&&s.flowMode[item.id]==='balanced'?2:0;
+    const stockFloor=Math.max(contractStockTarget(s,item.id),s.stockReserves[item.id]||0);
+    const warehouseBuffer=0;
     const amount=Math.min(Math.max(0,s[item.id]-Math.max(stockFloor,warehouseBuffer)),assigned*SALES_UNITS_PER_SECOND*(s.researched.includes('dispatch-systems')?1.25:1)*(1+s.capitalLevels.freightNetwork*.1)*speed*(s.boostSeconds.dispatch>0?2:1));
     return sum+amount*item.price*(s.researched.includes('market-intelligence')?1.2:1)*60;
   },0):0;
