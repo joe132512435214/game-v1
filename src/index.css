@@ -1997,3 +1997,7 @@ svg.staff-pixel-portrait::before,svg.staff-pixel-portrait::after{content:none;di
 .logistics-dispatch-row>div:nth-child(2){flex:1;min-width:0;display:grid;gap:4px}.logistics-dispatch-row b{font-size:12px}.logistics-dispatch-row small{font-size:10px;color:#9db5b6}
 @media(max-width:850px){.logistics-route-grid,.logistics-dispatch-list{grid-template-columns:1fr}}
 @media(max-width:520px){.logistics-intro,.logistics-section{padding:12px}.logistics-quick-stats{width:100%;justify-content:space-between}.logistics-route-flow{gap:5px}.logistics-dispatch-row{flex-wrap:wrap}.logistics-dispatch-row .assignment-stepper{margin-left:auto}}
+
+
+.reserve-recommendation{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;padding:8px 9px;border:1px solid rgba(108,190,157,.24);background:rgba(43,103,82,.11);border-radius:7px}
+.reserve-recommendation span{display:grid;gap:3px;min-width:0}.reserve-recommendation b{font-size:11px;color:#b8ebcd}.reserve-recommendation small{font-size:10px;color:#a5b9b5;line-height:1.4}.reserve-recommendation button{flex-shrink:0;padding:6px 9px;font-size:10px}
