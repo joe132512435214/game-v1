@@ -2053,3 +2053,10 @@ svg.staff-pixel-portrait::before,svg.staff-pixel-portrait::after{content:none;di
 .warehouse-stock-card .warehouse-use-button{flex-shrink:0;align-self:center!important;white-space:normal!important;min-width:0;max-width:130px;padding:9px 10px!important;background:#3c6d51!important;color:#eef9ed!important;border:1px solid #699777!important;border-radius:6px;font-size:10px!important;line-height:1.2!important;text-align:center}.warehouse-stock-card .warehouse-use-button:disabled{opacity:.55}
 .warehouse-grid .warehouse-stock-card>.warehouse-ship-button{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;margin:0!important;padding:12px!important;align-self:stretch!important;font-size:11px!important;line-height:1.3;white-space:normal!important;text-align:left}.warehouse-ship-button span{font-weight:800;white-space:nowrap}
 @media(max-width:540px){.warehouse-grid .warehouse-stock-card{padding:12px}.warehouse-stock-suggestion{grid-template-columns:1fr}.warehouse-stock-card .warehouse-use-button{width:100%;max-width:none;justify-self:stretch}.warehouse-stock-reserve-heading{align-items:flex-start}.warehouse-stock-reserve-heading>span{font-size:10px}}
+
+
+/* Compact factory level badge: no progress bar or duplicate reputation number */
+.factory-command-bottom .factory-rank-box{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:7px;padding:13px 18px;background:rgba(10,25,24,.4);border:1px solid rgba(170,201,176,.25);border-radius:9px;margin:10px;min-width:0}
+.factory-rank-box small{font-size:9px;letter-spacing:.12em;color:#b5c9b9}
+.factory-rank-box strong{font-size:clamp(13px,1.5vw,18px);line-height:1.3;color:#f4e2b5;font-weight:800;overflow-wrap:anywhere}
+@media(max-width:700px){.factory-command-bottom .factory-rank-box{grid-column:1/-1;border:1px solid rgba(170,201,176,.25)!important;margin:9px}}
