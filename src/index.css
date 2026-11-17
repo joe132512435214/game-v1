@@ -1661,3 +1661,11 @@ body:has(.game[data-theme="copper"]){background:#2b1c18!important}
 .staff-role-actions button:disabled{opacity:.45}
 @media(max-width:780px){.staff-roles-compact{grid-template-columns:1fr}.staff-role-heading h2{font-size:15px!important}}
 @media(max-width:400px){.staff-roles-compact .role-card{padding:11px!important}.staff-role-heading{gap:8px}.staff-role-count{font-size:9px}.staff-role-actions button{font-size:11px}}
+
+
+/* Actual approved five-character sprite portraits replace temporary CSS faces */
+svg.staff-pixel-portrait{display:block;flex:none;width:48px;height:48px;padding:0;border:2px solid #e2a05b;border-radius:5px;background:#28283b;image-rendering:pixelated;box-shadow:2px 3px 0 #0e1a14;overflow:hidden}
+svg.staff-pixel-portrait::before,svg.staff-pixel-portrait::after{content:none;display:none}
+.freight-staff-heading{justify-content:flex-start;align-items:center;margin-bottom:8px}
+.freight-staff-heading h2{margin:2px 0 0!important;font-size:19px!important}
+@media(max-width:400px){svg.staff-pixel-portrait{width:44px;height:44px}}
