@@ -1967,3 +1967,33 @@ svg.staff-pixel-portrait::before,svg.staff-pixel-portrait::after{content:none;di
 .auto-order-toggle b{font-size:9px;color:#a9b7ba}
 .auto-order-toggle:has(input:checked) b{color:#7be4a3}
 @media(max-width:680px){.auto-order-toggle{padding:4px 5px;gap:4px;font-size:9px}.auto-order-toggle b{display:none}}
+
+
+/* Unified logistics: compact overview, advanced controls only on demand */
+.logistics-dashboard{display:grid;gap:16px}
+.logistics-intro,.logistics-section{background:var(--panel,#142b30);border:1px solid rgba(149,191,185,.19);border-radius:12px;padding:17px}
+.logistics-intro{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.logistics-intro h2{margin:3px 0 5px;font-size:23px}.logistics-intro p,.logistics-section-head p{margin:0;color:#9db5b6;font-size:12px}
+.logistics-quick-stats{display:flex;gap:17px}.logistics-quick-stats span{display:grid;gap:3px;text-align:center}.logistics-quick-stats b{font-size:20px;color:#e8f4ed}.logistics-quick-stats small{font-size:9px;color:#8da8a9}
+.logistics-section-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+.logistics-section-head h3{display:flex;align-items:center;gap:8px;font-size:19px;margin:4px 0}
+.logistics-head-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.logistics-head-actions small{color:#a8bcbd;font-size:10px}
+.logistics-route-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.logistics-route-card{border:1px solid rgba(147,183,184,.2);background:rgba(6,22,27,.35);border-radius:10px;padding:13px;display:grid;gap:12px;min-width:0}
+.logistics-route-top,.logistics-route-bottom{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.logistics-route-top>div{display:grid;gap:3px}.logistics-route-top b{font-size:14px}.logistics-route-top small,.logistics-route-bottom>span{font-size:10px;color:#9eb7b8}
+.logistics-status{border-radius:5px;padding:5px 7px;background:rgba(75,168,123,.14);color:#a3e8bd;font-size:9px;font-weight:800;white-space:nowrap}.logistics-status.needs-help{background:rgba(239,156,64,.14);color:#f4bb76}
+.logistics-route-flow{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:9px;font-size:10px;color:#9eb7b8}.logistics-route-flow span{display:grid;gap:3px}.logistics-route-flow b{color:#e8f1ee}
+.logistics-route-track{height:6px;background:#294146;border-radius:8px;overflow:hidden}.logistics-route-track i{display:block;height:100%;background:#69cda0;border-radius:8px}
+.logistics-tip{font-size:11px;color:#f0bd78}
+.logistics-route-details,.logistics-advanced{border-top:1px solid rgba(144,182,183,.18);padding-top:10px}
+.logistics-route-details summary,.logistics-advanced summary{cursor:pointer;color:#bdd4d2;font-size:11px;font-weight:700}
+.logistics-detail-actions,.logistics-advanced-content{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px}.logistics-detail-actions span{font-size:11px}
+.logistics-advanced{margin-top:14px}.logistics-advanced summary{display:list-item}.logistics-advanced summary span{float:right;color:#8ba8a8}
+.logistics-advanced-content{display:grid}.logistics-advanced-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 0}.logistics-advanced-row+ .logistics-advanced-row{border-top:1px solid rgba(144,182,183,.15)}.logistics-advanced-row>div{flex:1;min-width:180px;display:grid;gap:4px}.logistics-advanced-row small{font-size:10px;color:#9db5b6}
+.logistics-inline-toggle{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;cursor:pointer}.logistics-inline-toggle input{accent-color:#70d5a0;width:16px;height:16px}
+.logistics-dispatch-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.logistics-dispatch-row{display:flex;align-items:center;gap:10px;min-width:0;padding:10px;border:1px solid rgba(147,183,184,.17);border-radius:8px;background:rgba(6,22,27,.27)}
+.logistics-dispatch-row>div:nth-child(2){flex:1;min-width:0;display:grid;gap:4px}.logistics-dispatch-row b{font-size:12px}.logistics-dispatch-row small{font-size:10px;color:#9db5b6}
+@media(max-width:850px){.logistics-route-grid,.logistics-dispatch-list{grid-template-columns:1fr}}
+@media(max-width:520px){.logistics-intro,.logistics-section{padding:12px}.logistics-quick-stats{width:100%;justify-content:space-between}.logistics-route-flow{gap:5px}.logistics-dispatch-row{flex-wrap:wrap}.logistics-dispatch-row .assignment-stepper{margin-left:auto}}
