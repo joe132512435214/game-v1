@@ -1768,3 +1768,35 @@ body:has(.game[data-theme="copper"]){background:#2b1c18!important}
 
 /* Each supplied sheet is 700×100: seven square 100×100 frames. Keep the animated frame square and centred to match object-fit:contain stills. */
 .machine-art.art-sprite-ready .machine-original-animation{inset:auto;left:50%;top:50%;width:auto;height:100%;max-width:100%;aspect-ratio:1;transform:translate(-50%,-50%);background-size:700% 100%;}
+
+
+/* Desktop factory dashboard: keep action copy readable and controls contained.
+   Scoped to the Factory overview; mobile continues to stack naturally. */
+@media(min-width:761px){
+ .game .home-hero,.game .home-next,.game .home-delivery{border-radius:6px}
+ .game .home-hero{padding:22px 24px 18px}
+ .game .home-factory-machines{
+   display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,210px));
+   justify-content:start;align-items:stretch;gap:12px;margin:18px 0 0;
+ }
+ .game .home-machine{width:100%;min-height:145px;padding:16px 12px;border-radius:5px}
+ .game .home-machine .pixel-machine-icon{width:96px;height:96px;object-fit:contain;image-rendering:pixelated}
+ .game .home-next{
+   display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;
+   justify-content:stretch;column-gap:24px;min-height:120px;padding:20px 24px;
+ }
+ .game .home-next>div{min-width:0;width:auto;max-width:72ch}
+ .game .home-next h2{max-width:none;font-size:clamp(19px,1.8vw,24px);line-height:1.2;overflow-wrap:normal}
+ .game .home-next p{max-width:60ch;line-height:1.5}
+ .game .home-next>.primary-button{
+   flex:none;width:auto!important;min-width:165px;max-width:235px;
+   justify-self:end;white-space:nowrap;padding:12px 18px;
+ }
+ .game .home-delivery{grid-template-columns:minmax(180px,1fr) minmax(140px,1.4fr) auto}
+ .game .home-delivery>.secondary-button{width:auto!important;min-width:115px;justify-self:end}
+}
+@media(min-width:761px) and (max-width:960px){
+ .game .home-next{grid-template-columns:minmax(0,1fr) auto;gap:14px;padding:16px}
+ .game .home-next>.primary-button{min-width:145px;padding:10px 12px}
+ .game .home-factory-machines{grid-template-columns:repeat(auto-fill,minmax(140px,180px))}
+}
