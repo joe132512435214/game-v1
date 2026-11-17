@@ -515,14 +515,12 @@ function ProductIcon({id,size=36}:{id:StockId;size?:number}){
    style={{width:size,height:size}}><Icon size={Math.max(17,Math.round(size*.57))} strokeWidth={2.25}/></span>;
 }
 function MachineIcon({id,size=36}:{id:MachineId;size?:number}){
-  if(id==='motorworks')return <span className="motor-icon" role="img" aria-label="Electric Motor Works" style={{width:size,height:size}}><Cog size={Math.max(17,Math.round(size*.7))}/></span>;
-  return <img className="pixel-machine-icon" src={pixelMachineArt(id).icon} alt={machines.find(m=>m.id===id)?.name||'Machine'} width={size} height={size}/>;
+  return <img className="pixel-machine-icon" src={'/machines/basic/'+id+'-still.webp'} alt={machines.find(m=>m.id===id)?.name||'Machine'} width={size} height={size}/>;
 }
 
 function MachineArt({id,active,broken,lights,cycleSeconds,progress}:{id:MachineId;active:boolean;broken:boolean;lights:('on'|'off'|'empty')[];cycleSeconds:number;progress:number}){
  const sprite=pixelMachineArt(id);
- const spriteReady=id!=='motorworks';
- const hasOriginalAnimation=id!=='motorworks';
+ const spriteReady=true; // All eleven machine types now have basic animation assets.
  const safeCycle=cycleSeconds>0?cycleSeconds:8;
  const electrical=['copperMiner','copperSmelter','wiremill','circuitpress','coilWinder','motorworks'].includes(id);
  const copper=electrical?'#bd8054':'#bd985e';
@@ -531,7 +529,7 @@ function MachineArt({id,active,broken,lights,cycleSeconds,progress}:{id:MachineI
  
  const bolt=(x:number,y:number)=><circle cx={x} cy={y} r="2.3" fill="#d7c9a8" stroke="#39453b" strokeWidth="1"/>;
  return <div className={'machine-art art-'+id+(electrical?' art-electrical':'')+(active?' running':'')+(broken?' broken':'')+(spriteReady?' art-sprite-ready':'')} style={{'--machine-cycle':safeCycle+'s','--machine-offset':'-'+(Math.max(0,Math.min(1,progress))*safeCycle)+'s'} as CSSProperties}>
-  {spriteReady&&<><img className="machine-still-image" src={sprite.icon} alt={machines.find(m=>m.id===id)?.name+' original pixel artwork'}/>{hasOriginalAnimation&&<div className="machine-original-animation" aria-hidden="true" style={{backgroundImage:'url(/machines/pixel/'+id+'-sheet.webp)'}}/>}</>}
+  {spriteReady&&<img className="machine-still-image" src={'/machines/basic/'+id+(active?'.webp':'-still.webp')} alt={machines.find(m=>m.id===id)?.name+' Basic pixel-art machinery'}/> }
 
   <div className="art-backdrop"/>
   <svg viewBox="0 0 320 210" role="img" aria-label={machines.find(m=>m.id===id)?.name+' detailed industrial machine illustration'}>
@@ -1134,13 +1132,6 @@ export default function App(){
     setNotice(m.id==='assembler'&&!s.cyberAttackSeen?'Mech Assembly commissioned. Security breach detected — the factory network is locked down.':m.name+' unit '+(s[m.id]+1)+' built'+((s.pendingReplacement[m.id]||0)>0?' as a replacement at up to 5 levels below the old equipment.':'.'));
     celebrate('New machine online!',m.name+' · unit '+(s[m.id]+1),'upgrade');
   };
-  const upgradeMachine=(m:typeof machines[number])=>{
-    const cost=(s[`tier_${m.id}`]+1)*3;
-    if(s.gears<cost){setNotice('You need '+cost+' Gears for this upgrade.');return;}
-    setS(v=>({...v,gears:v.gears-cost,[`tier_${m.id}`]:v[`tier_${m.id}`]+1}));
-    setNotice(m.name+' upgraded. Output increased by 25%.');
-    celebrate('Production upgraded!',m.name+' · +25% output','upgrade');
-  };
   const sellStock=(id:StockId)=>{
     const item=goods.find(g=>g.id===id)!;const amount=Math.floor(s[id]);
     if(amount<1){setNotice('There are no full units ready to ship.');return;}
@@ -1433,15 +1424,15 @@ export default function App(){
           return <article className={'machine-card '+(owned?'owned':'locked')+(failed>0?' is-broken':'')} key={m.id}>
             <div className="machine-card-head"><span className="machine-number"><MachineIcon id={m.id} size={26}/> 0{machines.indexOf(m)+1} · {m.short}</span><span className={'status '+(unitsWorking===0&&owned>0?'bad':active?'good':'idle')}>{machineStatus}</span></div>
             <MachineArt id={m.id} active={active} broken={failed>0} lights={lights} cycleSeconds={cycleSeconds} progress={s.visualProgress[m.id]}/>
-            <div className="machine-info"><div><h3>{m.name}</h3><p>{m.desc}</p></div><span className="machine-level">LV {tier+1}</span></div>
+            <div className="machine-info"><div><h3>{m.name}</h3><p>{m.desc}</p></div><span className="machine-level" title="Visual machine upgrades are coming later">BASIC</span></div>
             <div className="machine-details"><span>OUTPUT</span><b>{rateFor(m).toFixed(2)} / sec</b><span>RUNNING / OWNED</span><b>{active?unitsWorking:0} / {owned}</b></div>
             <div className="machine-electricity"><Zap size={14}/><span>POWER · {ELECTRICITY_PER_MINUTE[m.id]} RVT/min/unit {overclock?'· 3× OVERCLOCK':''}</span><b>{active?(unitsWorking*ELECTRICITY_PER_MINUTE[m.id]*electricitySpeedFactor(speed)*machinePowerFactor(s,m.id)*powerCostMultiplier(s)).toFixed(1):'0.0'} RVT/min</b></div>
              {owned>0&&<div className="machine-balance"><div className="machine-balance-head"><span>CAPACITY USED</span><b className={efficiency<70?'low':''}>{active?efficiency:0}%</b></div><div className="machine-balance-track"><i style={{width:(active?efficiency:0)+'%'}}/></div><small>{!running?'Factory paused':supplyLimited?'Not enough input. Improve '+(upstreamAdvice[m.id]||'upstream machines')+' or change Warehouse routing.':active?'Healthy supply. Extra units will increase output if upstream can keep up.':unitsWorking===0?'Repair machines to restore production.':s.powerShortage?'Power funding needed; switch off overclock or ship stock.':'Waiting for input from '+(upstreamAdvice[m.id]||'upstream production')+'.'}</small></div>}
              {owned>0&&<div className="machine-overclock-row"><div><b><Zap size={14}/> OVERCLOCK</b><small>+50% machine speed · 3× electricity while producing</small></div><button type="button" role="switch" className={'dashboard-switch '+(overclock?'is-on':'')} aria-label={'Overclock '+m.name} aria-checked={overclock} onClick={()=>setS(v=>({...v,overclocked:{...v.overclocked,[m.id]:!v.overclocked[m.id]}}))}><i/></button></div>}
             {owned>0&&stopReason&&<div className="machine-stop-reason"><AlertTriangle size={13}/><span>{stopReason}</span></div>}
             {failed>0&&<div className="machine-repair"><span>{failed} broken unit{failed>1?'s':''} · {s.mechanicAssignments[m.id]>0?'mechanic repairing':'awaiting repair'}</span><button onClick={()=>{if(s.cash<repairCost){setNotice('Emergency repair costs '+repairCost+' Rivets per machine.');return;}const index=firstFault(s,m.id);if(index<0)return;setS(v=>({...repairUnit(v,m.id,index),cash:v.cash-repairCost}));setNotice(m.name+' unit '+(index+1)+' repaired.')}}>REPAIR ONE · {fmt(repairCost)} RVT</button></div>}
-            <div className="machine-buttons">{owned===0?(!(s.pendingReplacement[m.id]>0)&&(!stageReached(machineStage[m.id])||s.experience<unlockAt[m.id]||s.reputation<reputationUnlock[m.id])?<div className="machine-locked-note">🔒 STAGE {machineStage[m.id]} · {unlockAt[m.id]} XP + {reputationUnlock[m.id]} REP</div>:<button className="primary-button" disabled={s.cash<cost} onClick={()=>buyMachine(m)}>{(s.pendingReplacement[m.id]||0)>0?'REPLACE DESTROYED UNIT':'BUILD MACHINE'} · {fmt(cost)} RVT</button>):<><button className="primary-button" disabled={owned>=MAX_MACHINE_UNITS||s.cash<cost} onClick={()=>buyMachine(m)}>{owned>=MAX_MACHINE_UNITS?'5/5 UNITS · MAX':'ADD UNIT '+(owned+1)+' · '+fmt(cost)+' RVT'}</button><button className="secondary-button" disabled={s.gears<(tier+1)*3} onClick={()=>upgradeMachine(m)}><ArrowUpRight size={15}/> UPGRADE · {(tier+1)*3} GEARS</button></>}</div>
-            {owned>0&&<small className="machine-footnote">+25% output per upgrade · {m.output} · {owned}/{MAX_MACHINE_UNITS} units installed{(s.pendingReplacement[m.id]||0)>0?' · REPLACEMENT NEEDED':''}</small>}
+            <div className="machine-buttons">{owned===0?(!(s.pendingReplacement[m.id]>0)&&(!stageReached(machineStage[m.id])||s.experience<unlockAt[m.id]||s.reputation<reputationUnlock[m.id])?<div className="machine-locked-note">🔒 STAGE {machineStage[m.id]} · {unlockAt[m.id]} XP + {reputationUnlock[m.id]} REP</div>:<button className="primary-button" disabled={s.cash<cost} onClick={()=>buyMachine(m)}>{(s.pendingReplacement[m.id]||0)>0?'REPLACE DESTROYED UNIT':'BUILD MACHINE'} · {fmt(cost)} RVT</button>):<><button className="primary-button" disabled={owned>=MAX_MACHINE_UNITS||s.cash<cost} onClick={()=>buyMachine(m)}>{owned>=MAX_MACHINE_UNITS?'5/5 UNITS · MAX':'ADD UNIT '+(owned+1)+' · '+fmt(cost)+' RVT'}</button><span className="machine-upgrade-coming" title="Advanced and Master machine upgrades will be added in a future update">ADVANCED &amp; MASTER · COMING LATER</span></>}</div>
+            {owned>0&&<small className="machine-footnote">{m.output} · {owned}/{MAX_MACHINE_UNITS} units installed{(s.pendingReplacement[m.id]||0)>0?' · REPLACEMENT NEEDED':''}</small>}
             {owned>0&&s.unitPenalties[m.id].some(p=>p>0)&&<div className="machine-replacement-levels">UNIT LEVELS: {s.unitPenalties[m.id].slice(0,owned).map((pen,i)=>'Unit '+(i+1)+' LV '+(Math.max(0,tier-pen)+1)).join(' · ')} · replacement units are up to 5 levels lower</div>}
           </article>;
         })}</section>
