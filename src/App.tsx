@@ -9,6 +9,9 @@ import { StaffPortrait } from './StaffPortrait';
 import { newMachineTierArt } from './newMachineTierArt';
 import { rockbreakerTierArt } from './rockbreakerTierArt';
 import { beamRollingTierArt } from './beamRollingTierArt';
+import { wireMillTierArt } from './wireMillTierArt';
+import { coilWinderTierArt } from './coilWinderTierArt';
+import { motorworksTierArt } from './motorworksTierArt';
 
 type MachineId = 'miner' | 'smelter' | 'press' | 'assembler' | 'copperMiner' | 'copperSmelter' | 'wiremill' | 'circuitpress' | 'beamMill' | 'coilWinder' | 'motorworks';
 type StockId = 'ore' | 'ingot' | 'plate' | 'parts' | 'copperOre' | 'copperIngot' | 'wire' | 'circuits' | 'beams' | 'coils' | 'motors';
@@ -505,7 +508,7 @@ const boostClock=(seconds:number)=>`${Math.floor(seconds/60)}:${String(seconds%6
 // The uploaded GIF contains six different machines; each uses its own still.
 const selectedStillMachines:MachineId[]=['miner','smelter','press','assembler','copperMiner','copperSmelter'];
 const pixelMachineArt=(id:MachineId)=>({
-  icon:id==='miner'?rockbreakerTierArt.basic:id==='beamMill'?beamRollingTierArt.basic:(newMachineTierArt[id]?.basic ?? (selectedStillMachines.includes(id)?'/machines/pixel/'+id+'-still.webp':'/machines/pixel/'+id+'-icon.png'))
+  icon:id==='miner'?rockbreakerTierArt.basic:id==='beamMill'?beamRollingTierArt.basic:id==='wiremill'?wireMillTierArt.basic:id==='coilWinder'?coilWinderTierArt.basic:id==='motorworks'?motorworksTierArt.basic:(newMachineTierArt[id]?.basic ?? (selectedStillMachines.includes(id)?'/machines/pixel/'+id+'-still.webp':'/machines/pixel/'+id+'-icon.png'))
 });
 // Products have their own flat, recognisable icons. Never reuse machine photos
 // as item artwork: an ingot should look like a material, not a blast furnace.
@@ -524,8 +527,8 @@ function MachineIcon({id,size=36}:{id:MachineId;size?:number}){
 
 function MachineArt({id,active,broken,lights,cycleSeconds,progress}:{id:MachineId;active:boolean;broken:boolean;lights:('on'|'off'|'empty')[];cycleSeconds:number;progress:number}){
  const sprite=pixelMachineArt(id);
- const spriteReady=id!=='motorworks';
- const hasOriginalAnimation=id!=='motorworks'&&id!=='miner'&&id!=='beamMill'&&!newMachineTierArt[id];
+ const spriteReady=true;
+ const hasOriginalAnimation=!['miner','beamMill','wiremill','coilWinder','motorworks'].includes(id)&&!newMachineTierArt[id];
  const safeCycle=cycleSeconds>0?cycleSeconds:8;
  const electrical=['copperMiner','copperSmelter','wiremill','circuitpress','coilWinder','motorworks'].includes(id);
  const copper=electrical?'#bd8054':'#bd985e';
