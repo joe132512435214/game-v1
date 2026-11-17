@@ -4,6 +4,7 @@ import {
   CheckCircle2, ArrowUpRight, Zap, Boxes, CircleDollarSign, FlaskConical, ShieldCheck, TrendingUp, Cpu, HeartHandshake, GraduationCap, Sprout, LifeBuoy, Heart, Gem, Layers, Cable, CircuitBoard, Construction, Fan, Package
 } from 'lucide-react';
 import { Analytics } from '@vercel/analytics/react';
+import { QualityControlGame } from './QualityControlGame';
 
 type MachineId = 'miner' | 'smelter' | 'press' | 'assembler' | 'copperMiner' | 'copperSmelter' | 'wiremill' | 'circuitpress' | 'beamMill' | 'coilWinder' | 'motorworks';
 type StockId = 'ore' | 'ingot' | 'plate' | 'parts' | 'copperOre' | 'copperIngot' | 'wire' | 'circuits' | 'beams' | 'coils' | 'motors';
@@ -46,45 +47,6 @@ function finishQualityControl(s:GameState,id:string,correct:number):GameState{
  const score=Math.max(0,Math.min(10,Math.floor(correct)));
  return {...s,qcSession:null,styleTokens:s.styleTokens+qcTokenReward(score)};
 }
-type QCItem={id:number;defect:'crack'|'bolt'|null};
-type QCRound={index:number;correct:number;mistakes:number;done:boolean};
-function judgeQuality(round:QCRound,item:QCItem,reject:boolean|null):QCRound{
- if(round.done||item.id!==round.index)return round;
- const correct=reject!==null&&reject===Boolean(item.defect);
- const next={index:round.index+1,correct:round.correct+(correct?1:0),mistakes:round.mistakes+(correct?0:1),done:false};
- next.done=next.index>=10||next.mistakes>=3;return next;
-}
-function QualityControlGame({session,playing,onFinish,onClose}:{session:string;playing:boolean;onFinish:(id:string,correct:number)=>void;onClose:()=>void}){
- const [items]=useState<QCItem[]>(()=>Array.from({length:10},(_,id)=>({id,defect:Math.random()<.5?null:Math.random()<.5?'crack':'bolt'})));
- const [round,setRound]=useState<QCRound>({index:0,correct:0,mistakes:0,done:false});
- const timer=useRef<ReturnType<typeof setTimeout>|null>(null);
- const remaining=useRef(2500);
- const pick=(reject:boolean|null)=>{
-   if(!playing||round.done)return;
-   if(timer.current)clearTimeout(timer.current);
-   setRound(v=>judgeQuality(v,items[round.index],reject));
- };
- useEffect(()=>{remaining.current=2500;},[round.index]);
- useEffect(()=>{
-   if(round.done||!playing)return;
-   const started=Date.now();
-   timer.current=setTimeout(()=>setRound(v=>judgeQuality(v,items[round.index],null)),remaining.current);
-   return()=>{if(timer.current)clearTimeout(timer.current);remaining.current=Math.max(0,remaining.current-(Date.now()-started));};
- },[round.index,round.done,playing,items]);
- useEffect(()=>{if(round.done)onFinish(session,round.correct);},[round.done,round.correct,session,onFinish]);
- const item=items[Math.min(9,round.index)];
- return <section className="qc-game" aria-label="Quality Control mini-game">
-   <div className="qc-game-heading"><div><span className="eyebrow">QUALITY CONTROL</span><h2>{round.done?'Shift complete':'Inspect the next plate'}</h2></div><button type="button" className="secondary-button" onClick={onClose}>{round.done?'BACK TO THEMES':'LEAVE SHIFT'}</button></div>
-   {round.done?<div className="qc-result" role="status"><b>{round.correct}/10 correct</b><h3>{qcTokenReward(round.correct)?'Nice work! +'+qcTokenReward(round.correct)+' Style Token'+(qcTokenReward(round.correct)>1?'s':''):'No tokens this time'}</h3><p>{round.mistakes>=3?'Three mistakes ended this shift. ':''}Get at least 7 correct to earn a token. A perfect shift earns 2.</p></div>:<>
-    <p>Keep good plates. Reject plates with a crack or a missing corner bolt. You have 2.5 seconds per plate; three mistakes end the shift.</p>
-    <div className="qc-score"><span>PLATE {round.index+1}/10</span><span>{round.correct} CORRECT</span><span>{3-round.mistakes} LIVES</span></div>
-    <div className="qc-conveyor"><svg viewBox="0 0 240 160" role="img" aria-label="Inspect this plate visually: check for cracks and all four corner bolts"><rect x="40" y="20" width="160" height="120" rx="12" fill="#aab8bd" stroke="#344750" strokeWidth="6"/><rect x="58" y="38" width="124" height="84" rx="5" fill="#72868d"/>{[[56,36],[184,36],[56,124],[184,124]].map(([x,y],i)=>item.defect==='bolt'&&i===3?<circle key={i} cx={x} cy={y} r="7" fill="#253238"/>:<g key={i}><circle cx={x} cy={y} r="7" fill="#dbe7e9" stroke="#344750" strokeWidth="2"/><path d={'M'+(x-4)+' '+y+'h8'} stroke="#344750" strokeWidth="2"/></g>)}{item.defect==='crack'&&<path d="M105 20l14 27-15 15 28 21-14 19 24 38" fill="none" stroke="#2f1917" strokeWidth="6"/>}</svg><span className="qc-accessible-defect">{item.defect==='crack'?'Crack through the plate':item.defect==='bolt'?'Bottom-right bolt is missing':'All bolts present; no cracks'}</span></div>
-    <div className="qc-actions"><button type="button" disabled={!playing} className="qc-reject" onClick={()=>pick(true)}>✕ REJECT</button><button type="button" disabled={!playing} className="qc-keep" onClick={()=>pick(false)}>✓ KEEP</button></div>
-    <p role="status">{playing?'Factory production continues while you play.':'Shift paused with your factory. Resume the factory to continue.'}</p>
-   </>}
- </section>;
-}
-
 type GameState = {
   styleTokens:number; unlockedThemes:FactoryTheme[]; theme:FactoryTheme; qcReadyAt:number; qcSession:string|null;
   qualityInspectors:number;
@@ -1372,7 +1334,7 @@ export default function App(){
       </section>}
       {page==='extras'&&<div className="page-content">
         <div className="welcome-row"><div><span className="eyebrow">AFTER-HOURS EXTRAS</span><h1>Quality & Themes</h1><p>Earn cosmetic rewards by inspecting products. Themes never affect production, prices or difficulty.</p></div><div className="staff-summary"><b>{s.styleTokens}</b><span>STYLE TOKENS</span></div></div>
-        {qcView?<QualityControlGame key={qcView} session={qcView} playing={economyActive&&!s.powerShortage} onFinish={(id,correct)=>setS(v=>finishQualityControl(v,id,correct))} onClose={()=>{setQcView(null);setS(v=>({...v,qcSession:null}));}}/>:<section className="qc-invite"><div><span className="eyebrow">OPTIONAL · ABOUT 25 SECONDS</span><h2>Quality Control</h2><p>Inspect 10 plates. Reject cracks and missing bolts. Three mistakes end your shift. Get 7 correct for 1 Style Token, or all 10 for 2.</p><small>One shift every 3 game minutes. Leaving or reloading ends the shift without a reward; no money or reputation is lost.</small></div><button type="button" className="primary-button" disabled={s.miner===0||!economyActive||s.powerShortage||s.contractClock<s.qcReadyAt} onClick={()=>{if(s.miner===0||!economyActive||s.powerShortage||s.contractClock<s.qcReadyAt)return;const id=Date.now()+'-'+Math.random();setS(v=>startQualityControl(v,id));setQcView(id);}}>{s.miner===0?'BUILD YOUR FIRST MINE':s.contractClock<s.qcReadyAt?'NEXT SHIFT · '+boostClock(s.qcReadyAt-s.contractClock):!economyActive||s.powerShortage?'RESUME PRODUCTION TO PLAY':'START QUALITY CHECK'}</button></section>}
+        {qcView?<QualityControlGame key={qcView} session={qcView} playing={economyActive&&!s.powerShortage} onFinish={(id,correct)=>setS(v=>finishQualityControl(v,id,correct))} onClose={()=>{setQcView(null);setS(v=>({...v,qcSession:null}));}}/>:<section className="qc-invite"><div><span className="eyebrow">OPTIONAL · ABOUT 40 SECONDS</span><h2>Quality Control</h2><p>Inspect 10 plates as they move along the belt. Catch cracks, missing bolts, dents and shifted panels. Three mistakes end your shift. Get 7 correct for 1 Style Token, or all 10 for 2.</p><small>One shift every 3 game minutes. Leaving or reloading ends the shift without a reward; no money or reputation is lost.</small></div><button type="button" className="primary-button" disabled={s.miner===0||!economyActive||s.powerShortage||s.contractClock<s.qcReadyAt} onClick={()=>{if(s.miner===0||!economyActive||s.powerShortage||s.contractClock<s.qcReadyAt)return;const id=Date.now()+'-'+Math.random();setS(v=>startQualityControl(v,id));setQcView(id);}}>{s.miner===0?'BUILD YOUR FIRST MINE':s.contractClock<s.qcReadyAt?'NEXT SHIFT · '+boostClock(s.qcReadyAt-s.contractClock):!economyActive||s.powerShortage?'RESUME PRODUCTION TO PLAY':'START QUALITY CHECK'}</button></section>}
         <section className="theme-shop"><div className="section-heading"><div><span className="eyebrow">FACTORY COLOURS</span><h2>Choose your theme</h2><p>Unlock a colour scheme once, then switch whenever you like. Themes and tokens stay with your save, even after a factory reset.</p></div></div><div className="theme-grid">{FACTORY_THEMES.map(theme=>{const owned=s.unlockedThemes.includes(theme.id);return <article className="theme-card" key={theme.id}><div className="theme-swatches" aria-hidden="true">{theme.colours.map(colour=><span key={colour} style={{background:colour}}/>)}</div><h3>{theme.name}</h3><button type="button" className={s.theme===theme.id?'primary-button':'secondary-button'} aria-pressed={s.theme===theme.id} disabled={!owned&&s.styleTokens<theme.cost} onClick={()=>setS(v=>buyFactoryTheme(v,theme.id))}>{s.theme===theme.id?'SELECTED':owned?'USE THEME':'UNLOCK · '+theme.cost+' STYLE TOKENS'}</button></article>})}</div></section>
       </div>}
       {page==='factory'&&<div className="page-content">
