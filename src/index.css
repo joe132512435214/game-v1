@@ -1767,4 +1767,4 @@ body:has(.game[data-theme="copper"]){background:#2b1c18!important}
 }
 
 /* Each supplied sheet is 700×100: seven square 100×100 frames. Keep the animated frame square and centred to match object-fit:contain stills. */
-.machine-art.art-sprite-ready .machine-original-animation{inset:auto;left:50%;top:50%;width:min(100%,100cqh);height:min(100%,100cqw);aspect-ratio:1;transform:translate(-50%,-50%);background-size:700% 100%;}
+.machine-art.art-sprite-ready .machine-original-animation{inset:auto;left:50%;top:50%;width:auto;height:100%;max-width:100%;aspect-ratio:1;transform:translate(-50%,-50%);background-size:700% 100%;}
