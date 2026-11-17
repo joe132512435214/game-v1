@@ -1937,3 +1937,21 @@ svg.staff-pixel-portrait::before,svg.staff-pixel-portrait::after{content:none;di
 @keyframes qc-reject-exit{0%{transform:translate(0,0) rotate(0);opacity:1}100%{transform:translate(-12%,30%) rotate(-12deg);opacity:.12}}
 @media(max-width:650px){.qc-v2 .qc-training-examples{grid-template-columns:repeat(2,minmax(0,1fr))}.qc-v2 .qc-training-examples>div:first-child{grid-column:1/-1}.qc-v2 .qc-training-examples svg{max-width:120px}}
 @media(prefers-reduced-motion:reduce){.qc-v2 .qc-conveyor.qc-plate-approved .qc-plate-carriage,.qc-v2 .qc-conveyor.qc-plate-rejected .qc-plate-carriage{animation:none!important}}
+
+
+/* One clear next milestone, compact enough to preserve the factory dashboard */
+.progression-spotlight{padding:16px 18px;margin-bottom:14px;border:1px solid #7b946e70;border-radius:9px;background:linear-gradient(120deg,#26372b,#1c2823)}
+.progression-spotlight-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.progression-spotlight h2{font-size:19px;margin:4px 0 5px}
+.progression-spotlight p{font-size:13px;margin:0;color:#c6d2c6}
+.progression-counter{flex-shrink:0;color:#e6d19b;font-size:23px;font-weight:800;font-variant-numeric:tabular-nums}
+.progression-counter span{font-size:12px;color:#aebdb0}
+.progression-track{height:6px;background:#101c17;border-radius:20px;overflow:hidden;margin:12px 0}
+.progression-track>span{display:block;height:100%;background:#9fc58a;transition:width .3s ease}
+.progression-next{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:12px;color:#c2cebf}
+.progression-next>span{flex:1;min-width:170px}
+.progression-requirements{display:flex;flex-wrap:wrap;gap:5px}
+.progression-requirements span{border:1px solid #a07a5c70;border-radius:4px;padding:4px 6px;color:#e2b7a0;background:#402d2840;font-size:11px;font-weight:700}
+.progression-requirements span.ready{border-color:#7ca77c70;color:#b7d6a6;background:#24412b60}
+.progression-next button{min-height:32px;white-space:nowrap;font-size:11px}
+@media(max-width:600px){.progression-spotlight{padding:12px}.progression-spotlight h2{font-size:17px}.progression-next>span{flex-basis:100%}}

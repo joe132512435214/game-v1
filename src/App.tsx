@@ -991,6 +991,26 @@ export default function App(){
   };
   const currentStage=[...FACTORY_STAGES].reverse().find(stage=>stageReached(stage.number))||FACTORY_STAGES[0];
   const nextMachine=machines.filter(m=>s[m.id]===0).sort((a,b)=>unlockAt[a.id]-unlockAt[b.id])[0];
+  // Show one achievable progression target at a time rather than overwhelming players with future upgrades.
+  const progressionSteps=[
+    {id:'miner' as MachineId,title:'Start the quarry',detail:'Accept the starter contract, then build your Rockbreaker Mine.',hint:'Your first working machine starts the production chain.'},
+    {id:'smelter' as MachineId,title:'Fire up the furnace',detail:'Build a Blast Furnace to turn ore into ingots.',hint:'Keep enough ore coming in to feed the furnace.'},
+    {id:'press' as MachineId,title:'Shape your first plates',detail:'Build a Stamping Press to manufacture metal plates.',hint:'Balance smelting and pressing so neither machine waits.'},
+    {id:'assembler' as MachineId,title:'Build precision parts',detail:'Install Mech Assembly to unlock finished goods.',hint:'Finished goods create a new reason to expand your workforce.'},
+    {id:'copperMiner' as MachineId,title:'Open the copper line',detail:'Start mining copper to expand beyond steel.',hint:'A second supply chain means new transport demands.'},
+    {id:'copperSmelter' as MachineId,title:'Refine copper',detail:'Build the Copper Foundry.',hint:'Keep copper shipments moving into the foundry.'},
+    {id:'wiremill' as MachineId,title:'Draw electrical wire',detail:'Install the Wire Drawing Mill.',hint:'Wire feeds your future electronics production.'},
+    {id:'circuitpress' as MachineId,title:'Manufacture circuits',detail:'Build the Circuit Board Line.',hint:'A new product opens more advanced contracts.'},
+    {id:'beamMill' as MachineId,title:'Expand heavy industry',detail:'Install the Beam Mill.',hint:'Turn your steel supply into structural products.'},
+    {id:'coilWinder' as MachineId,title:'Wind industrial coils',detail:'Build the Coil Winder.',hint:'Connect your copper line to advanced manufacturing.'},
+    {id:'motorworks' as MachineId,title:'Complete the motor works',detail:'Commission Electric Motor Works.',hint:'Your production network now supports complex products.'}
+  ];
+  const completedProgression=progressionSteps.filter(step=>s[step.id]>0).length;
+  const nextProgression=progressionSteps.find(step=>s[step.id]===0);
+  const nextProgressionMachine=nextProgression?machines.find(m=>m.id===nextProgression.id):undefined;
+  const nextProgressionCost=nextProgressionMachine?machineCost(nextProgressionMachine,s):0;
+  const nextProgressionXp=nextProgression?unlockAt[nextProgression.id]:0;
+  const nextProgressionRep=nextProgression?reputationUnlock[nextProgression.id]:0;
   const visibleMachines=machines.filter(m=>s[m.id]>0||(s.pendingReplacement[m.id]||0)>0||m.id===nextMachine?.id||(m.id==='beamMill'&&s.smelter>0)||(m.id==='coilWinder'&&s.wiremill>0));
   const visibleGoods=goods.filter((g)=>{
     const producer=contractProducer;
@@ -1339,6 +1359,11 @@ export default function App(){
         <section className="theme-shop"><div className="section-heading"><div><span className="eyebrow">FACTORY COLOURS</span><h2>Choose your theme</h2><p>Unlock a colour scheme once, then switch whenever you like. Themes and tokens stay with your save, even after a factory reset.</p></div></div><div className="theme-grid">{FACTORY_THEMES.map(theme=>{const owned=s.unlockedThemes.includes(theme.id);return <article className="theme-card" key={theme.id}><div className="theme-swatches" aria-hidden="true">{theme.colours.map(colour=><span key={colour} style={{background:colour}}/>)}</div><h3>{theme.name}</h3><button type="button" className={s.theme===theme.id?'primary-button':'secondary-button'} aria-pressed={s.theme===theme.id} disabled={!owned&&s.styleTokens<theme.cost} onClick={()=>setS(v=>buyFactoryTheme(v,theme.id))}>{s.theme===theme.id?'SELECTED':owned?'USE THEME':'UNLOCK · '+theme.cost+' STYLE TOKENS'}</button></article>})}</div></section>
       </div>}
       {page==='factory'&&<div className="page-content">
+        <section className="progression-spotlight" aria-label="Factory progression">
+          <div className="progression-spotlight-head"><div><span className="eyebrow">YOUR NEXT MILESTONE</span><h2>{nextProgression?.title||'Industrial empire complete'}</h2><p>{nextProgression?.detail||'Every machine type is now part of your factory. Keep improving your production lines.'}</p></div><div className="progression-counter">{completedProgression}<span> / {progressionSteps.length}</span></div></div>
+          <div className="progression-track" role="progressbar" aria-valuenow={completedProgression} aria-valuemin={0} aria-valuemax={progressionSteps.length} aria-label="Machine milestones completed"><span style={{width:(completedProgression/progressionSteps.length*100)+'%'}}/></div>
+          {nextProgression&&<div className="progression-next"><span>{nextProgression.hint}</span><div className="progression-requirements"><span className={s.cash>=nextProgressionCost?'ready':''}>{fmt(nextProgressionCost)} RVT</span>{nextProgressionXp>0&&<span className={s.experience>=nextProgressionXp?'ready':''}>{fmt(s.experience)}/{fmt(nextProgressionXp)} XP</span>}{nextProgressionRep>0&&<span className={s.reputation>=nextProgressionRep?'ready':''}>{fmt(s.reputation)}/{fmt(nextProgressionRep)} REP</span>}</div><button type="button" className="secondary-button" onClick={()=>{setFactoryView('equipment');setNotice('Find '+nextProgressionMachine?.name+' in the Machines view.')}}>VIEW MACHINES</button></div>}
+        </section>
         <div className="factory-view-toolbar"><div><span className="eyebrow">FACTORY</span></div><div className="factory-view-switch" role="tablist" aria-label="Factory view"><button type="button" role="tab" aria-selected={factoryView==='overview'} className={factoryView==='overview'?'selected':''} onClick={()=>setFactoryView('overview')}><TrendingUp size={15}/> Dashboard</button><button type="button" role="tab" aria-selected={factoryView==='equipment'} className={factoryView==='equipment'?'selected':''} onClick={()=>setFactoryView('equipment')}><Factory size={15}/> Machines</button></div></div>
         {factoryView==='overview'&&<>
         <section className="home-hero" aria-label="Factory at a glance">
