@@ -1969,3 +1969,12 @@ svg.staff-pixel-portrait::before,svg.staff-pixel-portrait::after{content:none;di
   letter-spacing:.35px;min-height:38px;
 }
 @media(max-width:620px){.machine-upgrade-coming{padding:8px;font-size:9px}}
+
+
+/* Put realisable stock-sale income next to each product's base value. */
+.stock-revenue{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:9px 0}
+.stock-revenue>span{display:flex;flex-direction:column;gap:5px;padding:8px 9px;background:#1429206e;border:1px solid #66826b43;border-radius:6px}
+.stock-revenue small{font-size:9px;font-weight:700;letter-spacing:.5px;color:#bbcbb5}
+.stock-revenue strong{font-size:13px;font-variant-numeric:tabular-nums;color:#d3e3bc;overflow-wrap:anywhere}
+.stock-revenue>span:last-child strong{color:#edcd84}
+@media(max-width:450px){.stock-revenue{gap:5px}.stock-revenue>span{padding:7px}.stock-revenue strong{font-size:12px}}
