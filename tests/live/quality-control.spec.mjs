@@ -20,11 +20,13 @@ test('quality control completes a perfect shift and awards two style tokens', as
   await page.getByRole('button', { name: 'START QUALITY CHECK' }).click();
   const game = page.getByRole('region', { name: 'Quality Control mini-game' });
   await expect(game).toBeVisible();
+  await game.getByRole('button', { name: 'START INSPECTION' }).click();
   for (let i = 0; i < 10; i++) {
-    await expect(game.getByText(`PLATE ${i + 1}/10`)).toBeVisible();
+    await expect(game.locator('.qc-score')).toContainText(`PLATE ${i + 1}/10`);
     const defect = await game.locator('.qc-accessible-defect').innerText();
-    const reject = !defect.includes('All bolts present');
+    const reject = !defect.includes('Intact metal plate');
     await game.getByRole('button', { name: reject ? /REJECT/ : /KEEP/ }).click();
+    if (i < 9) await expect(game.locator('.qc-score')).toContainText(`PLATE ${i + 2}/10`, { timeout: 5000 });
   }
   await expect(game.getByText('10/10 correct')).toBeVisible();
   await expect(game.getByText(/\+2 style tokens/i)).toBeVisible();
