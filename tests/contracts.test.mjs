@@ -8,7 +8,7 @@ import ts from 'typescript';
 const root=dirname(dirname(fileURLToPath(import.meta.url)));
 const folder=await mkdtemp(join(root,'.contract-test-'));
 const source=await readFile(join(root,'src/App.tsx'),'utf8');
-const output=ts.transpileModule(source+'\nexport {fresh,goods,machines,contracts,issueRepeatOrder,estimateContractSeconds,orderPayout,orderExpiry,updateContractOffers,deliverRepeatOrder,closeRepeatOrder,contractStockTarget,stockSaleReminder,sellSurplusStock,salesWages,salesCost,SALES_UNITS_PER_SECOND,payrollPerMinute,qcTokenReward,judgeQuality,startQualityControl,finishQualityControl,buyFactoryTheme,normaliseStyle,loadGame,CONTRACT_TERMS};',{
+const output=ts.transpileModule(source+'\nexport {fresh,goods,machines,contracts,issueRepeatOrder,estimateContractSeconds,orderPayout,orderExpiry,updateContractOffers,deliverRepeatOrder,closeRepeatOrder,contractStockTarget,stockSaleReminder,sellSurplusStock,sellOneSurplusStock,salesWages,salesCost,SALES_UNITS_PER_SECOND,payrollPerMinute,qcTokenReward,judgeQuality,startQualityControl,finishQualityControl,buyFactoryTheme,normaliseStyle,loadGame,CONTRACT_TERMS};',{
   compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.ReactJSX}
 }).outputText;
 await writeFile(join(folder,'game.mjs'),output);
@@ -240,4 +240,19 @@ test('QC start consumes a persistent cooldown and blocks simultaneous shifts',()
  const done=game.finishQualityControl(start,'a',7);assert.strictEqual(game.startQualityControl(done,'b'),done);
  done.contractClock=done.qcReadyAt;assert.equal(game.startQualityControl(done,'b').qcSession,'b');
  const blocked=factory();blocked.powerShortage=true;assert.strictEqual(game.startQualityControl(blocked,'x'),blocked);
+});
+
+test('single-product shipping respects contract demand and manual reserves',()=>{
+  const s=factory();s.ore=100;s.stockReserves.ore=80;s.repeatOffers=[null,null,null];
+  const shipped=game.sellOneSurplusStock(s,'ore');
+  assert.equal(shipped.ore,80);
+  assert.ok(shipped.cash>s.cash);
+  assert.strictEqual(game.sellOneSurplusStock(shipped,'ore'),shipped);
+});
+test('single-product shipping recalculates against latest order commitments',()=>{
+  const s=factory();s.ore=100;s.stockReserves.ore=0;
+  const o=offer(s);s.repeatOffers=[{...o,items:[{good:'ore',qty:90}]},null,null];
+  const shipped=game.sellOneSurplusStock(s,'ore');
+  assert.equal(shipped.ore,90);
+  assert.equal(game.sellOneSurplusStock(shipped,'ore'),shipped);
 });
