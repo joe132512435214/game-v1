@@ -347,6 +347,20 @@ function sellSurplusStock(state:GameState):GameState{
   for(const item of batch.items)next[item.good]-=item.qty;
   return next;
 }
+function sellOneSurplusStock(state:GameState,id:StockId):GameState{
+  const item=goods.find(g=>g.id===id);
+  if(!item)return state;
+  const amount=Math.floor(Math.max(0,state[id]-Math.max(contractStockTarget(state,id),state.stockReserves[id]||0)));
+  if(amount<1)return state;
+  const multiplier=state.researched.includes('market-intelligence')?1.2:1;
+  const revenue=amount*item.price*multiplier;
+  const progress=state.salesXpProgress+revenue;
+  const xp=Math.floor((progress+1e-8)/25);
+  const gearGain=shipmentGearGain(state,finishedGearUnits(id,amount));
+  return {...state,[id]:state[id]-amount,cash:state.cash+revenue,sold:state.sold+revenue,
+    salesXpProgress:progress-xp*25,experience:state.experience+xp,
+    gears:state.gears+gearGain.earned,gearShipmentProgress:gearGain.remainder};
+}
 const materialAvailable=(state:GameState,id:StockId,amount:number)=>Math.max(0,amount-Math.max(contractStockTarget(state,id),state.stockReserves[id]||0));
 const allocateInputs=(state:GameState,available:number,consumers:{id:MachineId;demand:number}[]):number[]=>{
  const output=consumers.map(()=>0);let remaining=Math.max(0,available);
@@ -1177,13 +1191,13 @@ export default function App(){
     celebrate('Production upgraded!',m.name+' · +25% output','upgrade');
   };
   const sellStock=(id:StockId)=>{
-    const item=goods.find(g=>g.id===id)!;const amount=Math.floor(Math.max(0,s[id]-Math.max(contractStockTarget(s,id),s.stockReserves[id]||0)));
-    if(amount<1){setNotice('There are no full units ready to ship.');return;}
+    const item=goods.find(g=>g.id===id)!;
+    const amount=Math.floor(Math.max(0,s[id]-Math.max(contractStockTarget(s,id),s.stockReserves[id]||0)));
+    if(amount<1){setNotice('There are no spare full units ready to ship.');return;}
     const revenue=amount*item.price*saleMultiplier;
-    setS(v=>{const total=v.salesXpProgress+revenue;const shipmentXp=Math.floor((total+1e-8)/25);return {...v,[id]:v[id]-amount,cash:v.cash+revenue,sold:v.sold+revenue,salesXpProgress:total-shipmentXp*25,experience:v.experience+shipmentXp,gears:v.gears+shipmentGearGain(v,finishedGearUnits(id,amount)).earned,gearShipmentProgress:shipmentGearGain(v,finishedGearUnits(id,amount)).remainder};});
-    const shipmentXp=Math.floor((s.salesXpProgress+revenue+1e-8)/25);
-    setNotice('Shipped '+fmt(amount)+' '+item.name+' for '+fmt(revenue)+' Rivets.'+(shipmentXp>0?' · +'+shipmentXp+' XP from shipments.':''));
-    celebrate('Shipment dispatched!',fmt(amount)+' '+item.name,'shipment',{cash:revenue,xp:shipmentXp});
+    setS(v=>sellOneSurplusStock(v,id));
+    setNotice('Shipping available '+item.name+' surplus. Contract and reserve stock stays protected.');
+    celebrate('Shipment dispatched!',fmt(amount)+' '+item.name,'shipment',{cash:revenue});
   };
   const shipSurplus=()=>{
     if(!stockSaleReminder(s).units){setNotice('No spare full units to sell. Your contract stock is being kept safe.');return;}
