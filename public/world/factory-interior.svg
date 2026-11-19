@@ -1,1 +1,36 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="448" height="280" viewBox="0 0 112 70" shape-rendering="crispEdges"><path fill="#263441" d="M1 1h110v69H1z"/><path fill="#a65d47" d="M3 3h106v64H3z"/><path fill="#626c75" d="M7 7h98v56H7z"/><path stroke="#89919a" stroke-width=".5" d="M7 21h98M7 35h98M7 49h98M21 7v56M35 7v56M49 7v56M63 7v56M77 7v56M91 7v56"/><path fill="#253645" d="M34 6h3v57h-3z"/><path fill="#b78a5b" d="M7 7h27v55H7z"/><path fill="#8b6a4b" d="M9 9h23v50H9z"/><path fill="#293b4a" d="M13 18h16v8H13z"/><path fill="#6bafc0" d="M15 19h12v5H15z"/><path fill="#624b39" d="M12 32h19v7H12z"/><path fill="#d0a767" d="M13 32h17v2H13z"/><path fill="#283c4d" d="M19 40h7v8h-7z"/><path fill="#d5a743" d="M39 12h62v4H39z"/><path fill="#303d4d" d="M39 10h62v3H39z"/><path fill="#d4a84a" d="M40 32h17v21H40zm20 0h17v21H60zm20 0h17v21H80z"/><path fill="#747b84" d="M41 33h15v19H41zm20 0h15v19H61zm20 0h15v19H81z"/><path fill="#394653" d="M53 62h10v8H53z"/><path fill="#e0b04b" d="M53 62h10v2H53z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="448" height="280" viewBox="0 0 112 70" shape-rendering="crispEdges"><path fill="#263441" d="M1 1h110v69H1z"/><path fill="#a65d47" d="M3 3h106v64H3z"/><path fill="#626c75" d="M7 7h98v56H7z"/><path stroke="#89919a" stroke-width=".5" d="M7 21h98M7 35h98M7 49h98M21 7v56M35 7v56M49 7v56M63 7v56M77 7v56M91 7v56"/><path fill="#253645" d="M34 6h3v57h-3z"/><path fill="#b78a5b" d="M7 7h27v55H7z"/><path fill="#8b6a4b" d="M9 9h23v50H9z"/><path fill="#293b4a" d="M13 18h16v8H13z"/><path fill="#6bafc0" d="M15 19h12v5H15z"/><path fill="#624b39" d="M12 32h19v7H12z"/><path fill="#d0a767" d="M13 32h17v2H13z"/><path fill="#283c4d" d="M19 40h7v8h-7z"/><path fill="#d5a743" d="M39 12h62v4H39z"/><path fill="#303d4d" d="M39 10h62v3H39z"/><path fill="#d4a84a" d="M40 32h17v21H40zm20 0h17v21H60zm20 0h17v21H80z"/><path fill="#747b84" d="M41 33h15v19H41zm20 0h15v19H61zm20 0h15v19H81z"/><path fill="#394653" d="M53 62h10v8H53z"/><path fill="#e0b04b" d="M53 62h10v2H53z"/><g shape-rendering="crispEdges">
+<!-- Steel wall beams and overhead utility pipes -->
+<path fill="#293943" d="M37 6h2v55h-2zM103 7h2v55h-2zM39 18h63v2H39z"/>
+<path fill="#ba8847" d="M39 18h63v1H39z"/>
+<path fill="#637b82" d="M42 20h2v8h-2zm25 0h2v8h-2zm25 0h2v8h-2z"/>
+<path fill="#d7c07c" d="M41 21h4v2h-4zm25 0h4v2h-4zm25 0h4v2h-4z"/>
+<!-- Empty machine bays: three distinct floor spaces, not machines -->
+<path fill="#454f58" d="M41 34h14v17H41zm20 0h14v17H61zm20 0h14v17H81z"/>
+<path fill="#9a783b" d="M41 34h14v2H41zm20 0h14v2H61zm20 0h14v2H81z"/>
+<path fill="#c5a14c" d="M42 49h3v2h-3zm5 0h3v2h-3zm5 0h3v2h-3zm9 0h3v2h-3zm5 0h3v2h-3zm5 0h3v2h-3zm10 0h3v2h-3zm5 0h3v2h-3zm5 0h3v2h-3z"/>
+<path fill="#d5b565" d="M44 39h8v1h-8zm20 0h8v1h-8zm20 0h8v1h-8z"/>
+<path fill="#6b7c83" d="M45 41h6v5h-6zm20 0h6v5h-6zm20 0h6v5h-6z"/>
+<path fill="#394852" d="M46 42h4v3h-4zm20 0h4v3h-4zm20 0h4v3h-4z"/>
+<!-- Management office: desk, chair, monitor, filing cabinets, lamp -->
+<path fill="#4b3833" d="M11 31h21v10H11z"/>
+<path fill="#c19a65" d="M12 31h19v3H12z"/>
+<path fill="#30434b" d="M18 29h9v5h-9z"/>
+<path fill="#81a7ad" d="M19 30h7v3h-7z"/>
+<path fill="#b9a376" d="M22 34h2v2h-2z"/>
+<path fill="#354b53" d="M19 42h8v7h-8z"/>
+<path fill="#708087" d="M20 43h6v2h-6z"/>
+<path fill="#554a3d" d="M10 50h7v9h-7zm16 0h6v9h-6z"/>
+<path fill="#c5a16d" d="M11 52h5v1h-5zm16 0h4v1h-4zM11 55h5v1h-5zm16 0h4v1h-4z"/>
+<path fill="#f3d28c" d="M12 15h3v2h-3z"/>
+<!-- Mine-feed intake on east wall and empty conveyor connection -->
+<path fill="#293b46" d="M99 25h7v11h-7z"/>
+<path fill="#d3a04a" d="M99 25h7v2h-7zm0 8h7v2h-7z"/>
+<path fill="#4a5b65" d="M97 28h7v4h-7z"/>
+<path fill="#d0ae63" d="M98 29h5v1h-5z"/>
+<path fill="#394750" d="M96 56h8v4h-8z"/>
+<path fill="#9dabae" d="M97 57h6v1h-6z"/>
+<!-- Main walking lane and exit threshold -->
+<path fill="#6e777e" d="M38 54h64v6H38z"/>
+<path fill="#899299" d="M39 55h62v1H39z"/>
+<path fill="#d5aa4d" d="M52 61h12v1H52z"/>
+</g></svg>
