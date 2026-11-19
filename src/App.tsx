@@ -361,7 +361,9 @@ function sellOneSurplusStock(state:GameState,id:StockId):GameState{
     salesXpProgress:progress-xp*25,experience:state.experience+xp,
     gears:state.gears+gearGain.earned,gearShipmentProgress:gearGain.remainder};
 }
-const materialAvailable=(state:GameState,id:StockId,amount:number)=>Math.max(0,amount-Math.max(contractStockTarget(state,id),state.stockReserves[id]||0));
+// Warehouse reserve is a minimum for selling, not a production lock.
+// Only customer commitments are protected from downstream consumption.
+const materialAvailable=(state:GameState,id:StockId,amount:number)=>Math.max(0,amount-contractStockTarget(state,id));
 const allocateInputs=(state:GameState,available:number,consumers:{id:MachineId;demand:number}[]):number[]=>{
  const output=consumers.map(()=>0);let remaining=Math.max(0,available);
  for(const priority of ['high','normal','low'] as const){
