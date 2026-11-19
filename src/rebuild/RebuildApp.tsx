@@ -2,6 +2,7 @@ import {useEffect,useRef,useState} from 'react';
 import {CharacterCreator,CharacterArt,readCharacter,type CharacterAppearance} from '../CharacterSystem';
 import {ElliePortrait} from '../ElliePortrait';
 import {WORLD_ART} from './assets';
+import {WalkingSprite} from './WalkingSprite';
 import {cameraFor,FACTORY_INTERIOR,movePlayer,STARTER_WORLD,withinReach,type Player,type Vector} from './engine';
 
 const VIEW={x:768,y:470};
@@ -17,6 +18,9 @@ export default function RebuildApp(){
  const [objective,setObjective]=useState('Speak to Ellie outside the factory');
  const [metEllie,setMetEllie]=useState(false);
  const [transitioning,setTransitioning]=useState(false);
+ const [walkFrame,setWalkFrame]=useState(0);
+ const [walking,setWalking]=useState(false);
+ const walkDistance=useRef(0);
  const keys=useRef(new Set<string>());
  const joystick=useRef<Vector>({x:0,y:0});
  const [thumb,setThumb]=useState<Vector>({x:0,y:0});
@@ -53,7 +57,8 @@ export default function RebuildApp(){
    const x=Number(k.has('d')||k.has('arrowright'))-Number(k.has('a')||k.has('arrowleft'));
    const y=Number(k.has('s')||k.has('arrowdown'))-Number(k.has('w')||k.has('arrowup'));
    const input=x||y?{x,y}:joystick.current;
-   if(!dialogueRef.current&&(input.x||input.y))setPlayer(p=>movePlayer(p,input,dt,sceneRef.current==='yard'?STARTER_WORLD:FACTORY_INTERIOR));
+   if(!dialogueRef.current&&(input.x||input.y))setPlayer(p=>{const next=movePlayer(p,input,dt,sceneRef.current==='yard'?STARTER_WORLD:FACTORY_INTERIOR);const moved=Math.hypot(next.position.x-p.position.x,next.position.y-p.position.y);if(moved>0.01){walkDistance.current+=moved;if(walkDistance.current>=12){walkDistance.current%=12;setWalkFrame(f=>(f+1)%4);}setWalking(true);}else{setWalking(false);walkDistance.current=0;}return next;});
+   else {setWalking(false);walkDistance.current=0;}
    frame=requestAnimationFrame(tick);};
   frame=requestAnimationFrame(tick);
   return()=>{cancelAnimationFrame(frame);window.removeEventListener('keydown',down);window.removeEventListener('keyup',up);window.removeEventListener('blur',blur);};
@@ -78,7 +83,7 @@ export default function RebuildApp(){
  {[380,550,720].map(x=><rect key={x} x={x} y="160" width="150" height="130" fill="#555b65" stroke="#d9b05a" strokeWidth="5" strokeDasharray="12 8"/>)}
  <rect x="130" y="125" width="125" height="95" fill="#816247"/><rect x="468" y="647" width="84" height="17" fill="#403b36" stroke="#f1c15e" strokeWidth="3"/><text x="510" y="632" textAnchor="middle" fontSize="13" fill="#fff1a1">EXIT</text>
  </>}
- <g transform={`translate(${player.position.x} ${player.position.y})`}><foreignObject x="-19" y="-47" width="38" height="48"><div xmlns="http://www.w3.org/1999/xhtml" style={{width:38,height:48,overflow:'hidden',transform:player.facing==='left'?'scaleX(-1)':'none'}}><CharacterArt appearance={owner} pose={player.facing==='left'||player.facing==='right'?'side':'front'} size={38} world/></div></foreignObject></g>
+ <g transform={`translate(${player.position.x-16} ${player.position.y-40})`}><WalkingSprite appearance={owner} direction={player.facing} frame={walkFrame} moving={walking}/></g>
  </g></svg>
  {transitioning&&<div aria-live="polite" style={{position:'absolute',inset:0,background:'#0a1119',opacity:.8,display:'grid',placeItems:'center',color:'#fff4d0',fontWeight:800}}>Entering {scene==='factory'?'factory':'yard'}…</div>}
  {dialogue&&<div role="dialog" style={{position:'absolute',bottom:8,left:8,right:8,background:'#17232ff2',padding:12,display:'flex',alignItems:'center',gap:12,border:'2px solid #d6ad60'}}><ElliePortrait size={64}/><p style={{flex:1}}>{dialogue}</p><button onClick={interact}>Continue</button></div>}
