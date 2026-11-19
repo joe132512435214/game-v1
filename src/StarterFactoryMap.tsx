@@ -22,7 +22,7 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
    const scale=length>radius?radius/length:1;
    const offset={x:x*scale,y:y*scale};
    setStick(offset);
-   joystick.current={x:offset.x/radius,y:offset.y/radius};
+   joystick.current=length<7?{x:0,y:0}:{x:offset.x/radius,y:offset.y/radius};
  };
  const releaseStick=()=>{joystickPointer.current=null;joystick.current={x:0,y:0};setStick({x:0,y:0});};
 
@@ -59,12 +59,12 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
  const factoryDoorInside=(x:number,y:number)=>x>=307&&x<=368&&y>=285;
  useEffect(()=>{
    const down=(e:KeyboardEvent)=>{
-     if(e.altKey||e.ctrlKey||e.metaKey||/^(INPUT|TEXTAREA|SELECT)$/.test((e.target as HTMLElement)?.tagName||''))return;
+     if(e.altKey||e.ctrlKey||e.metaKey||/^(INPUT|TEXTAREA|SELECT)$/.test((e.target as HTMLElement)?.tagName||'')||(e.target as HTMLElement)?.isContentEditable)return;
      const k=e.key.toLowerCase();
-     if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(k)){keys.current.add(k);if(e.key.startsWith('Arrow'))e.preventDefault();}
+     if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(k)){keys.current.add(k);e.preventDefault();}
    };
    const up=(e:KeyboardEvent)=>keys.current.delete(e.key.toLowerCase());
-   const blur=()=>{keys.current.clear();releaseStick();};
+   const blur=()=>{keys.current.clear();joystick.current={x:0,y:0};joystickPointer.current=null;setStick({x:0,y:0});};
    window.addEventListener('keydown',down);window.addEventListener('keyup',up);window.addEventListener('blur',blur);
    return()=>{window.removeEventListener('keydown',down);window.removeEventListener('keyup',up);window.removeEventListener('blur',blur);};
  },[]);
