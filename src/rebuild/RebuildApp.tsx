@@ -71,7 +71,7 @@ export default function RebuildApp(){
  const stickStop=()=>{pointer.current=null;setThumb({x:0,y:0});joystick.current={x:0,y:0};};
  if(!owner)return <main style={{padding:24,background:'#172530',minHeight:'100vh',color:'#fff'}}><CharacterCreator onDone={setOwner}/></main>;
  return <main style={{background:'#15232b',color:'#f7ebd1',minHeight:'100vh',padding:16,fontFamily:'system-ui,sans-serif'}}>
- <header style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,flexWrap:'wrap'}}><h1>ORE & ORDER <small style={{fontSize:12}}>2.0 · FOUNDATION</small></h1><span>{owner.name} · {scene==='yard'?'Factory yard':'Factory interior'}</span></header>
+ <header style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,flexWrap:'wrap'}}><h1>ORE & ORDER <small style={{fontSize:12}}>2.0 · ART INTEGRATION</small></h1><span>{owner.name} · {scene==='yard'?'Factory yard':'Factory interior'}</span></header>
  <p role="status">Objective: {objective}</p>
  <div style={{maxWidth:950,margin:'auto',position:'relative',border:'4px solid #a97e46',overflow:'hidden'}}>
  <svg viewBox="0 0 768 470" style={{display:'block',width:'100%',background:'#739456',imageRendering:'pixelated'}} shapeRendering="crispEdges" aria-label="Walkable factory world">
@@ -80,15 +80,18 @@ export default function RebuildApp(){
  {scene==='yard'?<>
  <image href={WORLD_ART.exterior} x="100" y="90" width="570" height="330" preserveAspectRatio="none"/>
  <image href={WORLD_ART.minePlot} x="760" y="150" width="175" height="190"/>
+ <g transform="translate(746 150)"><rect x="0" y="0" width="196" height="195" fill="#1b2d31" fillOpacity=".42" stroke="#d5a958" strokeWidth="4"/>
+ <svg x="12" y="14" width="172" height="144" viewBox="0 0 64 64" preserveAspectRatio="xMidYMid meet" style={{imageRendering:'pixelated'}}><image href={WORLD_ART.starterMachines} width="192" height="64"/></svg>
+ <rect x="12" y="159" width="172" height="24" fill="#24333b" stroke="#d8a64e" strokeWidth="2"/><text x="98" y="175" textAnchor="middle" fontSize="14" fontWeight="bold" fill="#f6dba6">STARTER MINE · PREVIEW</text></g>
  <path d="M390 420V480" stroke="#d6b768" strokeWidth="45"/><rect x="365" y="414" width="50" height="12" fill="#483d36" stroke="#f1c15e" strokeWidth="3"/><text x="390" y="405" textAnchor="middle" fontSize="13" fill="#fff1a1">ENTRANCE</text>
  <g transform={`translate(${ELLIE.x} ${ELLIE.y})`}><rect x="-10" y="-28" width="20" height="24" fill="#df8738"/><rect x="-7" y="-42" width="14" height="15" fill="#f0b68d"/><text y="-48" textAnchor="middle" fontSize="13" fill="white">ELLIE</text></g>
  </>:<>
  <image href={WORLD_ART.interior} x="110" y="90" width="804" height="580" preserveAspectRatio="none"/>
  {machineBays.map((bay,i)=><g key={i} transform={`translate(${bay.x} ${bay.y})`}>
  <rect width="110" height="104" rx="3" fill={installedMachines.includes(i)?'#253b3c':'#25323c'} fillOpacity={installedMachines.includes(i)?.65:.25} stroke={installedMachines.includes(i)?'#dfb75a':'#cba35d'} strokeWidth="3" strokeDasharray={installedMachines.includes(i)?'none':'8 5'}/>
- {installedMachines.includes(i)&&<svg x="5" y="5" width="100" height="90" viewBox={`${i*64} 0 64 64`} preserveAspectRatio="xMidYMid meet" style={{imageRendering:'pixelated'}}><image href={WORLD_ART.starterMachines} x="0" y="0" width="192" height="64"/></svg>}
- {!installedMachines.includes(i)&&<text x="55" y="49" fontSize="13" textAnchor="middle" fontWeight="bold" fill="#f6d18a">EMPTY BAY {i+1}</text>}
- <text x="55" y="120" textAnchor="middle" fontSize="12" fill="#fff2d5">{installedMachines.includes(i)?'INSTALLED':'E · INSTALL'}</text>
+ <svg x="5" y="5" width="100" height="90" viewBox={`${i*64} 0 64 64`} preserveAspectRatio="xMidYMid meet" opacity={installedMachines.includes(i)?1:.52} style={{imageRendering:'pixelated'}}><image href={WORLD_ART.starterMachines} x="0" y="0" width="192" height="64"/></svg>
+
+ <text x="55" y="120" textAnchor="middle" fontSize="12" fill="#fff2d5">{installedMachines.includes(i)?'INSTALLED':'PREVIEW · E TO INSTALL'}</text>
  </g>)}
  <rect x="468" y="647" width="84" height="17" fill="#403b36" stroke="#f1c15e" strokeWidth="3"/><text x="510" y="632" textAnchor="middle" fontSize="13" fontWeight="bold" fill="#fff1a1">EXIT</text>
  </>}
