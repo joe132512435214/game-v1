@@ -5,8 +5,8 @@ import {WORLD_ART} from './assets';
 import {cameraFor,FACTORY_INTERIOR,movePlayer,STARTER_WORLD,withinReach,type Player,type Vector} from './engine';
 
 const VIEW={x:768,y:470};
-const DOOR_OUT={x:390,y:442};
-const DOOR_IN={x:500,y:608};
+const DOOR_OUT={x:390,y:431};
+const DOOR_IN={x:510,y:628};
 const ELLIE={x:520,y:510};
 type Scene='yard'|'factory';
 export default function RebuildApp(){
@@ -15,6 +15,8 @@ export default function RebuildApp(){
  const [player,setPlayer]=useState<Player>({position:{x:430,y:550},facing:'down'});
  const [dialogue,setDialogue]=useState<string|null>(null);
  const [objective,setObjective]=useState('Speak to Ellie outside the factory');
+ const [metEllie,setMetEllie]=useState(false);
+ const [transitioning,setTransitioning]=useState(false);
  const keys=useRef(new Set<string>());
  const joystick=useRef<Vector>({x:0,y:0});
  const [thumb,setThumb]=useState<Vector>({x:0,y:0});
@@ -28,9 +30,14 @@ export default function RebuildApp(){
  const nearEllie=scene==='yard'&&withinReach(player.position,ELLIE,72);
  const nearDoor=withinReach(player.position,scene==='yard'?DOOR_OUT:DOOR_IN,65);
  const interact=()=>{
-   if(dialogue){setDialogue(null);setObjective('Explore the factory entrance');return;}
-   if(nearEllie){setDialogue("Welcome to Ore & Order. The factory has been waiting for someone like you.");return;}
-   if(nearDoor){const next=scene==='yard'?'factory':'yard';setScene(next);setPlayer({position:next==='factory'?{x:500,y:560}:{x:390,y:495},facing:'down'});setObjective(next==='factory'?'Explore the empty factory floor':'Speak to Ellie');}
+   if(dialogue){setDialogue(null);setMetEllie(true);setObjective('Head to the marked factory entrance');return;}
+   if(nearEllie){setDialogue("Welcome to Ore & Order! I'm Ellie. Follow the path to the factory door — we'll take a look inside together.");return;}
+   if(nearDoor&&!transitioning){if(scene==='yard'&&!metEllie){setDialogue('Ellie is waiting nearby. Speak to her before going inside.');return;}
+    setTransitioning(true);keys.current.clear();joystick.current={x:0,y:0};setThumb({x:0,y:0});
+    const next=scene==='yard'?'factory':'yard';setScene(next);setPlayer({position:next==='factory'?{x:510,y:585}:{x:390,y:483},facing:next==='factory'?'up':'down'});
+    setObjective(next==='factory'?'Explore the empty factory floor':'Explore the factory yard');
+    window.setTimeout(()=>setTransitioning(false),450);
+   }
  };
  const interactRef=useRef(interact);interactRef.current=interact;
  useEffect(()=>{
@@ -64,20 +71,21 @@ export default function RebuildApp(){
  {scene==='yard'?<>
  <image href={WORLD_ART.exterior} x="100" y="90" width="570" height="330" preserveAspectRatio="none"/>
  <image href={WORLD_ART.minePlot} x="760" y="150" width="175" height="190"/>
- <path d="M390 420V480" stroke="#d6b768" strokeWidth="45"/>
+ <path d="M390 420V480" stroke="#d6b768" strokeWidth="45"/><rect x="365" y="414" width="50" height="12" fill="#483d36" stroke="#f1c15e" strokeWidth="3"/><text x="390" y="405" textAnchor="middle" fontSize="13" fill="#fff1a1">ENTRANCE</text>
  <g transform={`translate(${ELLIE.x} ${ELLIE.y})`}><rect x="-10" y="-28" width="20" height="24" fill="#df8738"/><rect x="-7" y="-42" width="14" height="15" fill="#f0b68d"/><text y="-48" textAnchor="middle" fontSize="13" fill="white">ELLIE</text></g>
  </>:<>
  <image href={WORLD_ART.interior} x="110" y="90" width="804" height="580" preserveAspectRatio="none"/>
  {[380,550,720].map(x=><rect key={x} x={x} y="160" width="150" height="130" fill="#555b65" stroke="#d9b05a" strokeWidth="5" strokeDasharray="12 8"/>)}
- <rect x="130" y="125" width="125" height="95" fill="#816247"/>
+ <rect x="130" y="125" width="125" height="95" fill="#816247"/><rect x="468" y="647" width="84" height="17" fill="#403b36" stroke="#f1c15e" strokeWidth="3"/><text x="510" y="632" textAnchor="middle" fontSize="13" fill="#fff1a1">EXIT</text>
  </>}
- <g transform={`translate(${player.position.x} ${player.position.y})`}><rect x="-10" y="-24" width="20" height="20" fill="#d18a3a"/><rect x="-8" y="-39" width="16" height="15" fill="#d6a07b"/><rect x="-9" y="-4" width="7" height="10" fill="#39495a"/><rect x="2" y="-4" width="7" height="10" fill="#39495a"/></g>
+ <g transform={`translate(${player.position.x} ${player.position.y})`}><foreignObject x="-19" y="-47" width="38" height="48"><div xmlns="http://www.w3.org/1999/xhtml" style={{width:38,height:48,overflow:'hidden',transform:player.facing==='left'?'scaleX(-1)':'none'}}><CharacterArt appearance={owner} pose={player.facing==='left'||player.facing==='right'?'side':'front'} size={38} world/></div></foreignObject></g>
  </g></svg>
+ {transitioning&&<div aria-live="polite" style={{position:'absolute',inset:0,background:'#0a1119',opacity:.8,display:'grid',placeItems:'center',color:'#fff4d0',fontWeight:800}}>Entering {scene==='factory'?'factory':'yard'}…</div>}
  {dialogue&&<div role="dialog" style={{position:'absolute',bottom:8,left:8,right:8,background:'#17232ff2',padding:12,display:'flex',alignItems:'center',gap:12,border:'2px solid #d6ad60'}}><ElliePortrait size={64}/><p style={{flex:1}}>{dialogue}</p><button onClick={interact}>Continue</button></div>}
  </div>
  <div style={{maxWidth:950,margin:'12px auto',display:'flex',justifyContent:'space-between',alignItems:'center',gap:12}}>
  <div><div>WASD / arrows · E to interact</div><div>{nearEllie?'Ellie nearby':nearDoor?'Entrance nearby':'Explore the yard'}</div></div>
- <button type="button" onClick={interact} disabled={!dialogue&&!nearEllie&&!nearDoor}>Interact · E</button>
+ <button type="button" onClick={interact} disabled={transitioning||(!dialogue&&!nearEllie&&!nearDoor)}>Interact · E</button>
  <div ref={stickRef} aria-label="Mobile movement joystick" style={{touchAction:'none',width:100,height:100,border:'3px solid #d6ad60',borderRadius:'50%',position:'relative',background:'#2e3c47'}}
  onPointerDown={e=>{if(pointer.current!==null)return;pointer.current=e.pointerId;e.currentTarget.setPointerCapture(e.pointerId);stickMove(e.clientX,e.clientY);}}
  onPointerMove={e=>{if(pointer.current===e.pointerId)stickMove(e.clientX,e.clientY);}}
