@@ -93,8 +93,8 @@ export default function RebuildApp(){
  {Array.from({length:7},(_,i)=><g key={i}><path d={`M${158+i*78} 542v95`} stroke="#eee0a3" strokeWidth="4"/><path d={`M${158+i*78} 542h52`} stroke="#eee0a3" strokeWidth="4"/></g>)}
  <path d="M425 693v75" stroke="#f6e4a2" strokeWidth="4" strokeDasharray="22 18"/>
  <image href={WORLD_ART.exterior} x="98" y="96" width="563" height="380" preserveAspectRatio="xMidYMid meet"/>
- <image href={WORLD_ART.minePlot} x="742" y="137" width="242" height="162" preserveAspectRatio="xMidYMid meet"/>
- <image href={WORLD_ART.mineBuilt} x="744" y="108" width="238" height="226" preserveAspectRatio="xMidYMid meet"/>
+ <image href={WORLD_ART.minePlot} x="744" y="150" width="230" height="153" preserveAspectRatio="xMidYMid meet"/>
+ <image href={WORLD_ART.mineBlueprint} x="750" y="135" width="222" height="182" preserveAspectRatio="xMidYMid meet"/>
  <text x="863" y="355" textAnchor="middle" fontSize="13" fontWeight="bold" fill="#fff1a1" stroke="#263037" strokeWidth="3" paintOrder="stroke">MINE · NOT BUILT</text>
  <image href={WORLD_ART.tree} x="20" y="70" width="136" height="128" preserveAspectRatio="xMidYMid meet"/>
  <image href={WORLD_ART.pine} x="662" y="36" width="80" height="110" preserveAspectRatio="xMidYMid meet"/>
