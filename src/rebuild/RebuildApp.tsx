@@ -76,12 +76,34 @@ export default function RebuildApp(){
  <div style={{maxWidth:950,margin:'auto',position:'relative',border:'4px solid #a97e46',overflow:'hidden'}}>
  <svg viewBox="0 0 768 470" style={{display:'block',width:'100%',background:'#739456',imageRendering:'pixelated'}} shapeRendering="crispEdges" aria-label="Walkable factory world">
  <g transform={`translate(${-camera.x} ${-camera.y})`}>
- <rect width={world.width} height={world.height} fill={scene==='yard'?'#729551':'#797c84'}/>{scene==='yard'&&<><defs><pattern id="yard-grass" width="32" height="32" patternUnits="userSpaceOnUse"><image href={WORLD_ART.grass} width="32" height="32"/></pattern><pattern id="yard-dirt" width="32" height="32" patternUnits="userSpaceOnUse"><image href={WORLD_ART.dirt} width="32" height="32"/></pattern></defs><rect width={world.width} height={world.height} fill="url(#yard-grass)"/><rect x="705" y="105" width="260" height="280" fill="url(#yard-dirt)"/><image href={WORLD_ART.tree} x="35" y="40" width="95" height="110"/><image href={WORLD_ART.pine} x="690" y="25" width="70" height="100"/><image href={WORLD_ART.crate} x="946" y="300" width="55" height="65"/><image href={WORLD_ART.forklift} x="690" y="410" width="100" height="95"/><image href={WORLD_ART.bench} x="85" y="450" width="95" height="65"/></>}
+ <rect width={world.width} height={world.height} fill={scene==='yard'?'#729551':'#797c84'}/>
  {scene==='yard'?<>
- <image href={WORLD_ART.exterior} x="100" y="90" width="570" height="330" preserveAspectRatio="none"/>
- <image href={WORLD_ART.minePlot} x="760" y="150" width="175" height="190" preserveAspectRatio="xMidYMid meet"/>
- <image href={WORLD_ART.mineBuilt} x="766" y="160" width="165" height="175" preserveAspectRatio="xMidYMid meet"/><image href={WORLD_ART.mineBlueprint} x="766" y="160" width="165" height="175" preserveAspectRatio="none"/><text x="846" y="360" textAnchor="middle" fontSize="13" fontWeight="bold" fill="#fff1a1" stroke="#263037" strokeWidth="3" paintOrder="stroke">MINE · NOT BUILT</text>
- <path d="M390 420V480" stroke="#d6b768" strokeWidth="45"/><rect x="365" y="414" width="50" height="12" fill="#483d36" stroke="#f1c15e" strokeWidth="3"/><text x="390" y="405" textAnchor="middle" fontSize="13" fill="#fff1a1">ENTRANCE</text>
+ <defs>
+ <pattern id="yard-grass" width="32" height="32" patternUnits="userSpaceOnUse"><image href={WORLD_ART.grass} width="32" height="32"/></pattern>
+ <pattern id="yard-parking" width="32" height="32" patternUnits="userSpaceOnUse"><image href={WORLD_ART.parking} width="32" height="32"/></pattern>
+ <pattern id="yard-road" width="32" height="32" patternUnits="userSpaceOnUse"><image href={WORLD_ART.road} width="32" height="32"/></pattern>
+ <pattern id="yard-gravel" width="32" height="32" patternUnits="userSpaceOnUse"><image href={WORLD_ART.gravel} width="32" height="32"/></pattern>
+ </defs>
+ <rect width={world.width} height={world.height} fill="url(#yard-grass)"/>
+ <rect x="720" y="92" width="276" height="285" fill="url(#yard-gravel)"/>
+ <rect x="140" y="506" width="570" height="186" fill="url(#yard-parking)"/>
+ <rect x="140" y="691" width="570" height="77" fill="url(#yard-road)"/>
+ <rect x="388" y="476" width="66" height="32" fill="url(#yard-road)"/>
+ <path d="M140 506H710M140 692H710" stroke="#b8b6a5" strokeWidth="5"/>
+ {Array.from({length:7},(_,i)=><g key={i}><path d={`M${158+i*78} 542v95`} stroke="#eee0a3" strokeWidth="4"/><path d={`M${158+i*78} 542h52`} stroke="#eee0a3" strokeWidth="4"/></g>)}
+ <path d="M425 693v75" stroke="#f6e4a2" strokeWidth="4" strokeDasharray="22 18"/>
+ <image href={WORLD_ART.exterior} x="98" y="96" width="563" height="380" preserveAspectRatio="xMidYMid meet"/>
+ <image href={WORLD_ART.minePlot} x="742" y="137" width="242" height="162" preserveAspectRatio="xMidYMid meet"/>
+ <image href={WORLD_ART.mineBuilt} x="744" y="108" width="238" height="226" preserveAspectRatio="xMidYMid meet"/>
+ <text x="863" y="355" textAnchor="middle" fontSize="13" fontWeight="bold" fill="#fff1a1" stroke="#263037" strokeWidth="3" paintOrder="stroke">MINE · NOT BUILT</text>
+ <image href={WORLD_ART.tree} x="20" y="70" width="136" height="128" preserveAspectRatio="xMidYMid meet"/>
+ <image href={WORLD_ART.pine} x="662" y="36" width="80" height="110" preserveAspectRatio="xMidYMid meet"/>
+ <image href={WORLD_ART.crate} x="928" y="403" width="62" height="66" preserveAspectRatio="xMidYMid meet"/>
+ <image href={WORLD_ART.forklift} x="735" y="410" width="160" height="116" preserveAspectRatio="xMidYMid meet"/>
+ <image href={WORLD_ART.bench} x="33" y="478" width="91" height="65" preserveAspectRatio="xMidYMid meet"/>
+ </>:<>
+
+ <path d="M390 476V507" stroke="#d6b768" strokeWidth="36"/><rect x="365" y="414" width="50" height="12" fill="#483d36" stroke="#f1c15e" strokeWidth="3"/><text x="390" y="405" textAnchor="middle" fontSize="13" fill="#fff1a1">ENTRANCE</text>
  <g transform={`translate(${ELLIE.x-15} ${ELLIE.y-58})`} shapeRendering="crispEdges"><ellipse cx="15" cy="56" rx="16" ry="5" fill="#1e2d2b" opacity=".35"/><rect x="5" y="37" width="9" height="17" fill="#29394a"/><rect x="17" y="37" width="9" height="17" fill="#29394a"/><rect x="3" y="51" width="13" height="5" fill="#2c2528"/><rect x="17" y="51" width="13" height="5" fill="#2c2528"/><rect x="3" y="20" width="24" height="22" fill="#dc8637"/><rect x="9" y="21" width="12" height="20" fill="#354856"/><rect x="-3" y="22" width="7" height="20" fill="#d68a43"/><rect x="27" y="22" width="7" height="20" fill="#d68a43"/><rect x="8" y="4" width="16" height="19" fill="#f0b88b"/><rect x="5" y="2" width="6" height="20" fill="#b7532d"/><rect x="21" y="2" width="6" height="20" fill="#b7532d"/><rect x="8" y="-2" width="16" height="8" fill="#d86e32"/><rect x="7" y="3" width="18" height="5" fill="#344554"/><rect x="11" y="12" width="3" height="3" fill="#29333c"/><rect x="19" y="12" width="3" height="3" fill="#29333c"/><text x="15" y="-11" textAnchor="middle" fontSize="13" fontWeight="bold" fill="white" stroke="#243039" strokeWidth="3" paintOrder="stroke">ELLIE</text></g>
  </>:<>
  <image href={WORLD_ART.interior} x="110" y="90" width="804" height="580" preserveAspectRatio="none"/>
