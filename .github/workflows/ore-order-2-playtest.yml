@@ -21,6 +21,10 @@ jobs:
           cache: npm
       - name: Extract approved v2 pixel-art pack
         run: unzip -oq public/world/ore-and-order-v2-github-ready.zip -d .
+      - name: Install image compositor
+        run: python -m pip install Pillow
+      - name: Build seamless factory grounds
+        run: python scripts/build_factory_ground.py
       - run: npm ci
       - run: npm run build
       - uses: actions/configure-pages@v5
