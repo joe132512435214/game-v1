@@ -8,7 +8,7 @@ import ts from 'typescript';
 const root=dirname(dirname(fileURLToPath(import.meta.url)));
 const folder=await mkdtemp(join(root,'.contract-test-'));
 const source=await readFile(join(root,'src/App.tsx'),'utf8');
-const output=ts.transpileModule(source+'\nexport {fresh,goods,machines,contracts,issueRepeatOrder,estimateContractSeconds,orderPayout,orderExpiry,updateContractOffers,deliverRepeatOrder,closeRepeatOrder,contractStockTarget,stockSaleReminder,sellSurplusStock,sellOneSurplusStock,materialAvailable,salesWages,salesCost,SALES_UNITS_PER_SECOND,payrollPerMinute,qcTokenReward,judgeQuality,startQualityControl,finishQualityControl,buyFactoryTheme,normaliseStyle,loadGame,CONTRACT_TERMS};',{
+const output=ts.transpileModule(source+'\nexport {fresh,goods,machines,contracts,issueRepeatOrder,estimateContractSeconds,orderPayout,orderExpiry,updateContractOffers,deliverRepeatOrder,closeRepeatOrder,materialAvailable,contractStockTarget,stockSaleReminder,sellSurplusStock,sellOneSurplusStock,salesWages,salesCost,SALES_UNITS_PER_SECOND,payrollPerMinute,qcTokenReward,judgeQuality,startQualityControl,finishQualityControl,buyFactoryTheme,normaliseStyle,loadGame,CONTRACT_TERMS};',{
   compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.ReactJSX}
 }).outputText;
 await writeFile(join(folder,'game.mjs'),output);
@@ -21,7 +21,7 @@ function factory(all=false){
   for(const m of game.machines){s[m.id]=all||m.id==='miner'?1:0;s.unitFaults[m.id]=s[m.id]?[0]:[];}
   return s;
 }
-function offer(s,round=0){s.repeatContractRounds[0]=round;return game.issueRepeatOrder(s,0);}
+function offer(s,round=0){s.repeatContractRounds[0]=round;const result=game.issueRepeatOrder(s,0);return result?{...result,accepted:true}:null;}
 
 test('offers only request products the current factory can make',()=>{
   const s=factory();
@@ -266,4 +266,21 @@ test('production still protects outstanding customer order stock',()=>{
   const s=factory();s.repeatOffers=[null,null,null];s.ore=40;
   const o=offer(s);s.repeatOffers=[{...o,items:[{good:'ore',qty:30}]},null,null];
   assert.equal(game.materialAvailable(s,'ore',40),10);
+});
+
+test('new offers do not reserve stock until accepted',()=>{
+  const s=factory();s.ore=80;s.repeatOffers=[null,null,null];
+  const offered=game.issueRepeatOrder(s,0);
+  assert.ok(offered);assert.equal(offered.accepted,false);
+  s.repeatOffers=[offered,null,null];
+  assert.equal(game.contractStockTarget(s,'ore'),0);
+  assert.equal(game.materialAvailable(s,'ore',80),80);
+  s.repeatOffers=[{...offered,accepted:true},null,null];
+  assert.equal(game.contractStockTarget(s,'ore'),offered.qty);
+});
+test('dismissed offers have no reputation penalty',()=>{
+  const s=factory();const offered=game.issueRepeatOrder(s,0);assert.ok(offered);
+  s.repeatOffers=[offered,null,null];
+  const next=game.closeRepeatOrder(s,offered);
+  assert.equal(next.reputation,s.reputation);
 });
