@@ -1,3 +1,4 @@
+import { CharacterArt, CharacterCreator, readCharacter, saveCharacter, type CharacterAppearance } from './CharacterSystem';
 import { IsometricFactory } from './IsometricFactory';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import {
@@ -719,6 +720,10 @@ function MachineArt({id,active,broken,lights,cycleSeconds,progress}:{id:MachineI
 
 export default function App(){
   const [s,setS]=useState<GameState>(loadGame);
+  const [onboarding,setOnboarding]=useState<'creator'|'welcome'|'power'|'done'>(()=>{try{return !localStorage.getItem(SAVE_KEY)&&!readCharacter()?'creator':'done';}catch{return 'done';}});
+  const [owner,setOwner]=useState<CharacterAppearance|null>(()=>readCharacter());
+  const [powerRestored,setPowerRestored]=useState(false);
+
   const [qcView,setQcView]=useState<string|null>(null);
   const [page,setPage]=useState<Page>('factory');
   useEffect(()=>{if(page!=='extras'&&qcView){setQcView(null);setS(v=>({...v,qcSession:null}));}},[page,qcView]);
@@ -1360,6 +1365,12 @@ export default function App(){
   };
   const reset=()=>{setStockPromptDismissedUntil(0);setQcView(null);setS(v=>({...fresh,styleTokens:v.styleTokens,unlockedThemes:v.unlockedThemes,theme:v.theme,qcReadyAt:Math.max(0,v.qcReadyAt-v.contractClock)}));setRunning(true);setSpeed(1);setShowReset(false);setNotice('A fresh factory. Let’s get to work!');};
   return <div className="game" data-theme={s.theme}>
+    {onboarding!=='done'&&<div className="onboarding-overlay" role="dialog" aria-modal="true" aria-label="New factory introduction">
+      {onboarding==='creator'&&<CharacterCreator onDone={c=>{setOwner(c);setOnboarding('welcome');}}/>}
+      {onboarding==='welcome'&&<div className="onboarding-panel"><span className="onboarding-kicker">A NEW BEGINNING</span><h1>Welcome to Ore & Order</h1><div className="onboarding-dialogue"><div className="onboarding-ellie" aria-hidden="true">👩🏻‍🔧</div><div><strong>ELLIE · FACTORY CARETAKER</strong><p>Ah, you must be the new owner! I'm Ellie. I've been keeping this place from falling apart while it's been quiet.</p><p>We've got no machines running, and the power's off. Good news? I'm already on the team — no hiring cost or wages.</p><p>Ready to bring this factory back to life?</p></div></div><button type="button" className="onboarding-primary" onClick={()=>setOnboarding('power')}>LET'S DO IT!</button></div>}
+      {onboarding==='power'&&<div className="onboarding-panel"><span className="onboarding-kicker">RESTORE THE POWER!</span><h1>{powerRestored?'POWER RESTORED!':'Switch on the factory'}</h1><div className="onboarding-dialogue"><div className="onboarding-character">{owner&&<CharacterArt appearance={owner} pose={powerRestored?'front':'reach'} size={120}/>}</div><div><strong>ELLIE · FACTORY CARETAKER</strong><p>{powerRestored?"Would you look at that! The power's back on! Now we've just got to find something to actually power.":"First things first — flip the main switch to bring Ore & Order back to life!"}</p><button type="button" className={'onboarding-switch '+(powerRestored?'on':'')} disabled={powerRestored} onClick={()=>setPowerRestored(true)} aria-label="Turn on factory power">⚡ {powerRestored?'POWER ON':'FLIP MAIN SWITCH'}</button></div></div>{powerRestored&&<><p className="onboarding-objective"><strong>NEW OBJECTIVE:</strong> Buy your first Rockbreaker Mine</p><button type="button" className="onboarding-primary" onClick={()=>{if(owner)saveCharacter(owner);setOnboarding('done');setPage('factory');setFactoryView('equipment');}}>CONTINUE TO FACTORY</button></>}</div>}
+    </div>}
+
     {contractToast&&<div className={'contract-mini-toast '+contractToast.tone} role="status" aria-live="polite"><span aria-hidden="true">{contractToast.tone==='good'?'✓':'!'}</span><p>{contractToast.message}</p><button type="button" aria-label="Dismiss contract notification" onClick={()=>setContractToast(null)}>×</button></div>}
     <header className="topbar">
       <div className="brand"><span className="brand-mark"><Factory size={23}/></span><span><b>ORE &amp; ORDER</b><small>FACTORY TYCOON · v1.1</small></span></div>
