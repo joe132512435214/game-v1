@@ -5,7 +5,7 @@ export type Direction='up'|'down'|'left'|'right';
 export type Player={position:Vector;facing:Direction};
 export type World={width:number;height:number;obstacles:Rectangle[]};
 export const PLAYER_RADIUS=9;
-export const PLAYER_SPEED=130;
+export const PLAYER_SPEED=110;
 export function clamp(n:number,min:number,max:number){return Math.max(min,Math.min(max,n));}
 export function overlapsCircleRect(p:Vector,r:number,b:Rectangle){
  const x=clamp(p.x,b.x,b.x+b.width),y=clamp(p.y,b.y,b.y+b.height);
