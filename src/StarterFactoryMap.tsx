@@ -117,9 +117,9 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
  <path d="M330 400V342H438V400" fill="#727780"/><path d="M347 378h73" stroke="#eee7cb" strokeWidth="5" strokeDasharray="15 10"/>
  <rect x="525" y="299" width="172" height="74" fill="#6d707d" stroke="#bbb9af" strokeWidth="4"/>
  {Array.from({length:3},(_,i)=><path key={i} d={`M${544+i*50} 306v58`} stroke="#e7e1d0" strokeWidth="3"/>)}
- <rect x="48" y="65" width="442" height="263" fill="#9d5140" stroke="#2c3547" strokeWidth="8"/>
+
  {inside?<g>
- <rect x="64" y="81" width="410" height="231" fill="url(#sw-floor)"/>
+ <image href="/world/factory-interior.svg" x="48" y="65" width="442" height="263" preserveAspectRatio="none"/>
  <path d="M180 81v231" stroke="#343e50" strokeWidth="10"/><path d="M180 216v40" stroke="#d7ad50" strokeWidth="6" strokeDasharray="7 6"/>
  <rect x="71" y="89" width="100" height="112" fill="#a47d58" stroke="#403b43" strokeWidth="4"/>
  <path d="M71 125h100M71 160h100" stroke="#876a4e" strokeWidth="2"/>
@@ -136,19 +136,9 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
  </g>})}
  <rect x="317" y="305" width="46" height="18" fill="#3d444e" stroke="#d5ad4e" strokeWidth="3"/>
  <text x="338" y="291" fontSize="11" textAnchor="middle" fill="#30323b">ENTRANCE</text>
- </g>:<g>
- <path d="M55 150L260 47 481 150V205H55Z" fill="#344b68" stroke="#202e46" strokeWidth="8"/>
- <path d="M75 145L260 62 458 145" stroke="#8b9aa9" strokeWidth="6" fill="none"/>
- <rect x="100" y="208" width="90" height="48" fill={powered?'#e3b85d':'#344452'} stroke="#252f42" strokeWidth="7"/>
- <rect x="349" y="208" width="90" height="48" fill={powered?'#e3b85d':'#344452'} stroke="#252f42" strokeWidth="7"/>
- <rect x="211" y="220" width="104" height="108" fill="#333d4b" stroke="#d3a449" strokeWidth="8"/>
- <path d="M229 240h68" stroke="#7e8995" strokeWidth="6"/>
- <rect x="190" y="153" width="150" height="47" fill="#2d394b" stroke="#e6ae3f" strokeWidth="5"/>
- <text x="265" y="173" fontSize="16" textAnchor="middle" fill="#f3e4b8" fontWeight="bold">ORE &amp;</text><text x="265" y="191" fontSize="16" textAnchor="middle" fill="#f1b53c" fontWeight="bold">ORDER</text>
- </g>}
- <rect x="537" y="90" width="166" height="175" fill="url(#sw-dirt)" stroke="#6b543f" strokeWidth="6"/>
- <rect x="553" y="107" width="134" height="143" fill="none" stroke={mineBuilt?'#e5ad43':'#c3b18c'} strokeWidth="4" strokeDasharray={mineBuilt?'none':'10 6'}/>
- {mineBuilt?<g><path d="M564 216V156L620 116 676 156V216" fill="#5d4c43" stroke="#2d3440" strokeWidth="8"/><path d="M593 214v-52h55v52" fill="#252c34" stroke="#c8954c" strokeWidth="6"/><path d="M537 177H491" stroke="#424b5b" strokeWidth="19"/><path d="M537 177H491" stroke="#e3af43" strokeWidth="5" strokeDasharray="12 8"/></g>:<g><path d="M570 209L620 151 669 209" stroke="#d8c3a0" strokeWidth="4" strokeDasharray="9 7" fill="none"/><text x="620" y="190" textAnchor="middle" fill="#f4e3c3" fontSize="32">+</text></g>}
+ </g>:<g><image href="/world/factory-exterior.svg" x="48" y="65" width="442" height="263" preserveAspectRatio="none"/></g>}
+ <image href={mineBuilt?'/world/mine-built.svg':'/world/mine-plot.svg'} x="537" y="90" width="166" height="175" preserveAspectRatio="none"/>
+ {mineBuilt&&<g><path d="M537 177H491" stroke="#424b5b" strokeWidth="19"/><path d="M537 177H491" stroke={powered?'#e3af43':'#707680'} strokeWidth="5" strokeDasharray="12 8"/></g>}
  <text x="620" y="239" textAnchor="middle" fontSize="12" fill="#2e3137" fontWeight="bold">{mineBuilt?'ROCKBREAKER MINE':'UNBUILT MINE PLOT'}</text>
  <g transform={`translate(${player.x} ${player.y})`} aria-label="Player character">
  <ellipse cx="0" cy="3" rx="12" ry="5" fill="#263b34" opacity=".35"/>
