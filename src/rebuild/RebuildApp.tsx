@@ -79,8 +79,7 @@ export default function RebuildApp(){
  <g transform={`translate(${ELLIE.x} ${ELLIE.y})`}><rect x="-10" y="-28" width="20" height="24" fill="#df8738"/><rect x="-7" y="-42" width="14" height="15" fill="#f0b68d"/><text y="-48" textAnchor="middle" fontSize="13" fill="white">ELLIE</text></g>
  </>:<>
  <image href={WORLD_ART.interior} x="110" y="90" width="804" height="580" preserveAspectRatio="none"/>
- {[380,550,720].map(x=><rect key={x} x={x} y="160" width="150" height="130" fill="#555b65" stroke="#d9b05a" strokeWidth="5" strokeDasharray="12 8"/>)}
- <rect x="130" y="125" width="125" height="95" fill="#816247"/><rect x="468" y="647" width="84" height="17" fill="#403b36" stroke="#f1c15e" strokeWidth="3"/><text x="510" y="632" textAnchor="middle" fontSize="13" fill="#fff1a1">EXIT</text>
+ <rect x="468" y="647" width="84" height="17" fill="#403b36" stroke="#f1c15e" strokeWidth="3"/><text x="510" y="632" textAnchor="middle" fontSize="13" fontWeight="bold" fill="#fff1a1">EXIT</text>
  </>}
  <g transform={`translate(${player.position.x-16} ${player.position.y-40})`}><WalkingSprite appearance={owner} direction={player.facing} frame={walkFrame} moving={walking}/></g>
  </g></svg>
