@@ -22,7 +22,10 @@ export function normaliseCharacter(value:unknown):CharacterAppearance{
 export function readCharacter():CharacterAppearance|null{
  try{const saved=localStorage.getItem(CHARACTER_KEY);return saved?normaliseCharacter(JSON.parse(saved)):null;}catch{return null;}
 }
-export function saveCharacter(value:CharacterAppearance){localStorage.setItem(CHARACTER_KEY,JSON.stringify(normaliseCharacter(value)));}
+export function saveCharacter(value:CharacterAppearance){
+ try{localStorage.setItem(CHARACTER_KEY,JSON.stringify(normaliseCharacter(value)));return true;}
+ catch(error){console.warn('Character could not be persisted; continuing without local storage.',error);return false;}
+}
 type Pose='front'|'side'|'reach';
 export function CharacterArt({appearance,pose='front',size=160,world=false}:{
  appearance:CharacterAppearance;pose?:Pose;size?:number;world?:boolean;
