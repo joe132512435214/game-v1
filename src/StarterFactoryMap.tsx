@@ -6,7 +6,6 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
  const [inside,setInside]=useState(false);
  const [selected,setSelected]=useState<number|null>(null);
  const [dialogue,setDialogue]=useState<string|null>(null);
- const [nearby,setNearby]=useState<{id:string;label:string;action:string}|null>(null);
  const nearbyRef=useRef<{id:string;label:string;action:string}|null>(null);
  const interactRef=useRef<()=>void>(()=>{});
  const dialogueRef=useRef<string|null>(null);
