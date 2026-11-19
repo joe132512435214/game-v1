@@ -8,10 +8,14 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
  const [selected,setSelected]=useState<number|null>(null);
  const [dialogue,setDialogue]=useState<string|null>(null);
  const [elliePage,setElliePage]=useState(0);
+ const [ellieIntroDone,setEllieIntroDone]=useState(()=>{try{return localStorage.getItem('ore-and-order-ellie-intro-v1')==='done';}catch{return false;}});
+ const introDoneRef=useRef(ellieIntroDone);
+ introDoneRef.current=ellieIntroDone;
+ const introTriggeredRef=useRef(false);
  const ellieLines=[
    "Oh! You made it. I'm Ellie, the caretaker. Welcome to Ore & Order. It's seen better days, but the bones are good.",
-   "The factory is quiet for now. Head through the main entrance and have a look around. We'll get the equipment running together.",
-   "Once you're ready, check the machines and the empty mine plot. No need to rush — I'll be right here if you need me."
+   "Before you go in, there's something you need to know: the factory has no power. I'll show you where to restore it.",
+   "Right, now we can head inside. Find the electrical panel and we'll get the lights back on!"
  ];
  const nearbyRef=useRef<{id:string;label:string;action:string}|null>(null);
  const interactRef=useRef<()=>void>(()=>{});
@@ -103,6 +107,10 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
        // Door portals are checked before walls so they can actually be reached.
        // Crossing the front doorstep from below triggers entry.
        if(!insideRef.current&&dy<0&&prev.x>=307&&prev.x<=322&&prev.y>=328&&prev.y<=341){
+         if(!introDoneRef.current){
+           if(!introTriggeredRef.current){introTriggeredRef.current=true;setElliePage(0);setDialogue(ellieLines[0]);}
+           return prev;
+         }
          insideRef.current=true;setInside(true);return{x:338,y:278};
        }
        if(insideRef.current&&dy>0&&factoryDoorInside(prev.x,prev.y)){
@@ -118,6 +126,7 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
    return()=>window.clearInterval(timer);
  },[]);
  const toggleInterior=()=>{
+   if(!inside&&!introDoneRef.current){setElliePage(0);setDialogue(ellieLines[0]);introTriggeredRef.current=true;return;}
    const next=!inside;insideRef.current=next;setInside(next);
    setPlayer(next?{x:338,y:278}:{x:315,y:350});
  };
@@ -140,7 +149,7 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
  const currentTarget=target?{id:target.id,label:target.label,action:target.action}:null;
  nearbyRef.current=currentTarget;
  const interact=()=>{
-   if(dialogueRef.current){if(elliePage<ellieLines.length-1){setElliePage(p=>p+1);setDialogue(ellieLines[elliePage+1]);}else{setDialogue(null);setElliePage(0);}return;}
+   if(dialogueRef.current){if(elliePage<ellieLines.length-1){setElliePage(p=>p+1);setDialogue(ellieLines[elliePage+1]);}else{setDialogue(null);setElliePage(0);setEllieIntroDone(true);introDoneRef.current=true;try{localStorage.setItem('ore-and-order-ellie-intro-v1','done');}catch{}}return;}
    if(!currentTarget)return;
    if(currentTarget.id==='ellie'){setElliePage(0);setDialogue(ellieLines[0]);return;}
    if(currentTarget.id==='mine'){mineBuilt?onManage():onBuyMine();return;}
@@ -200,7 +209,7 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
  <rect x="-9" y="1" width="7" height="8" fill="#39495a"/><rect x="2" y="1" width="7" height="8" fill="#39495a"/>
  </g>
  </svg>
- <div className="starter-world-interaction"><span>{currentTarget?'Nearby: '+currentTarget.label:'Walk near an object to interact'}</span><button type="button" disabled={!currentTarget&&!dialogue} onClick={interact}>{dialogue?'Close':currentTarget?currentTarget.action+' · E':'Interact · E'}</button></div>
+ <div className="starter-world-interaction"><span>{!ellieIntroDone?'Objective: Speak to Ellie before entering the factory':currentTarget?'Nearby: '+currentTarget.label:'Walk near an object to interact'}</span><button type="button" disabled={!currentTarget&&!dialogue} onClick={interact}>{dialogue?'Close':currentTarget?currentTarget.action+' · E':'Interact · E'}</button></div>
  {dialogue&&<div className="starter-world-dialogue" role="dialog" aria-label="Talking to Ellie">
  <ElliePortrait size={80}/>
  <div><strong>ELLIE · CARETAKER</strong><p>{dialogue}</p><small>{elliePage+1} / {ellieLines.length}</small></div>
