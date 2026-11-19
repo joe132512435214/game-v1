@@ -8,7 +8,7 @@ import ts from 'typescript';
 const root=dirname(dirname(fileURLToPath(import.meta.url)));
 const folder=await mkdtemp(join(root,'.contract-test-'));
 const source=await readFile(join(root,'src/App.tsx'),'utf8');
-const output=ts.transpileModule(source+'\nexport {fresh,goods,machines,contracts,issueRepeatOrder,estimateContractSeconds,orderPayout,orderExpiry,updateContractOffers,deliverRepeatOrder,closeRepeatOrder,contractStockTarget,stockSaleReminder,sellSurplusStock,sellOneSurplusStock,salesWages,salesCost,SALES_UNITS_PER_SECOND,payrollPerMinute,qcTokenReward,judgeQuality,startQualityControl,finishQualityControl,buyFactoryTheme,normaliseStyle,loadGame,CONTRACT_TERMS};',{
+const output=ts.transpileModule(source+'\nexport {fresh,goods,machines,contracts,issueRepeatOrder,estimateContractSeconds,orderPayout,orderExpiry,updateContractOffers,deliverRepeatOrder,closeRepeatOrder,contractStockTarget,stockSaleReminder,sellSurplusStock,sellOneSurplusStock,materialAvailable,salesWages,salesCost,SALES_UNITS_PER_SECOND,payrollPerMinute,qcTokenReward,judgeQuality,startQualityControl,finishQualityControl,buyFactoryTheme,normaliseStyle,loadGame,CONTRACT_TERMS};',{
   compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.ReactJSX}
 }).outputText;
 await writeFile(join(folder,'game.mjs'),output);
@@ -255,4 +255,15 @@ test('single-product shipping recalculates against latest order commitments',()=
   const shipped=game.sellOneSurplusStock(s,'ore');
   assert.equal(shipped.ore,90);
   assert.equal(game.sellOneSurplusStock(shipped,'ore'),shipped);
+});
+
+test('warehouse reserve protects sales but does not block downstream machine inputs',()=>{
+  const s=factory();s.repeatOffers=[null,null,null];s.stockReserves.ore=100;s.ore=40;
+  assert.equal(game.materialAvailable(s,'ore',s.ore),40);
+  assert.strictEqual(game.sellOneSurplusStock(s,'ore'),s);
+});
+test('production still protects outstanding customer order stock',()=>{
+  const s=factory();s.repeatOffers=[null,null,null];s.ore=40;
+  const o=offer(s);s.repeatOffers=[{...o,items:[{good:'ore',qty:30}]},null,null];
+  assert.equal(game.materialAvailable(s,'ore',40),10);
 });
