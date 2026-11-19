@@ -8,6 +8,9 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
  const [selected,setSelected]=useState<number|null>(null);
  const [dialogue,setDialogue]=useState<string|null>(null);
  const [elliePage,setElliePage]=useState(0);
+ const [stage,setStage]=useState<'intro'|'follow'|'switch'|'done'>(()=>{try{return localStorage.getItem('ore-order-power-v1')==='done'?'done':'intro';}catch{return 'intro';}});
+ const stageRef=useRef(stage);stageRef.current=stage;
+ const [ellieX,setEllieX]=useState(362);
  const [ellieIntroDone,setEllieIntroDone]=useState(()=>{try{return localStorage.getItem('ore-and-order-ellie-intro-v1')==='done';}catch{return false;}});
  const introDoneRef=useRef(ellieIntroDone);
  introDoneRef.current=ellieIntroDone;
@@ -54,7 +57,7 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
      if(overlaps(48,65,490,328))return false;
      if(overlaps(537,90,703,265))return false;
      // Ellie stands by the entrance and is a solid NPC.
-     if(overlaps(351,339,373,366))return false;
+     if(stageRef.current==='intro'&&overlaps(351,339,373,366))return false;
      // Yard fence is solid, except for the vehicle gate at the bottom.
      if(overlaps(40,25,730,48))return false;
      if(overlaps(34,30,54,386)||overlaps(716,30,736,386))return false;
@@ -65,7 +68,7 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
    // Office partition has a gap between y=211 and 259.
    if(overlaps(171,81,190,211)||overlaps(171,259,190,312))return false;
    if(overlaps(86,104,157,180))return false;
-   if(overlaps(194,91,462,132))return false;
+   if(overlaps(194,91,415,132))return false;
    for(let i=0;i<3;i++){
      const sx=212+i*84;
      if(factoryMachines[i]&&overlaps(sx,163,sx+72,248))return false;
@@ -111,6 +114,7 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
            if(!introTriggeredRef.current){introTriggeredRef.current=true;setElliePage(0);setDialogue(ellieLines[0]);}
            return prev;
          }
+         if(stageRef.current==='follow'){stageRef.current='switch';setStage('switch');}
          insideRef.current=true;setInside(true);return{x:338,y:278};
        }
        if(insideRef.current&&dy>0&&factoryDoorInside(prev.x,prev.y)){
@@ -125,9 +129,10 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
    },33);
    return()=>window.clearInterval(timer);
  },[]);
+ useEffect(()=>{if(stage!=='follow'||inside)return;const timer=window.setInterval(()=>setEllieX(x=>Math.max(337,x-1.5)),33);return()=>window.clearInterval(timer);},[stage,inside]);
  const toggleInterior=()=>{
    if(!inside&&!introDoneRef.current){setElliePage(0);setDialogue(ellieLines[0]);introTriggeredRef.current=true;return;}
-   const next=!inside;insideRef.current=next;setInside(next);
+   const next=!inside;if(next&&stageRef.current==='follow'){stageRef.current='switch';setStage('switch');}insideRef.current=next;setInside(next);
    setPlayer(next?{x:338,y:278}:{x:315,y:350});
  };
 
@@ -137,10 +142,11 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
  const slots=[0,1,2];
  const interactables=[
    ...(!inside?[
-     {id:'ellie',label:'Ellie · caretaker',action:'Talk',x:362,y:354,range:68},
+     {id:'ellie',label:'Ellie · caretaker',action:'Talk',x:ellieX,y:354,range:68},
      {id:'mine',label:mineBuilt?'Rockbreaker Mine':'Empty mine plot',action:mineBuilt?'Inspect mine':'Build mine',x:535,y:270,range:75}
    ]:[]),
    ...(inside?[
+     {id:'switch',label:'Electrical switch',action:'Restore power',x:437,y:150,range:65},
      {id:'office',label:'Management office',action:'Open management',x:185,y:233,range:57},
      ...slots.map(i=>({id:'slot-'+i,label:factoryMachines[i]?.name||'Empty machine space '+(i+1),action:'Manage machines',x:248+i*84,y:268,range:45}))
    ]:[])
@@ -149,9 +155,10 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
  const currentTarget=target?{id:target.id,label:target.label,action:target.action}:null;
  nearbyRef.current=currentTarget;
  const interact=()=>{
-   if(dialogueRef.current){if(elliePage<ellieLines.length-1){setElliePage(p=>p+1);setDialogue(ellieLines[elliePage+1]);}else{setDialogue(null);setElliePage(0);setEllieIntroDone(true);introDoneRef.current=true;try{localStorage.setItem('ore-and-order-ellie-intro-v1','done');}catch{}}return;}
+   if(dialogueRef.current){if(stageRef.current==='done'){setDialogue(null);return;}if(elliePage<ellieLines.length-1){setElliePage(p=>p+1);setDialogue(ellieLines[elliePage+1]);}else{setDialogue(null);setElliePage(0);setEllieIntroDone(true);introDoneRef.current=true;if(stageRef.current==='intro'){stageRef.current='follow';setStage('follow');}try{localStorage.setItem('ore-and-order-ellie-intro-v1','done');}catch{}}return;}
    if(!currentTarget)return;
    if(currentTarget.id==='ellie'){setElliePage(0);setDialogue(ellieLines[0]);return;}
+   if(currentTarget.id==='switch'){if(stageRef.current==='switch'){stageRef.current='done';setStage('done');try{localStorage.setItem('ore-order-power-v1','done');}catch{}setDialogue('You did it! The factory has power again. Now we can start production.');}return;}
    if(currentTarget.id==='mine'){mineBuilt?onManage():onBuyMine();return;}
    if(currentTarget.id==='office'||currentTarget.id.startsWith('slot-')){onManage();return;}
  };
@@ -178,7 +185,7 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
  <rect x="99" y="149" width="24" height="23" fill="#394656"/>
  <text x="120" y="191" fontSize="11" textAnchor="middle" fill="#252c36" fontWeight="bold">OFFICE</text>
  <path d="M206 108H451" stroke="#424b5b" strokeWidth="19"/><path d="M206 108H451" stroke={powered&&mineBuilt?'#e8b444':'#6e737e'} strokeWidth="5" strokeDasharray="16 9"/>
- <rect x="443" y="91" width="29" height="34" fill="#3b4555" stroke="#e7b547" strokeWidth="4"/>
+ <rect x="420" y="137" width="35" height="29" fill={stage==='done'?'#527b54':'#3b4555'} stroke="#e7b547" strokeWidth="4"/><rect x="433" y="144" width="9" height="14" fill={stage==='done'?'#9bea8a':'#d97b60'}/><text x="437" y="181" fontSize="10" textAnchor="middle" fill="#fff0b7">POWER</text>
  {slots.map((i)=>{const x=212+i*84;const m=factoryMachines[i];return <g key={i} onClick={()=>{if(inside&&Math.hypot(player.x-(248+i*84),player.y-268)<=45)setSelected(i);else setDialogue('Move closer to the machine to inspect it.');}} style={{cursor:'pointer'}} role="button" aria-label={m?'Inspect '+m.name:'Empty machine position '+(i+1)} tabIndex={0}>
  <rect x={x} y="163" width="72" height="85" fill={m?'#657c83':'#757880'} stroke={selected===i?'#fff0a4':'#e7b547'} strokeWidth="4" strokeDasharray={m?'none':'9 5'}/>
  {m?<><rect x={x+11} y="180" width="50" height="46" fill="#3a5160" stroke="#1d2d3b" strokeWidth="4"/><circle cx={x+36} cy="202" r="13" fill="#b77e39" stroke="#e5bd67" strokeWidth="4"/></>:<text x={x+36} y="210" textAnchor="middle" fontSize="30" fill="#e6e0cf">+</text>}
@@ -191,7 +198,7 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
  {mineBuilt&&<g><path d="M537 177H491" stroke="#424b5b" strokeWidth="19"/><path d="M537 177H491" stroke={powered?'#e3af43':'#707680'} strokeWidth="5" strokeDasharray="12 8"/></g>}
  <text x="620" y="239" textAnchor="middle" fontSize="12" fill="#2e3137" fontWeight="bold">{mineBuilt?'ROCKBREAKER MINE':'UNBUILT MINE PLOT'}</text>
  {target&&<g pointerEvents="none"><circle cx={target.x} cy={target.y} r="13" fill="none" stroke="#f8df7c" strokeWidth="3" strokeDasharray="5 4"/><text x={target.x} y={target.y-17} fill="#fff0ad" fontSize="13" textAnchor="middle" fontWeight="bold">E</text></g>}
- {!inside&&<g transform="translate(362 354)" aria-label="Ellie, factory caretaker">
+ {(inside||stage!=='done')&&<g transform={`translate(${inside?'405 194':`${ellieX} 354`})`} aria-label="Ellie, factory caretaker">
  <ellipse cx="0" cy="5" rx="12" ry="5" fill="#1b2d30" opacity=".4"/>
  <rect x="-8" y="-26" width="16" height="12" fill="#f1b98b" stroke="#293647" strokeWidth="2"/>
  <path d="M-10 -23v-9h20v12H7v-6H-7v6h-3z" fill="#e97436" stroke="#a3442b" strokeWidth="2"/>
@@ -209,11 +216,11 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
  <rect x="-9" y="1" width="7" height="8" fill="#39495a"/><rect x="2" y="1" width="7" height="8" fill="#39495a"/>
  </g>
  </svg>
- <div className="starter-world-interaction"><span>{!ellieIntroDone?'Objective: Speak to Ellie before entering the factory':currentTarget?'Nearby: '+currentTarget.label:'Walk near an object to interact'}</span><button type="button" disabled={!currentTarget&&!dialogue} onClick={interact}>{dialogue?'Close':currentTarget?currentTarget.action+' · E':'Interact · E'}</button></div>
+ <div className="starter-world-interaction"><span>{stage==='follow'?'Follow Ellie to the factory entrance':stage==='switch'?'Find the electrical switch and press E':!ellieIntroDone?'Objective: Speak to Ellie before entering the factory':currentTarget?'Nearby: '+currentTarget.label:'Walk near an object to interact'}</span><button type="button" disabled={!currentTarget&&!dialogue} onClick={interact}>{dialogue?'Close':currentTarget?currentTarget.action+' · E':'Interact · E'}</button></div>
  {dialogue&&<div className="starter-world-dialogue" role="dialog" aria-label="Talking to Ellie">
  <ElliePortrait size={80}/>
  <div><strong>ELLIE · CARETAKER</strong><p>{dialogue}</p><small>{elliePage+1} / {ellieLines.length}</small></div>
- <button type="button" onClick={interact}>{elliePage<ellieLines.length-1?'Next':'Finish'}</button>
+ <button type="button" onClick={interact}>{stage==='done'?'Close':elliePage<ellieLines.length-1?'Next':'Finish'}</button>
  </div>}
  <div className="starter-world-controls"><span>PC: WASD / arrows + E · Mobile: joystick + Interact</span>
  <div ref={joystickBase} className="starter-world-joystick" role="group" aria-label="Movement joystick"
