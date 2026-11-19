@@ -60,7 +60,7 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
        if(walkable(x+dx,y,insideRef.current))x+=dx;
        if(walkable(x,y+dy,insideRef.current))y+=dy;
        // Door trigger: the outside entrance and the interior's south exit.
-       if(!insideRef.current&&x>=316&&x<=394&&y>=330&&y<=346){
+       if(!insideRef.current&&x>=316&&x<=394&&y>=343&&y<=357&&dy<0){
          insideRef.current=true;setInside(true);return{x:338,y:277};
        }
        if(insideRef.current&&x>=314&&x<=365&&y>=294){
