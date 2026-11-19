@@ -87,7 +87,7 @@ export default function RebuildApp(){
  <image href={WORLD_ART.interior} x="110" y="90" width="804" height="580" preserveAspectRatio="none"/>
  {machineBays.map((bay,i)=><g key={i} transform={`translate(${bay.x} ${bay.y})`}>
  <rect width="110" height="104" rx="3" fill={installedMachines.includes(i)?'#253b3c':'#25323c'} fillOpacity={installedMachines.includes(i)?.65:.25} stroke={installedMachines.includes(i)?'#dfb75a':'#cba35d'} strokeWidth="3" strokeDasharray={installedMachines.includes(i)?'none':'8 5'}/>
- <svg x="5" y="5" width="100" height="90" viewBox={`${i*64} 0 64 64`} preserveAspectRatio="xMidYMid meet" opacity={installedMachines.includes(i)?1:.52} style={{imageRendering:'pixelated'}}><image href={WORLD_ART.starterMachines} x="0" y="0" width="192" height="64"/></svg>
+ <image href={WORLD_ART.forklift} x="9" y="10" width="92" height="82" opacity={installedMachines.includes(i)?1:.35} preserveAspectRatio="xMidYMid meet"/>
 
  <text x="55" y="120" textAnchor="middle" fontSize="12" fill="#fff2d5">{installedMachines.includes(i)?'INSTALLED':'PREVIEW · E TO INSTALL'}</text>
  </g>)}
@@ -107,11 +107,7 @@ export default function RebuildApp(){
  onPointerUp={stickStop} onPointerCancel={stickStop} onLostPointerCapture={stickStop}>
  <div style={{position:'absolute',left:36,top:36,width:28,height:28,borderRadius:'50%',background:'#d6ad60',transform:`translate(${thumb.x}px,${thumb.y}px)`}}/></div>
  </div>
- {scene==='factory'&&<section style={{maxWidth:950,margin:'16px auto',border:'2px solid #a97e46',padding:12,background:'#24323b'}} aria-label="Starter machine catalogue">
- <h2 style={{margin:'0 0 8px',fontSize:18}}>Starter machines · preview</h2>
- <p style={{margin:'0 0 10px',fontSize:13}}>Walk up to an empty bay and press E to install a starter machine. Machine art is temporary until the new matching sprites are ready.</p>
- <div style={{display:'flex',flexWrap:'wrap',gap:16}}>{['Starter machine 1','Starter machine 2','Starter machine 3'].map((name,i)=><div key={name} style={{textAlign:'center',width:132}}><svg viewBox={`${i*64} 0 64 64`} width="112" height="112" style={{background:'#35434b',imageRendering:'pixelated',border:'1px solid #bd995a'}}><image href={WORLD_ART.starterMachines} x="0" y="0" width="192" height="64" style={{imageRendering:'pixelated'}}/></svg><div style={{fontSize:12}}>{name}</div></div>)}</div>
- </section>}
+
  <details><summary>Character preview</summary><CharacterArt appearance={owner} size={80}/></details>
  </main>;
 }
