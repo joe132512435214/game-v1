@@ -2213,3 +2213,11 @@ svg.staff-pixel-portrait::before,svg.staff-pixel-portrait::after{content:none;di
 .starter-world-interaction button:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(1)}
 .starter-world-dialogue{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;background:#182d3b;border-top:2px solid #c69b48}
 @media(max-width:640px){.starter-world-interaction{flex-wrap:wrap}.starter-world-interaction button{min-height:48px;flex:1}}
+
+.starter-world-dialogue{display:flex;align-items:center;gap:16px;color:#f4e8d0}
+.starter-world-dialogue>svg{flex:0 0 80px;image-rendering:pixelated}
+.starter-world-dialogue>div{flex:1;min-width:0}
+.starter-world-dialogue p{margin:5px 0 8px;line-height:1.5}
+.starter-world-dialogue small{opacity:.7}
+.starter-world-dialogue button{min-width:88px}
+@media(max-width:600px){.starter-world-dialogue{flex-wrap:wrap}.starter-world-dialogue>svg{flex-basis:64px;width:64px;height:64px}.starter-world-dialogue button{width:100%;min-height:44px}}
