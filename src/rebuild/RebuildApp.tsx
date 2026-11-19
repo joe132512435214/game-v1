@@ -95,6 +95,11 @@ export default function RebuildApp(){
  onPointerUp={stickStop} onPointerCancel={stickStop} onLostPointerCapture={stickStop}>
  <div style={{position:'absolute',left:36,top:36,width:28,height:28,borderRadius:'50%',background:'#d6ad60',transform:`translate(${thumb.x}px,${thumb.y}px)`}}/></div>
  </div>
+ {scene==='factory'&&<section style={{maxWidth:950,margin:'16px auto',border:'2px solid #a97e46',padding:12,background:'#24323b'}} aria-label="Starter machine catalogue">
+ <h2 style={{margin:'0 0 8px',fontSize:18}}>Starter machines · original pixel art</h2>
+ <p style={{margin:'0 0 10px',fontSize:13}}>These machines are previews only. The factory floor stays empty until you purchase machines.</p>
+ <div style={{display:'flex',flexWrap:'wrap',gap:16}}>{['Starter machine 1','Starter machine 2','Starter machine 3'].map((name,i)=><div key={name} style={{textAlign:'center',width:132}}><svg viewBox="0 0 64 64" width="112" height="112" style={{background:'#35434b',imageRendering:'pixelated',border:'1px solid #bd995a'}}><image href={WORLD_ART.starterMachines} x={-64*i} y="0" width="192" height="64" style={{imageRendering:'pixelated'}}/></svg><div style={{fontSize:12}}>{name}</div></div>)}</div>
+ </section>}
  <details><summary>Character preview</summary><CharacterArt appearance={owner} size={80}/></details>
  </main>;
 }
