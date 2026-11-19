@@ -2090,3 +2090,24 @@ svg.staff-pixel-portrait::before,svg.staff-pixel-portrait::after{content:none;di
 .iso-footer{border-top:1px solid #38544d}
 @media(max-width:650px){.iso-toolbar,.iso-footer{padding:12px;flex-wrap:wrap}.iso-viewport{height:310px}.iso-unit{width:24%;min-width:65px}.iso-machine-body{width:58px;height:56px}.iso-machine-body img{width:48px;height:46px}.iso-machine-label strong{font-size:8px}.iso-machine-label small{font-size:8px}.iso-floor{left:3%;width:94%}}
 @media(prefers-reduced-motion:reduce){.iso-belt.is-moving,.iso-unit.is-working .iso-machine-body img{animation:none}}
+
+
+/* Coordinate-driven isometric factory floor */
+.iso-viewport{height:440px;touch-action:none;user-select:none;background:radial-gradient(ellipse at 50% 30%,#35564c 0%,#1b3437 55%,#0e2329 100%);overflow:hidden}
+.iso-world{position:absolute;left:50%;top:50%;width:1000px;height:520px;transform-origin:center;will-change:transform}
+.iso-ground{position:absolute;inset:0;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 14px 8px #07171a88)}
+.iso-track-active{animation:iso-track 1.5s linear infinite}@keyframes iso-track{to{stroke-dashoffset:-42}}
+.iso-building{position:absolute;width:94px;height:135px;transform:translate(-50%,-55%);border:0;background:transparent;color:#eff4e6;cursor:pointer;z-index:3;isolation:isolate}
+.iso-building-shadow{position:absolute;top:55px;left:8px;width:80px;height:33px;border-radius:50%;background:#07191b99;filter:blur(7px)}
+.iso-building-roof{position:absolute;left:13px;top:1px;width:70px;height:69px;background:linear-gradient(145deg,#77958a,#3e615b);border:3px solid #d1b979;border-radius:8px;transform:skewY(-9deg);box-shadow:0 5px 0 #314c4b;z-index:3;display:grid;place-items:center}
+.iso-building-roof img{width:61px;height:61px;object-fit:contain;image-rendering:pixelated;pointer-events:none}
+.iso-building-front{position:absolute;top:56px;left:13px;width:70px;height:22px;background:#284b4b;transform:skewY(-9deg);border-bottom:3px solid #132d34;z-index:2}
+.iso-building-side{position:absolute;top:57px;left:76px;width:14px;height:21px;background:#18383d;transform:skewY(38deg);z-index:1}
+.iso-building-indicator{position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:#dd8e52;box-shadow:0 0 7px #dd8e52}
+.iso-building.is-working .iso-building-indicator{background:#8cda88;box-shadow:0 0 8px #8cda88}
+.iso-building.is-working .iso-building-roof img{animation:iso-working 1.4s ease-in-out infinite}
+.iso-building:hover .iso-building-roof,.iso-building:focus-visible .iso-building-roof{outline:2px solid #f5d48a;outline-offset:3px}
+.iso-building-label{position:absolute;top:83px;left:50%;transform:translateX(-50%);width:max-content;max-width:155px;min-width:88px;padding:5px 7px;display:flex;flex-direction:column;align-items:center;gap:2px;background:#10272be8;border:1px solid #789384;border-radius:5px;box-shadow:0 4px 9px #0008;z-index:4}
+.iso-building-label b{font-size:10px;line-height:1.2;white-space:normal}.iso-building-label small{font-size:9px;color:#d2d6bf}
+@media(max-width:650px){.iso-viewport{height:340px}.iso-world{transform-origin:center}.iso-controls button{padding:6px 9px}}
+@media(prefers-reduced-motion:reduce){.iso-track-active{animation:none}}
