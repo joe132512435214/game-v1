@@ -1,5 +1,5 @@
 import {useEffect,useRef,useState} from 'react';
-import {CharacterCreator,CharacterArt,readCharacter,type CharacterAppearance} from '../CharacterSystem';
+import {CharacterCreator,readCharacter,type CharacterAppearance} from '../CharacterSystem';
 import {ElliePortrait} from '../ElliePortrait';
 import {WORLD_ART} from './assets';
 import {WalkingSprite} from './WalkingSprite';
@@ -26,7 +26,6 @@ export default function RebuildApp(){
  const [thumb,setThumb]=useState<Vector>({x:0,y:0});
  const stickRef=useRef<HTMLDivElement|null>(null);
  const pointer=useRef<number|null>(null);
- const playerRef=useRef(player);playerRef.current=player;
  const sceneRef=useRef(scene);sceneRef.current=scene;
  const dialogueRef=useRef(dialogue);dialogueRef.current=dialogue;
  const world=scene==='yard'?STARTER_WORLD:FACTORY_INTERIOR;
@@ -34,7 +33,7 @@ export default function RebuildApp(){
  const nearEllie=scene==='yard'&&withinReach(player.position,ELLIE,72);
  const nearDoor=withinReach(player.position,scene==='yard'?DOOR_OUT:DOOR_IN,65);
  const interact=()=>{
-   if(dialogue){setDialogue(null);setMetEllie(true);setObjective('Head to the marked factory entrance');return;}
+   if(dialogue){const spokeToEllie=dialogue.startsWith('Welcome to Ore & Order!');setDialogue(null);if(spokeToEllie){setMetEllie(true);setObjective('Head to the marked factory entrance');}return;}
    if(nearEllie){setDialogue("Welcome to Ore & Order! I'm Ellie. Follow the path to the factory door — we'll take a look inside together.");return;}
    if(nearDoor&&!transitioning){if(scene==='yard'&&!metEllie){setDialogue('Ellie is waiting nearby. Speak to her before going inside.');return;}
     setTransitioning(true);keys.current.clear();joystick.current={x:0,y:0};setThumb({x:0,y:0});
