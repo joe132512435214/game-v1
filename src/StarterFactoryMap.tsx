@@ -8,6 +8,24 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
  const [player,setPlayer]=useState({x:380,y:357});
  const [facing,setFacing]=useState<'up'|'down'|'left'|'right'>('down');
  const keys=useRef(new Set<string>());
+ const joystick=useRef({x:0,y:0});
+ const joystickPointer=useRef<number|null>(null);
+ const [stick,setStick]=useState({x:0,y:0});
+ const joystickBase=useRef<HTMLDivElement|null>(null);
+ const updateStick=(clientX:number,clientY:number)=>{
+   const bounds=joystickBase.current?.getBoundingClientRect();
+   if(!bounds)return;
+   const radius=42;
+   const x=clientX-(bounds.left+bounds.width/2);
+   const y=clientY-(bounds.top+bounds.height/2);
+   const length=Math.hypot(x,y);
+   const scale=length>radius?radius/length:1;
+   const offset={x:x*scale,y:y*scale};
+   setStick(offset);
+   joystick.current={x:offset.x/radius,y:offset.y/radius};
+ };
+ const releaseStick=()=>{joystickPointer.current=null;joystick.current={x:0,y:0};setStick({x:0,y:0});};
+
  const insideRef=useRef(inside);
  insideRef.current=inside;
  const walkable=(x:number,y:number,interior:boolean)=>{
@@ -52,8 +70,12 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
      const k=keys.current;
      let dx=Number(k.has('d')||k.has('arrowright'))-Number(k.has('a')||k.has('arrowleft'));
      let dy=Number(k.has('s')||k.has('arrowdown'))-Number(k.has('w')||k.has('arrowup'));
+     // Analogue thumbstick permits variable speed and diagonals; keyboard stays full speed.
+     if(!dx&&!dy){dx=joystick.current.x;dy=joystick.current.y;}
      if(!dx&&!dy)return;
-     const length=Math.hypot(dx,dy);dx=dx/length*3;dy=dy/length*3;
+     const length=Math.hypot(dx,dy);
+     const speed=3*Math.min(1,length);
+     dx=dx/length*speed;dy=dy/length*speed;
      setFacing(Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up'));
      setPlayer(prev=>{
        let x=prev.x,y=prev.y;
@@ -75,9 +97,6 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
    const next=!inside;insideRef.current=next;setInside(next);
    setPlayer(next?{x:338,y:277}:{x:380,y:353});
  };
- const moveButton=(direction:'up'|'down'|'left'|'right',label:string)=><button type="button" className="starter-world-dpad-key" aria-label={label}
- onPointerDown={e=>{e.preventDefault();keys.current.add(direction==='up'?'w':direction==='down'?'s':direction==='left'?'a':'d');(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);}}
- onPointerUp={()=>keys.current.clear()} onPointerCancel={()=>keys.current.clear()} onLostPointerCapture={()=>keys.current.clear()}>{direction==='up'?'▲':direction==='down'?'▼':direction==='left'?'◀':'▶'}</button>;
 
  const mine=machines.find(m=>m.id==='miner');
  const mineBuilt=(mine?.count||0)>0;
@@ -135,7 +154,16 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
  <rect x="-9" y="1" width="7" height="8" fill="#39495a"/><rect x="2" y="1" width="7" height="8" fill="#39495a"/>
  </g>
  </svg>
- <div className="starter-world-controls"><span>Move with WASD or arrow keys · Walk to the factory entrance</span><div className="starter-world-dpad"><div>{moveButton('up','Move up')}</div><div>{moveButton('left','Move left')}{moveButton('down','Move down')}{moveButton('right','Move right')}</div></div></div>
+ <div className="starter-world-controls"><span>PC: WASD / arrow keys · Mobile: drag the joystick · Walk to the entrance</span>
+ <div ref={joystickBase} className="starter-world-joystick" role="group" aria-label="Movement joystick"
+ onPointerDown={e=>{if(joystickPointer.current!==null)return;e.preventDefault();joystickPointer.current=e.pointerId;e.currentTarget.setPointerCapture(e.pointerId);updateStick(e.clientX,e.clientY);}}
+ onPointerMove={e=>{if(joystickPointer.current===e.pointerId){e.preventDefault();updateStick(e.clientX,e.clientY);}}}
+ onPointerUp={e=>{if(joystickPointer.current===e.pointerId)releaseStick();}}
+ onPointerCancel={e=>{if(joystickPointer.current===e.pointerId)releaseStick();}}
+ onLostPointerCapture={e=>{if(joystickPointer.current===e.pointerId)releaseStick();}}>
+ <div className="starter-world-joystick-ring"/>
+ <div className="starter-world-joystick-knob" style={{transform:`translate(${stick.x}px,${stick.y}px)`}}/>
+ </div></div>
  <div className="starter-world-footer"><div><strong>{mineBuilt?'Mine connected':'Mine awaiting construction'}</strong><span>{mineBuilt?'Ore can feed into the factory input conveyor.':'Purchase the Rockbreaker Mine to activate the material connection.'}</span></div><button type="button" onClick={mineBuilt?onManage:onBuyMine}>{mineBuilt?'View mine':'Build first mine'}</button></div>
  {selected!==null&&inside&&<div className="starter-world-selection"><span>Machine space {selected+1}: {factoryMachines[selected]?.name||'Empty'}</span><button type="button" onClick={onManage}>Manage</button><button type="button" onClick={()=>setSelected(null)} aria-label="Close selection">×</button></div>}
  </section>;
