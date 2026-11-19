@@ -2132,3 +2132,30 @@ svg.staff-pixel-portrait::before,svg.staff-pixel-portrait::after{content:none;di
 .iso-inspector button{padding:8px 10px;background:#cba15d;color:#1d2927;border:0;border-radius:5px;font-size:11px;font-weight:800;cursor:pointer}
 .iso-inspector button:last-child{background:transparent;color:#e8eadc;font-size:20px}
 @media(max-width:650px){.iso-viewport{height:350px}.iso-hud span{padding:9px 7px;font-size:9px}.iso-inspector{flex-wrap:wrap;gap:8px}.iso-inspector button{font-size:10px}}
+
+
+/* 2D factory clicker view: side-on layout with layered industrial depth */
+.clicker-factory{overflow:hidden;border:1px solid #4d695e;border-radius:12px;background:#122b2e;color:#f1eddf;margin:14px 0;box-shadow:0 14px 34px #071a1c50}
+.clicker-head{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;padding:17px 20px;background:linear-gradient(120deg,#264c42,#142d32)}
+.clicker-eyebrow{color:#e3b46d;font-size:10px;font-weight:800;letter-spacing:.14em}.clicker-head h2{font-size:20px;margin:4px 0}.clicker-head p{color:#b5cbc0;font-size:12px;margin:0}
+.clicker-summary{display:flex;gap:10px}.clicker-summary span{display:flex;flex-direction:column;background:#10282a;border:1px solid #54766b;border-radius:7px;padding:8px 13px;font-size:10px;color:#b7c8bd}.clicker-summary b{font-size:19px;color:#f5dfb1}.clicker-summary .clicker-alert b{color:#f0a16a}
+.clicker-stage{position:relative;min-height:255px;overflow-x:auto;overflow-y:hidden;background:linear-gradient(#284b4b 0%,#29423f 67%,#192e31 68%);isolation:isolate}
+.clicker-background{position:absolute;inset:0;pointer-events:none;opacity:.65}.clicker-beams{position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 130px,#122b2e 132px 140px,transparent 142px 270px),linear-gradient(0deg,transparent 80%,#122b2e 81% 87%,transparent 88%)}
+.clicker-pipes{position:absolute;top:40px;left:0;right:0;height:24px;border-top:7px solid #647e70;border-bottom:5px solid #1b3334;opacity:.7}
+.clicker-windows{position:absolute;top:72px;left:0;right:0;height:45px;background:repeating-linear-gradient(90deg,transparent 0 48px,#9bb6a31c 50px 98px,transparent 100px 160px)}
+.clicker-line{position:relative;z-index:2;display:flex;align-items:flex-end;justify-content:flex-start;min-width:max-content;padding:35px 28px 27px}
+.clicker-station{position:relative;display:flex;align-items:center;flex-shrink:0}
+.clicker-machine{position:relative;width:142px;min-height:190px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;border:1px solid transparent;border-radius:9px;background:#102d3055;color:#f2f0e5;padding:10px 8px 12px;cursor:pointer;transition:background .15s,border-color .15s}
+.clicker-machine:hover,.clicker-machine:focus-visible,.clicker-machine.is-selected{background:#1e4142;border-color:#f1c16f;outline:none}
+.clicker-machine-housing{position:relative;display:grid;place-items:center;width:104px;height:94px;background:linear-gradient(145deg,#78968a,#335752);border:4px solid #b6a777;border-bottom:9px solid #233c3c;border-radius:9px 9px 3px 3px;box-shadow:inset 0 5px 0 #ffffff20,5px 7px 0 #0e292c}
+.clicker-machine-housing img{width:85px;height:79px;object-fit:contain;image-rendering:pixelated}.clicker-machine.is-active .clicker-machine-housing img{animation:clicker-operate 1.6s ease-in-out infinite}
+.clicker-machine-light{position:absolute;top:6px;right:6px;width:8px;height:8px;background:#d99660;border-radius:50%;box-shadow:0 0 7px #d99660}.clicker-machine.is-active .clicker-machine-light{background:#a2dd90;box-shadow:0 0 8px #a2dd90}
+.clicker-machine-title{font-size:12px;font-weight:800;text-align:center;line-height:1.2}.clicker-machine-status{font-size:9px;color:#c5d7c9}.clicker-machine-count{font-size:9px;color:#f0c47d;font-weight:800}
+.clicker-link{display:flex;gap:6px;align-items:center;justify-content:center;width:48px;height:22px;margin:0 -2px 42px;background:repeating-linear-gradient(90deg,#9c814d 0 5px,#344c49 6px 12px);border:3px solid #1a3134;color:#e0b56d;font-size:9px;overflow:hidden}
+.clicker-link.is-moving span{animation:clicker-transfer 1.3s linear infinite}@keyframes clicker-transfer{to{transform:translateX(15px)}}@keyframes clicker-operate{50%{transform:translateY(-3px)}}
+.clicker-floor{position:absolute;z-index:1;bottom:0;left:0;right:0;height:29px;background:repeating-linear-gradient(90deg,#344e4a 0 34px,#49645a 35px 37px);border-top:6px solid #aa925d}
+.clicker-empty{position:relative;z-index:2;padding:50px 20px;text-align:center}.clicker-empty p{font-size:12px}.clicker-empty button,.clicker-bottom button,.clicker-inspector button{border:1px solid #b89b61;border-radius:6px;background:#caa05b;color:#172b2a;padding:8px 12px;font-size:11px;font-weight:800;cursor:pointer}
+.clicker-inspector{display:flex;align-items:center;gap:12px;padding:12px 16px;background:#26463e;border-top:1px solid #678576}.clicker-inspector img{width:49px;height:49px;object-fit:contain;image-rendering:pixelated}.clicker-inspector-details{flex:1;display:flex;flex-direction:column;gap:5px;min-width:0}.clicker-inspector-details strong{font-size:13px}.clicker-inspector-details span{font-size:11px;color:#bfd0c5}.clicker-meter{height:5px;background:#11292a;border-radius:4px;overflow:hidden}.clicker-meter i{display:block;height:100%;background:#a3ca8d}.clicker-inspector button:last-child{background:transparent;border:0;color:#f1eddf;font-size:20px}
+.clicker-bottom{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 16px;border-top:1px solid #4a685d}.clicker-bottom span{font-size:10px;color:#afc5b9}.clicker-bottom>div{display:flex;gap:8px}.clicker-bottom button:first-child:not(:last-child){background:#29473f;color:#e9eddf;border-color:#638074}
+@media(max-width:600px){.clicker-head{padding:12px}.clicker-line{padding:25px 15px}.clicker-machine{width:124px}.clicker-machine-housing{width:94px;height:86px}.clicker-inspector{flex-wrap:wrap}.clicker-summary b{font-size:16px}}
+@media(prefers-reduced-motion:reduce){.clicker-machine.is-active .clicker-machine-housing img,.clicker-link.is-moving span{animation:none}}
