@@ -1,6 +1,7 @@
 /** Approved v2 pixel-art assets extracted from uploaded ZIP by Pages workflow. */
 const v2=`${import.meta.env.BASE_URL}world/v2/`;
 export const WORLD_ART={
+ grounds:v2+'factory_grounds_composite.png',
  exterior:v2+'sprites/factory_exterior.png',
  interior:v2+'buildings/factory_interior_roofless.png',
  minePlot:v2+'buildings/mine_plot_empty.png',
