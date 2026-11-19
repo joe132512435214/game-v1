@@ -10,8 +10,7 @@ export function WalkingSprite({appearance,direction,frame=0,moving=false}:{
 }){
  const c=appearance,face=direction==='down',back=direction==='up',side=!face&&!back;
  const phase=moving?Math.floor(frame)%4:0;
- const stride=[0,3,0,-3][phase],bounce=moving&&phase%2===1?-1:0;
- const left=side?-1:1;
+ const stride=[0,2,0,-2][phase],bounce=moving&&phase===2?-1:0;
  return <svg viewBox="0 0 32 44" width="32" height="44" shapeRendering="crispEdges" aria-label={c.name+' walking '+direction} role="img" style={{overflow:'visible',transform:direction==='left'?'scaleX(-1)':undefined}}>
  <ellipse cx="16" cy="42" rx="11" ry="3" fill="#17212b" opacity=".35"/>
  <g transform={`translate(0 ${bounce})`} stroke="#27303a" strokeWidth="1.5" strokeLinejoin="miter">
