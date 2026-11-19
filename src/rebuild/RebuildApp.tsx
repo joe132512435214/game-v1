@@ -1,5 +1,5 @@
 import {useEffect,useRef,useState} from 'react';
-import {CharacterCreator,readCharacter,type CharacterAppearance} from '../CharacterSystem';
+import {CharacterCreator,CharacterArt,readCharacter,type CharacterAppearance} from '../CharacterSystem';
 import {ElliePortrait} from '../ElliePortrait';
 import {WORLD_ART} from './assets';
 import {WalkingSprite} from './WalkingSprite';
