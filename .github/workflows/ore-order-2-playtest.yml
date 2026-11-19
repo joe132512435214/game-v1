@@ -1,7 +1,7 @@
 name: Ore & Order 2.0 Playtest (GitHub Pages)
 on:
   push:
-    branches: [preview/ore-order-2-pages]
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
