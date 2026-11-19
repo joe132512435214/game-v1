@@ -10,6 +10,8 @@ export const WORLD_ART={
  dirt:v2+'terrain/dirt.png',
  concrete:v2+'terrain/concrete.png',
  road:v2+'terrain/road.png',
+ parking:v2+'terrain/parking.png',
+ gravel:v2+'terrain/gravel.png',
  tree:v2+'sprites/tree_broadleaf.png',
  pine:v2+'sprites/tree_pine.png',
  forklift:v2+'sprites/forklift.png',
