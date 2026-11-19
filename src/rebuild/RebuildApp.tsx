@@ -57,7 +57,7 @@ export default function RebuildApp(){
    const x=Number(k.has('d')||k.has('arrowright'))-Number(k.has('a')||k.has('arrowleft'));
    const y=Number(k.has('s')||k.has('arrowdown'))-Number(k.has('w')||k.has('arrowup'));
    const input=x||y?{x,y}:joystick.current;
-   if(!dialogueRef.current&&(input.x||input.y))setPlayer(p=>{const next=movePlayer(p,input,dt,sceneRef.current==='yard'?STARTER_WORLD:FACTORY_INTERIOR);const moved=Math.hypot(next.position.x-p.position.x,next.position.y-p.position.y);if(moved>0.01){walkDistance.current+=moved;if(walkDistance.current>=12){walkDistance.current%=12;setWalkFrame(f=>(f+1)%4);}setWalking(true);}else{setWalking(false);walkDistance.current=0;}return next;});
+   if(!dialogueRef.current&&(input.x||input.y))setPlayer(p=>{const next=movePlayer(p,input,dt,sceneRef.current==='yard'?STARTER_WORLD:FACTORY_INTERIOR);const moved=Math.hypot(next.position.x-p.position.x,next.position.y-p.position.y);if(moved>0.01){walkDistance.current+=moved;if(walkDistance.current>=16){walkDistance.current%=16;setWalkFrame(f=>(f+1)%4);}setWalking(true);}else{setWalking(false);walkDistance.current=0;}return next;});
    else {setWalking(false);walkDistance.current=0;}
    frame=requestAnimationFrame(tick);};
   frame=requestAnimationFrame(tick);
