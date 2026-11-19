@@ -2174,3 +2174,18 @@ svg.staff-pixel-portrait::before,svg.staff-pixel-portrait::after{content:none;di
 .onboarding-primary:hover,.onboarding-switch:not(:disabled):hover{filter:brightness(1.1)}.onboarding-switch.on{background:#78c685;border-color:#36633d;cursor:default}
 .onboarding-objective{padding:14px;background:#293c43;border-left:5px solid #f2b740}.onboarding-objective strong{color:#f2c55c}
 @media(max-width:520px){.onboarding-overlay{padding:12px}.onboarding-panel{padding:14px}.onboarding-dialogue{padding:12px;gap:8px;align-items:start}.onboarding-ellie{font-size:46px}.onboarding-character{flex-basis:95px}.onboarding-character svg{max-width:95px;height:auto}.onboarding-dialogue p{font-size:13px}}
+
+
+/* Ore & Order starter world: clean 2D clicker map */
+.starter-world{margin:16px 0 24px;border:3px solid #34475b;border-radius:14px;overflow:hidden;background:#1b2a35;color:#f4ebd8;box-shadow:0 12px 32px #0002}
+.starter-world-toolbar,.starter-world-footer{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:13px 17px;background:#263747}
+.starter-world-toolbar>div:first-child,.starter-world-footer>div{display:grid;gap:3px}
+.starter-world-toolbar strong,.starter-world-footer strong{font-size:14px;color:#f5ca65}
+.starter-world-toolbar span,.starter-world-footer span{font-size:12px;color:#d1d9dd}
+.starter-world-actions{display:flex;gap:8px}
+.starter-world button{cursor:pointer;border:2px solid #bc873c;background:#eab84c;color:#1e2c36;border-radius:6px;padding:9px 12px;font-weight:800}
+.starter-world button:hover{filter:brightness(1.1)}
+.starter-world-scene{display:block;width:100%;height:auto;max-height:650px;background:#759a56;image-rendering:pixelated}
+.starter-world-footer{border-top:3px solid #35475a}
+.starter-world-selection{display:flex;gap:10px;align-items:center;padding:12px 17px;background:#3c4e5e}.starter-world-selection span{flex:1}
+@media(max-width:640px){.starter-world-toolbar,.starter-world-footer{align-items:stretch;flex-direction:column}.starter-world-actions{flex-wrap:wrap}.starter-world-actions button{flex:1}.starter-world-scene{min-height:220px}.starter-world-footer button{width:100%}}
