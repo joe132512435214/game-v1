@@ -5,6 +5,12 @@ const W=768,H=470;
 export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
  const [inside,setInside]=useState(false);
  const [selected,setSelected]=useState<number|null>(null);
+ const [dialogue,setDialogue]=useState<string|null>(null);
+ const [nearby,setNearby]=useState<{id:string;label:string;action:string}|null>(null);
+ const nearbyRef=useRef<{id:string;label:string;action:string}|null>(null);
+ const interactRef=useRef<()=>void>(()=>{});
+ const dialogueRef=useRef<string|null>(null);
+ dialogueRef.current=dialogue;
  const [player,setPlayer]=useState({x:315,y:350});
  const [facing,setFacing]=useState<'up'|'down'|'left'|'right'>('down');
  const keys=useRef(new Set<string>());
@@ -61,6 +67,10 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
    const down=(e:KeyboardEvent)=>{
      if(e.altKey||e.ctrlKey||e.metaKey||/^(INPUT|TEXTAREA|SELECT)$/.test((e.target as HTMLElement)?.tagName||'')||(e.target as HTMLElement)?.isContentEditable)return;
      const k=e.key.toLowerCase();
+     if(k==='e'||k==='enter'){
+       if(k==='enter'&&(e.target as HTMLElement)?.closest('button,a,[role="button"]'))return;
+       if(nearbyRef.current||dialogueRef.current){e.preventDefault();if(!e.repeat)interactRef.current();return;}
+     }
      if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(k)){keys.current.add(k);e.preventDefault();}
    };
    const up=(e:KeyboardEvent)=>keys.current.delete(e.key.toLowerCase());
@@ -75,6 +85,7 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
      let dy=Number(k.has('s')||k.has('arrowdown'))-Number(k.has('w')||k.has('arrowup'));
      // Analogue thumbstick permits variable speed and diagonals; keyboard stays full speed.
      if(!dx&&!dy){dx=joystick.current.x;dy=joystick.current.y;}
+     if(dialogueRef.current)return;
      if(!dx&&!dy)return;
      const length=Math.hypot(dx,dy);
      const speed=3*Math.min(1,length);
@@ -107,6 +118,24 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
  const mineBuilt=(mine?.count||0)>0;
  const factoryMachines=machines.filter(m=>m.id!=='miner'&&m.count>0);
  const slots=[0,1,2];
+ const interactables=[
+   ...(!inside?[{id:'mine',label:mineBuilt?'Rockbreaker Mine':'Empty mine plot',action:mineBuilt?'Inspect mine':'Build mine',x:535,y:270,range:75}]:[]),
+   ...(inside?[
+     {id:'office',label:'Management office',action:'Open management',x:185,y:233,range:57},
+     ...slots.map(i=>({id:'slot-'+i,label:factoryMachines[i]?.name||'Empty machine space '+(i+1),action:'Manage machines',x:248+i*84,y:268,range:45}))
+   ]:[])
+ ];
+ const target=interactables.map(t=>({...t,distance:Math.hypot(player.x-t.x,player.y-t.y)})).filter(t=>t.distance<=t.range).sort((a,b)=>a.distance-b.distance)[0];
+ const currentTarget=target?{id:target.id,label:target.label,action:target.action}:null;
+ nearbyRef.current=currentTarget;
+ const interact=()=>{
+   if(dialogueRef.current){setDialogue(null);return;}
+   if(!currentTarget)return;
+   if(currentTarget.id==='mine'){mineBuilt?onManage():onBuyMine();return;}
+   if(currentTarget.id==='office'||currentTarget.id.startsWith('slot-')){onManage();return;}
+ };
+ interactRef.current=interact;
+
  return <section className="starter-world" aria-label="Ore and Order starting factory map">
  <div className="starter-world-toolbar"><div><strong>YOUR STARTING FACTORY</strong><span>{inside?'Inside · Roof hidden':'Outside · Starter yard'}</span></div><div className="starter-world-actions"><button type="button" onClick={toggleInterior}>{inside?'Go outside':'Enter factory'}</button><button type="button" onClick={onManage}>Manage machines</button></div></div>
  <svg className="starter-world-scene" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={inside?'Factory interior with an office, three machine spaces and mine input':'Factory yard with a small building, empty mine plot, car park and road'} shapeRendering="crispEdges">
@@ -129,7 +158,7 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
  <text x="120" y="191" fontSize="11" textAnchor="middle" fill="#252c36" fontWeight="bold">OFFICE</text>
  <path d="M206 108H451" stroke="#424b5b" strokeWidth="19"/><path d="M206 108H451" stroke={powered&&mineBuilt?'#e8b444':'#6e737e'} strokeWidth="5" strokeDasharray="16 9"/>
  <rect x="443" y="91" width="29" height="34" fill="#3b4555" stroke="#e7b547" strokeWidth="4"/>
- {slots.map((i)=>{const x=212+i*84;const m=factoryMachines[i];return <g key={i} onClick={()=>setSelected(i)} style={{cursor:'pointer'}} role="button" aria-label={m?'Inspect '+m.name:'Empty machine position '+(i+1)} tabIndex={0}>
+ {slots.map((i)=>{const x=212+i*84;const m=factoryMachines[i];return <g key={i} onClick={()=>{if(inside&&Math.hypot(player.x-(248+i*84),player.y-268)<=45)setSelected(i);else setDialogue('Move closer to the machine to inspect it.');}} style={{cursor:'pointer'}} role="button" aria-label={m?'Inspect '+m.name:'Empty machine position '+(i+1)} tabIndex={0}>
  <rect x={x} y="163" width="72" height="85" fill={m?'#657c83':'#757880'} stroke={selected===i?'#fff0a4':'#e7b547'} strokeWidth="4" strokeDasharray={m?'none':'9 5'}/>
  {m?<><rect x={x+11} y="180" width="50" height="46" fill="#3a5160" stroke="#1d2d3b" strokeWidth="4"/><circle cx={x+36} cy="202" r="13" fill="#b77e39" stroke="#e5bd67" strokeWidth="4"/></>:<text x={x+36} y="210" textAnchor="middle" fontSize="30" fill="#e6e0cf">+</text>}
  <text x={x+36} y="263" textAnchor="middle" fontSize="10" fontWeight="bold" fill="#2d3440">{m?m.name.slice(0,12):'EMPTY '+(i+1)}</text>
@@ -140,6 +169,7 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
  <image href={mineBuilt?'/world/mine-built.svg':'/world/mine-plot.svg'} x="537" y="90" width="166" height="175" preserveAspectRatio="none"/>
  {mineBuilt&&<g><path d="M537 177H491" stroke="#424b5b" strokeWidth="19"/><path d="M537 177H491" stroke={powered?'#e3af43':'#707680'} strokeWidth="5" strokeDasharray="12 8"/></g>}
  <text x="620" y="239" textAnchor="middle" fontSize="12" fill="#2e3137" fontWeight="bold">{mineBuilt?'ROCKBREAKER MINE':'UNBUILT MINE PLOT'}</text>
+ {target&&<g pointerEvents="none"><circle cx={target.x} cy={target.y} r="13" fill="none" stroke="#f8df7c" strokeWidth="3" strokeDasharray="5 4"/><text x={target.x} y={target.y-17} fill="#fff0ad" fontSize="13" textAnchor="middle" fontWeight="bold">E</text></g>}
  <g transform={`translate(${player.x} ${player.y})`} aria-label="Player character">
  <ellipse cx="0" cy="3" rx="12" ry="5" fill="#263b34" opacity=".35"/>
  <rect x="-8" y="-27" width="16" height="12" fill="#e6b08b" stroke="#293543" strokeWidth="2"/>
@@ -149,7 +179,9 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
  <rect x="-9" y="1" width="7" height="8" fill="#39495a"/><rect x="2" y="1" width="7" height="8" fill="#39495a"/>
  </g>
  </svg>
- <div className="starter-world-controls"><span>PC: WASD / arrow keys · Mobile: drag the joystick · Walk to the entrance</span>
+ <div className="starter-world-interaction"><span>{currentTarget?'Nearby: '+currentTarget.label:'Walk near an object to interact'}</span><button type="button" disabled={!currentTarget&&!dialogue} onClick={interact}>{dialogue?'Close':currentTarget?currentTarget.action+' · E':'Interact · E'}</button></div>
+ {dialogue&&<div className="starter-world-dialogue" role="status"><span>{dialogue}</span><button type="button" onClick={()=>setDialogue(null)}>Close</button></div>}
+ <div className="starter-world-controls"><span>PC: WASD / arrows + E · Mobile: joystick + Interact</span>
  <div ref={joystickBase} className="starter-world-joystick" role="group" aria-label="Movement joystick"
  onPointerDown={e=>{if(joystickPointer.current!==null)return;e.preventDefault();joystickPointer.current=e.pointerId;e.currentTarget.setPointerCapture(e.pointerId);updateStick(e.clientX,e.clientY);}}
  onPointerMove={e=>{if(joystickPointer.current===e.pointerId){e.preventDefault();updateStick(e.clientX,e.clientY);}}}
