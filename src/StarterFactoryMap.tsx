@@ -5,7 +5,7 @@ const W=768,H=470;
 export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
  const [inside,setInside]=useState(false);
  const [selected,setSelected]=useState<number|null>(null);
- const [player,setPlayer]=useState({x:380,y:357});
+ const [player,setPlayer]=useState({x:315,y:350});
  const [facing,setFacing]=useState<'up'|'down'|'left'|'right'>('down');
  const keys=useRef(new Set<string>());
  const joystick=useRef({x:0,y:0});
@@ -29,31 +29,34 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
  const insideRef=useRef(inside);
  insideRef.current=inside;
  const walkable=(x:number,y:number,interior:boolean)=>{
-   const radius=9;
+   const radius=8;
+   const overlaps=(left:number,top:number,right:number,bottom:number)=>
+     x+radius>left&&x-radius<right&&y+radius>top&&y-radius<bottom;
    if(x<radius||x>W-radius||y<radius||y>H-radius)return false;
    if(!interior){
-     // Exterior building, mine plot and solid fence. Doorway at south wall is a trigger.
-     if(x>48-radius&&x<490+radius&&y>65-radius&&y<328+radius)return false;
-     if(x>537-radius&&x<703+radius&&y>90-radius&&y<265+radius)return false;
-     if(y>25&&y<48&&x>40&&x<730)return false;
-     if(x>34&&x<54&&y>30&&y<386)return false;
-     if(x>716&&x<736&&y>30&&y<386)return false;
-     if(y>378&&y<398&&x>40&&x<330)return false;
-     if(y>378&&y<398&&x>438&&x<730)return false;
+     // Building occupies the upper-left yard. Only its doorway is a portal.
+     if(overlaps(48,65,490,328))return false;
+     if(overlaps(537,90,703,265))return false;
+     // Yard fence is solid, except for the vehicle gate at the bottom.
+     if(overlaps(40,25,730,48))return false;
+     if(overlaps(34,30,54,386)||overlaps(716,30,736,386))return false;
+     if(overlaps(40,378,330,398)||overlaps(438,378,730,398))return false;
      return true;
    }
-   // Interior footprint, solid perimeter, office wall, desk and installed machines.
-   if(x<75||x>463||y<92||y>304)return false;
-   if(x>171&&x<190&&y<211)return false;
-   if(x>171&&x<190&&y>259)return false;
-   if(x>86&&x<157&&y>104&&y<180)return false;
-   if(x>194&&x<462&&y>91&&y<132)return false;
+   if(x<75+radius||x>463-radius||y<92+radius||y>304-radius)return false;
+   // Office partition has a gap between y=211 and 259.
+   if(overlaps(171,81,190,211)||overlaps(171,259,190,312))return false;
+   if(overlaps(86,104,157,180))return false;
+   if(overlaps(194,91,462,132))return false;
    for(let i=0;i<3;i++){
      const sx=212+i*84;
-     if(factoryMachines[i]&&x>sx-8&&x<sx+80&&y>155&&y<255)return false;
+     if(factoryMachines[i]&&overlaps(sx,163,sx+72,248))return false;
    }
    return true;
  };
+ const walkableRef=useRef(walkable);
+ walkableRef.current=walkable;
+ const factoryDoorInside=(x:number,y:number)=>x>=307&&x<=368&&y>=285;
  useEffect(()=>{
    const down=(e:KeyboardEvent)=>{
      if(e.altKey||e.ctrlKey||e.metaKey||/^(INPUT|TEXTAREA|SELECT)$/.test((e.target as HTMLElement)?.tagName||''))return;
@@ -61,7 +64,7 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
      if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(k)){keys.current.add(k);if(e.key.startsWith('Arrow'))e.preventDefault();}
    };
    const up=(e:KeyboardEvent)=>keys.current.delete(e.key.toLowerCase());
-   const blur=()=>keys.current.clear();
+   const blur=()=>{keys.current.clear();releaseStick();};
    window.addEventListener('keydown',down);window.addEventListener('keyup',up);window.addEventListener('blur',blur);
    return()=>{window.removeEventListener('keydown',down);window.removeEventListener('keyup',up);window.removeEventListener('blur',blur);};
  },[]);
@@ -78,24 +81,26 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
      dx=dx/length*speed;dy=dy/length*speed;
      setFacing(Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up'));
      setPlayer(prev=>{
+       // Door portals are checked before walls so they can actually be reached.
+       // Crossing the front doorstep from below triggers entry.
+       if(!insideRef.current&&dy<0&&prev.x>=307&&prev.x<=322&&prev.y>=328&&prev.y<=341){
+         insideRef.current=true;setInside(true);return{x:338,y:278};
+       }
+       if(insideRef.current&&dy>0&&factoryDoorInside(prev.x,prev.y)){
+         insideRef.current=false;setInside(false);return{x:315,y:350};
+       }
        let x=prev.x,y=prev.y;
-       if(walkable(x+dx,y,insideRef.current))x+=dx;
-       if(walkable(x,y+dy,insideRef.current))y+=dy;
-       // Door trigger: the outside entrance and the interior's south exit.
-       if(!insideRef.current&&x>=316&&x<=394&&y>=343&&y<=357&&dy<0){
-         insideRef.current=true;setInside(true);return{x:338,y:277};
-       }
-       if(insideRef.current&&x>=314&&x<=365&&y>=294){
-         insideRef.current=false;setInside(false);return{x:380,y:353};
-       }
-       return{x,y};
+       // Resolve each axis separately: the player slides along walls rather than sticking.
+       if(walkableRef.current(x+dx,y,insideRef.current))x+=dx;
+       if(walkableRef.current(x,y+dy,insideRef.current))y+=dy;
+       return x===prev.x&&y===prev.y?prev:{x,y};
      });
    },33);
    return()=>window.clearInterval(timer);
- },[factoryMachines.length]);
+ },[]);
  const toggleInterior=()=>{
    const next=!inside;insideRef.current=next;setInside(next);
-   setPlayer(next?{x:338,y:277}:{x:380,y:353});
+   setPlayer(next?{x:338,y:278}:{x:315,y:350});
  };
 
  const mine=machines.find(m=>m.id==='miner');
