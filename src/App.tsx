@@ -938,7 +938,7 @@ export default function App(){
       return n;
     });},1000);
     return()=>window.clearInterval(timer);
-  },[running,speed]);
+  },[running,speed,onboarding]);
   const machineCount=machines.reduce((sum,m)=>sum+s[m.id],0);
   const saleReminder=stockSaleReminder(s);
   const showStockReminder=page!=='warehouse'&&s.contractsCompleted.includes('first-ore')&&
