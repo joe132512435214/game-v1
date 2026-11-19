@@ -21,8 +21,11 @@ export function movePlayer(player:Player,input:Vector,dt:number,world:World):Pla
  const dx=input.x/length*delta,dy=input.y/length*delta;
  let position={...player.position};
  // Axis-separated resolution lets players slide along walls.
- if(walkable({...position,x:position.x+dx},world))position.x+=dx;
- if(walkable({...position,y:position.y+dy},world))position.y+=dy;
+ const steps=Math.max(1,Math.ceil(Math.max(Math.abs(dx),Math.abs(dy))/4));
+ for(let i=0;i<steps;i++){
+  if(walkable({...position,x:position.x+dx/steps},world))position.x+=dx/steps;
+  if(walkable({...position,y:position.y+dy/steps},world))position.y+=dy/steps;
+ }
  const facing:Direction=Math.abs(dx)>Math.abs(dy)?dx>0?'right':'left':dy>0?'down':'up';
  return {...player,position,facing};
 }
@@ -32,7 +35,7 @@ export function cameraFor(player:Vector,viewport:Vector,world:World):Vector{
 }
 export function withinReach(a:Vector,b:Vector,distance=55){return Math.hypot(a.x-b.x,a.y-b.y)<=distance;}
 export const STARTER_WORLD:World={width:1024,height:768,obstacles:[
- {x:100,y:90,width:570,height:330}, // factory footprint, entrance handled by a separate scene
+ {x:100,y:90,width:570,height:330}, // factory footprint; door trigger is just outside the south wall
  {x:760,y:150,width:175,height:190}, // mine plot
  {x:20,y:20,width:984,height:16},
  {x:20,y:20,width:16,height:680},
@@ -40,7 +43,7 @@ export const STARTER_WORLD:World={width:1024,height:768,obstacles:[
 ]};
 export const FACTORY_INTERIOR:World={width:1024,height:768,obstacles:[
  {x:110,y:90,width:804,height:20},{x:110,y:90,width:20,height:580},
- {x:894,y:90,width:20,height:580},{x:110,y:650,width:804,height:20},
+ {x:894,y:90,width:20,height:580},{x:110,y:650,width:350,height:20},{x:560,y:650,width:354,height:20}, // doorway opening
  {x:290,y:110,width:20,height:290}, // office wall
  {x:130,y:125,width:125,height:95}, // office desk
  {x:380,y:160,width:150,height:130}, // machine bay one
