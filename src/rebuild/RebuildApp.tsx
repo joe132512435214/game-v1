@@ -13,6 +13,10 @@ type Scene='yard'|'factory';
 export default function RebuildApp(){
  const [owner,setOwner]=useState<CharacterAppearance|null>(()=>readCharacter());
  const [scene,setScene]=useState<Scene>('yard');
+ const [installedMachines,setInstalledMachines]=useState<number[]>([]);
+ const machineBays=[{x:405,y:170},{x:575,y:170},{x:745,y:170}];
+ const nearMachineBay=scene==='factory'?machineBays.findIndex(b=>withinReach(player.position,{x:b.x+55,y:b.y+95},85)):-1;
+ const purchaseMachine=(index:number)=>{if(installedMachines.includes(index))return;setInstalledMachines(current=>[...current,index]);setObjective('Your machine is installed! Explore the factory or buy another machine.');setDialogue(null);};
  const [player,setPlayer]=useState<Player>({position:{x:430,y:550},facing:'down'});
  const [dialogue,setDialogue]=useState<string|null>(null);
  const [objective,setObjective]=useState('Speak to Ellie outside the factory');
@@ -34,6 +38,7 @@ export default function RebuildApp(){
  const nearDoor=withinReach(player.position,scene==='yard'?DOOR_OUT:DOOR_IN,65);
  const interact=()=>{
    if(dialogue){const spokeToEllie=dialogue.startsWith('Welcome to Ore & Order!');setDialogue(null);if(spokeToEllie){setMetEllie(true);setObjective('Head to the marked factory entrance');}return;}
+   if(nearMachineBay>=0&&!installedMachines.includes(nearMachineBay)){purchaseMachine(nearMachineBay);return;}
    if(nearEllie){setDialogue("Welcome to Ore & Order! I'm Ellie. Follow the path to the factory door — we'll take a look inside together.");return;}
    if(nearDoor&&!transitioning){if(scene==='yard'&&!metEllie){setDialogue('Ellie is waiting nearby. Speak to her before going inside.');return;}
     setTransitioning(true);keys.current.clear();joystick.current={x:0,y:0};setThumb({x:0,y:0});
@@ -79,6 +84,12 @@ export default function RebuildApp(){
  <g transform={`translate(${ELLIE.x} ${ELLIE.y})`}><rect x="-10" y="-28" width="20" height="24" fill="#df8738"/><rect x="-7" y="-42" width="14" height="15" fill="#f0b68d"/><text y="-48" textAnchor="middle" fontSize="13" fill="white">ELLIE</text></g>
  </>:<>
  <image href={WORLD_ART.interior} x="110" y="90" width="804" height="580" preserveAspectRatio="none"/>
+ {machineBays.map((bay,i)=><g key={i} transform={`translate(${bay.x} ${bay.y})`}>
+ <rect width="110" height="104" rx="3" fill={installedMachines.includes(i)?'#253b3c':'#25323c'} fillOpacity={installedMachines.includes(i)?.65:.25} stroke={installedMachines.includes(i)?'#dfb75a':'#cba35d'} strokeWidth="3" strokeDasharray={installedMachines.includes(i)?'none':'8 5'}/>
+ {installedMachines.includes(i)&&<svg x="5" y="5" width="100" height="90" viewBox={`${i*64} 0 64 64`} preserveAspectRatio="xMidYMid meet" style={{imageRendering:'pixelated'}}><image href={WORLD_ART.starterMachines} x="0" y="0" width="192" height="64"/></svg>}
+ {!installedMachines.includes(i)&&<text x="55" y="49" fontSize="13" textAnchor="middle" fontWeight="bold" fill="#f6d18a">EMPTY BAY {i+1}</text>}
+ <text x="55" y="120" textAnchor="middle" fontSize="12" fill="#fff2d5">{installedMachines.includes(i)?'INSTALLED':'E · INSTALL'}</text>
+ </g>)}
  <rect x="468" y="647" width="84" height="17" fill="#403b36" stroke="#f1c15e" strokeWidth="3"/><text x="510" y="632" textAnchor="middle" fontSize="13" fontWeight="bold" fill="#fff1a1">EXIT</text>
  </>}
  <g transform={`translate(${player.position.x-16} ${player.position.y-40})`}><WalkingSprite appearance={owner} direction={player.facing} frame={walkFrame} moving={walking}/></g>
@@ -87,8 +98,8 @@ export default function RebuildApp(){
  {dialogue&&<div role="dialog" style={{position:'absolute',bottom:8,left:8,right:8,background:'#17232ff2',padding:12,display:'flex',alignItems:'center',gap:12,border:'2px solid #d6ad60'}}><ElliePortrait size={64}/><p style={{flex:1}}>{dialogue}</p><button onClick={interact}>Continue</button></div>}
  </div>
  <div style={{maxWidth:950,margin:'12px auto',display:'flex',justifyContent:'space-between',alignItems:'center',gap:12}}>
- <div><div>WASD / arrows · E to interact</div><div>{nearEllie?'Ellie nearby':nearDoor?'Entrance nearby':'Explore the yard'}</div></div>
- <button type="button" onClick={interact} disabled={transitioning||(!dialogue&&!nearEllie&&!nearDoor)}>Interact · E</button>
+ <div><div>WASD / arrows · E to interact</div><div>{nearEllie?'Ellie nearby':nearMachineBay>=0&&!installedMachines.includes(nearMachineBay)?'Machine bay ready · press E to install':nearDoor?'Entrance nearby':'Explore the yard'}</div></div>
+ <button type="button" onClick={interact} disabled={transitioning||(!dialogue&&!nearEllie&&!nearDoor&&!(nearMachineBay>=0&&!installedMachines.includes(nearMachineBay)))}>Interact · E</button>
  <div ref={stickRef} aria-label="Mobile movement joystick" style={{touchAction:'none',width:100,height:100,border:'3px solid #d6ad60',borderRadius:'50%',position:'relative',background:'#2e3c47'}}
  onPointerDown={e=>{if(pointer.current!==null)return;pointer.current=e.pointerId;e.currentTarget.setPointerCapture(e.pointerId);stickMove(e.clientX,e.clientY);}}
  onPointerMove={e=>{if(pointer.current===e.pointerId)stickMove(e.clientX,e.clientY);}}
@@ -97,8 +108,8 @@ export default function RebuildApp(){
  </div>
  {scene==='factory'&&<section style={{maxWidth:950,margin:'16px auto',border:'2px solid #a97e46',padding:12,background:'#24323b'}} aria-label="Starter machine catalogue">
  <h2 style={{margin:'0 0 8px',fontSize:18}}>Starter machines · original pixel art</h2>
- <p style={{margin:'0 0 10px',fontSize:13}}>These machines are previews only. The factory floor stays empty until you purchase machines.</p>
- <div style={{display:'flex',flexWrap:'wrap',gap:16}}>{['Starter machine 1','Starter machine 2','Starter machine 3'].map((name,i)=><div key={name} style={{textAlign:'center',width:132}}><svg viewBox="0 0 64 64" width="112" height="112" style={{background:'#35434b',imageRendering:'pixelated',border:'1px solid #bd995a'}}><image href={WORLD_ART.starterMachines} x={-64*i} y="0" width="192" height="64" style={{imageRendering:'pixelated'}}/></svg><div style={{fontSize:12}}>{name}</div></div>)}</div>
+ <p style={{margin:'0 0 10px',fontSize:13}}>These are the recovered PNG sprites. Walk up to an empty bay and press E to install one.</p>
+ <div style={{display:'flex',flexWrap:'wrap',gap:16}}>{['Starter machine 1','Starter machine 2','Starter machine 3'].map((name,i)=><div key={name} style={{textAlign:'center',width:132}}><svg viewBox={`${i*64} 0 64 64`} width="112" height="112" style={{background:'#35434b',imageRendering:'pixelated',border:'1px solid #bd995a'}}><image href={WORLD_ART.starterMachines} x="0" y="0" width="192" height="64" style={{imageRendering:'pixelated'}}/></svg><div style={{fontSize:12}}>{name}</div></div>)}</div>
  </section>}
  <details><summary>Character preview</summary><CharacterArt appearance={owner} size={80}/></details>
  </main>;
