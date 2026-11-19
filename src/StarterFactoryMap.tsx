@@ -1,3 +1,4 @@
+import { ElliePortrait } from './ElliePortrait';
 import { useEffect, useRef, useState } from 'react';
 type Machine={id:string;name:string;count:number};
 type Props={machines:Machine[];powered:boolean;onBuyMine:()=>void;onManage:()=>void};
@@ -6,6 +7,12 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
  const [inside,setInside]=useState(false);
  const [selected,setSelected]=useState<number|null>(null);
  const [dialogue,setDialogue]=useState<string|null>(null);
+ const [elliePage,setElliePage]=useState(0);
+ const ellieLines=[
+   "Oh! You made it. I'm Ellie, the caretaker. Welcome to Ore & Order. It's seen better days, but the bones are good.",
+   "The factory is quiet for now. Head through the main entrance and have a look around. We'll get the equipment running together.",
+   "Once you're ready, check the machines and the empty mine plot. No need to rush — I'll be right here if you need me."
+ ];
  const nearbyRef=useRef<{id:string;label:string;action:string}|null>(null);
  const interactRef=useRef<()=>void>(()=>{});
  const dialogueRef=useRef<string|null>(null);
@@ -42,6 +49,8 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
      // Building occupies the upper-left yard. Only its doorway is a portal.
      if(overlaps(48,65,490,328))return false;
      if(overlaps(537,90,703,265))return false;
+     // Ellie stands by the entrance and is a solid NPC.
+     if(overlaps(351,339,373,366))return false;
      // Yard fence is solid, except for the vehicle gate at the bottom.
      if(overlaps(40,25,730,48))return false;
      if(overlaps(34,30,54,386)||overlaps(716,30,736,386))return false;
@@ -118,7 +127,10 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
  const factoryMachines=machines.filter(m=>m.id!=='miner'&&m.count>0);
  const slots=[0,1,2];
  const interactables=[
-   ...(!inside?[{id:'mine',label:mineBuilt?'Rockbreaker Mine':'Empty mine plot',action:mineBuilt?'Inspect mine':'Build mine',x:535,y:270,range:75}]:[]),
+   ...(!inside?[
+     {id:'ellie',label:'Ellie · caretaker',action:'Talk',x:362,y:354,range:68},
+     {id:'mine',label:mineBuilt?'Rockbreaker Mine':'Empty mine plot',action:mineBuilt?'Inspect mine':'Build mine',x:535,y:270,range:75}
+   ]:[]),
    ...(inside?[
      {id:'office',label:'Management office',action:'Open management',x:185,y:233,range:57},
      ...slots.map(i=>({id:'slot-'+i,label:factoryMachines[i]?.name||'Empty machine space '+(i+1),action:'Manage machines',x:248+i*84,y:268,range:45}))
@@ -128,8 +140,9 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
  const currentTarget=target?{id:target.id,label:target.label,action:target.action}:null;
  nearbyRef.current=currentTarget;
  const interact=()=>{
-   if(dialogueRef.current){setDialogue(null);return;}
+   if(dialogueRef.current){if(elliePage<ellieLines.length-1){setElliePage(p=>p+1);setDialogue(ellieLines[elliePage+1]);}else{setDialogue(null);setElliePage(0);}return;}
    if(!currentTarget)return;
+   if(currentTarget.id==='ellie'){setElliePage(0);setDialogue(ellieLines[0]);return;}
    if(currentTarget.id==='mine'){mineBuilt?onManage():onBuyMine();return;}
    if(currentTarget.id==='office'||currentTarget.id.startsWith('slot-')){onManage();return;}
  };
@@ -169,6 +182,15 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
  {mineBuilt&&<g><path d="M537 177H491" stroke="#424b5b" strokeWidth="19"/><path d="M537 177H491" stroke={powered?'#e3af43':'#707680'} strokeWidth="5" strokeDasharray="12 8"/></g>}
  <text x="620" y="239" textAnchor="middle" fontSize="12" fill="#2e3137" fontWeight="bold">{mineBuilt?'ROCKBREAKER MINE':'UNBUILT MINE PLOT'}</text>
  {target&&<g pointerEvents="none"><circle cx={target.x} cy={target.y} r="13" fill="none" stroke="#f8df7c" strokeWidth="3" strokeDasharray="5 4"/><text x={target.x} y={target.y-17} fill="#fff0ad" fontSize="13" textAnchor="middle" fontWeight="bold">E</text></g>}
+ {!inside&&<g transform="translate(362 354)" aria-label="Ellie, factory caretaker">
+ <ellipse cx="0" cy="5" rx="12" ry="5" fill="#1b2d30" opacity=".4"/>
+ <rect x="-8" y="-26" width="16" height="12" fill="#f1b98b" stroke="#293647" strokeWidth="2"/>
+ <path d="M-10 -23v-9h20v12H7v-6H-7v6h-3z" fill="#e97436" stroke="#a3442b" strokeWidth="2"/>
+ <rect x="-10" y="-13" width="20" height="16" fill="#dc8737" stroke="#293647" strokeWidth="2"/>
+ <rect x="-8" y="-5" width="16" height="8" fill="#293647"/>
+ <rect x="-9" y="3" width="7" height="7" fill="#344657"/><rect x="2" y="3" width="7" height="7" fill="#344657"/>
+ <text x="0" y="-38" fontSize="12" fill="#fff0b7" fontWeight="bold" textAnchor="middle">ELLIE</text>
+ </g>}
  <g transform={`translate(${player.x} ${player.y})`} aria-label="Player character">
  <ellipse cx="0" cy="3" rx="12" ry="5" fill="#263b34" opacity=".35"/>
  <rect x="-8" y="-27" width="16" height="12" fill="#e6b08b" stroke="#293543" strokeWidth="2"/>
@@ -179,7 +201,11 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
  </g>
  </svg>
  <div className="starter-world-interaction"><span>{currentTarget?'Nearby: '+currentTarget.label:'Walk near an object to interact'}</span><button type="button" disabled={!currentTarget&&!dialogue} onClick={interact}>{dialogue?'Close':currentTarget?currentTarget.action+' · E':'Interact · E'}</button></div>
- {dialogue&&<div className="starter-world-dialogue" role="status"><span>{dialogue}</span><button type="button" onClick={()=>setDialogue(null)}>Close</button></div>}
+ {dialogue&&<div className="starter-world-dialogue" role="dialog" aria-label="Talking to Ellie">
+ <ElliePortrait size={80}/>
+ <div><strong>ELLIE · CARETAKER</strong><p>{dialogue}</p><small>{elliePage+1} / {ellieLines.length}</small></div>
+ <button type="button" onClick={interact}>{elliePage<ellieLines.length-1?'Next':'Finish'}</button>
+ </div>}
  <div className="starter-world-controls"><span>PC: WASD / arrows + E · Mobile: joystick + Interact</span>
  <div ref={joystickBase} className="starter-world-joystick" role="group" aria-label="Movement joystick"
  onPointerDown={e=>{if(joystickPointer.current!==null)return;e.preventDefault();joystickPointer.current=e.pointerId;e.currentTarget.setPointerCapture(e.pointerId);updateStick(e.clientX,e.clientY);}}
