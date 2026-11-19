@@ -15,9 +15,9 @@ export default function RebuildApp(){
  const [scene,setScene]=useState<Scene>('yard');
  const [installedMachines,setInstalledMachines]=useState<number[]>([]);
  const machineBays=[{x:405,y:170},{x:575,y:170},{x:745,y:170}];
- const nearMachineBay=scene==='factory'?machineBays.findIndex(b=>withinReach(player.position,{x:b.x+55,y:b.y+95},85)):-1;
  const purchaseMachine=(index:number)=>{if(installedMachines.includes(index))return;setInstalledMachines(current=>[...current,index]);setObjective('Your machine is installed! Explore the factory or buy another machine.');setDialogue(null);};
  const [player,setPlayer]=useState<Player>({position:{x:430,y:550},facing:'down'});
+ const nearMachineBay=scene==='factory'?machineBays.findIndex(b=>withinReach(player.position,{x:b.x+55,y:b.y+95},85)):-1;
  const [dialogue,setDialogue]=useState<string|null>(null);
  const [objective,setObjective]=useState('Speak to Ellie outside the factory');
  const [metEllie,setMetEllie]=useState(false);
