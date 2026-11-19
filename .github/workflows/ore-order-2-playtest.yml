@@ -19,6 +19,8 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+      - name: Extract approved v2 pixel-art pack
+        run: unzip -oq public/world/ore-and-order-v2-github-ready.zip -d .
       - run: npm ci
       - run: npm run build
       - uses: actions/configure-pages@v5
