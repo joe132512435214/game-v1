@@ -71,6 +71,7 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
  const walkableRef=useRef(walkable);
  walkableRef.current=walkable;
  const factoryDoorInside=(x:number,y:number)=>x>=307&&x<=368&&y>=285;
+ // Match the office's visible doorway and the walkable collision gap.
  useEffect(()=>{
    const down=(e:KeyboardEvent)=>{
      if(e.altKey||e.ctrlKey||e.metaKey||/^(INPUT|TEXTAREA|SELECT)$/.test((e.target as HTMLElement)?.tagName||'')||(e.target as HTMLElement)?.isContentEditable)return;
@@ -161,21 +162,31 @@ export function StarterFactoryMap({machines,powered,onBuyMine,onManage}:Props){
 
  {inside?<g>
  <image href="/world/factory-interior.svg" x="48" y="65" width="442" height="263" preserveAspectRatio="none"/>
- <path d="M180 81v231" stroke="#343e50" strokeWidth="10"/><path d="M180 216v40" stroke="#d7ad50" strokeWidth="6" strokeDasharray="7 6"/>
- <rect x="71" y="89" width="100" height="112" fill="#a47d58" stroke="#403b43" strokeWidth="4"/>
- <path d="M71 125h100M71 160h100" stroke="#876a4e" strokeWidth="2"/>
+ <path d="M180 81V211M180 259V312" stroke="#343e50" strokeWidth="10"/>
+ <path d="M175 211H186M175 259H186" stroke="#e7b547" strokeWidth="4"/>
+ <path d="M182 259V211" stroke="#b58a51" strokeWidth="3" strokeDasharray="6 5" opacity=".65"/>
+ <rect x="77" y="96" width="91" height="102" fill="#a47d58" stroke="#403b43" strokeWidth="4"/>
+ <path d="M77 125h91M77 160h91" stroke="#876a4e" strokeWidth="2"/>
  <rect x="88" y="116" width="63" height="24" fill="#744c35" stroke="#332c37" strokeWidth="4"/>
  <rect x="105" y="105" width="25" height="17" fill="#6ab0c8" stroke="#303b4e" strokeWidth="4"/>
  <rect x="99" y="149" width="24" height="23" fill="#394656"/>
  <text x="120" y="191" fontSize="11" textAnchor="middle" fill="#252c36" fontWeight="bold">OFFICE</text>
- <path d="M206 108H451" stroke="#424b5b" strokeWidth="19"/><path d="M206 108H451" stroke={powered&&mineBuilt?'#e8b444':'#6e737e'} strokeWidth="5" strokeDasharray="16 9"/>
+ <path d="M206 108H451" stroke="#424b5b" strokeWidth="19"/>
+ <rect x="193" y="136" width="257" height="9" fill="#4e5962" stroke="#27343f" strokeWidth="3"/>
+ <path d="M203 140H442" stroke="#d9a94c" strokeWidth="3" strokeDasharray="12 7"/>
+ <path d="M199 275H451" stroke="#59616b" strokeWidth="5" strokeDasharray="14 8"/>
+ <text x="322" y="157" fontSize="10" fill="#35414b" textAnchor="middle" fontWeight="bold">MATERIAL FEED</text><path d="M206 108H451" stroke={powered&&mineBuilt?'#e8b444':'#6e737e'} strokeWidth="5" strokeDasharray="16 9"/>
  <rect x="443" y="91" width="29" height="34" fill="#3b4555" stroke="#e7b547" strokeWidth="4"/>
+ <path d="M472 108H490" stroke="#3b4555" strokeWidth="16"/>
+ <path d="M472 108H490" stroke="#d4a648" strokeWidth="4" strokeDasharray="5 4"/>
+ <text x="433" y="87" fontSize="9" textAnchor="end" fill="#2b3943">MINE INTAKE</text>
  {slots.map((i)=>{const x=212+i*84;const m=factoryMachines[i];return <g key={i} onClick={()=>{if(inside&&Math.hypot(player.x-(248+i*84),player.y-268)<=45)setSelected(i);else setDialogue('Move closer to the machine to inspect it.');}} style={{cursor:'pointer'}} role="button" aria-label={m?'Inspect '+m.name:'Empty machine position '+(i+1)} tabIndex={0}>
  <rect x={x} y="163" width="72" height="85" fill={m?'#657c83':'#757880'} stroke={selected===i?'#fff0a4':'#e7b547'} strokeWidth="4" strokeDasharray={m?'none':'9 5'}/>
  {m?<><rect x={x+11} y="180" width="50" height="46" fill="#3a5160" stroke="#1d2d3b" strokeWidth="4"/><circle cx={x+36} cy="202" r="13" fill="#b77e39" stroke="#e5bd67" strokeWidth="4"/></>:<text x={x+36} y="210" textAnchor="middle" fontSize="30" fill="#e6e0cf">+</text>}
  <text x={x+36} y="263" textAnchor="middle" fontSize="10" fontWeight="bold" fill="#2d3440">{m?m.name.slice(0,12):'EMPTY '+(i+1)}</text>
  </g>})}
- <rect x="317" y="305" width="46" height="18" fill="#3d444e" stroke="#d5ad4e" strokeWidth="3"/>
+ <rect x="307" y="305" width="62" height="18" fill="#3d444e" stroke="#d5ad4e" strokeWidth="3"/>
+ <path d="M309 318H367" stroke="#f0ca6b" strokeWidth="3" strokeDasharray="8 5"/>
  <text x="338" y="291" fontSize="11" textAnchor="middle" fill="#30323b">ENTRANCE</text>
  </g>:<g><image href="/world/factory-exterior.svg" x="48" y="65" width="442" height="263" preserveAspectRatio="none"/></g>}
  <image href={mineBuilt?'/world/mine-built.svg':'/world/mine-plot.svg'} x="537" y="90" width="166" height="175" preserveAspectRatio="none"/>
