@@ -15,8 +15,20 @@ export default function PhaserWorld(props:Props){
    private previousGround='';
    private previousActor='';
    private versions={ground:0,actor:0};
-   private loadArt(kind:'ground'|'actor',markup:string){
+   private async loadArt(kind:'ground'|'actor',markup:string){
     const version=++this.versions[kind];
+    // SVG images cannot load external resources when used as textures.
+    const doc=new DOMParser().parseFromString(markup,'image/svg+xml');
+    await Promise.all(Array.from(doc.querySelectorAll('image')).map(async node=>{
+     const href=node.getAttribute('href');if(!href||href.startsWith('data:'))return;
+     try{const response=await fetch(href);if(!response.ok)throw Error('Missing texture '+href);
+      const blob=await response.blob();
+      const data=await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=reject;reader.readAsDataURL(blob);});
+      node.setAttribute('href',data);
+     }catch(error){console.error(error);node.remove();}
+    }));
+    if(disposed||version!==this.versions[kind])return;
+    markup=new XMLSerializer().serializeToString(doc);
     const img=new Image();
     img.onload=()=>{
      if(disposed||version!==this.versions[kind])return;
