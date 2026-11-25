@@ -1,4 +1,4 @@
-import {useEffect,useRef,useState} from 'react';
+import {memo,useEffect,useRef,useState} from 'react';
 import {CharacterCreator,CharacterArt,readCharacter,type CharacterAppearance} from '../CharacterSystem';
 import {ElliePortrait} from '../ElliePortrait';
 import {WORLD_ART} from './assets';
@@ -13,11 +13,40 @@ const DOOR_OUT={x:390,y:431};
 const DOOR_IN={x:510,y:628};
 const ELLIE={x:520,y:510};
 type Scene='yard'|'factory';
+const machineBays=[{x:405,y:170},{x:575,y:170},{x:745,y:170}];
+const Scenery=memo(function Scenery({scene,installedMachines}:{scene:Scene;installedMachines:number[]}){return <>
+ <rect width={1024} height={768} fill={scene==='yard'?'#729551':'#797c84'}/>
+ {scene==='yard'?<>
+ <image href={WORLD_ART.grounds} x="0" y="0" width={1024} height={768} preserveAspectRatio="none"/>
+ <text x="861" y="360" textAnchor="middle" fontSize="13" fontWeight="bold" fill="#fff1a1" stroke="#263037" strokeWidth="3" paintOrder="stroke">MINE · NOT BUILT</text>
+ <text x="390" y="405" textAnchor="middle" fontSize="13" fill="#fff1a1" stroke="#243039" strokeWidth="3" paintOrder="stroke">ENTRANCE</text>
+ <g transform={`translate(${ELLIE.x-15} ${ELLIE.y-58})`} shapeRendering="crispEdges"><ellipse cx="15" cy="56" rx="16" ry="5" fill="#1e2d2b" opacity=".35"/><rect x="5" y="37" width="9" height="17" fill="#29394a"/><rect x="17" y="37" width="9" height="17" fill="#29394a"/><rect x="3" y="51" width="13" height="5" fill="#2c2528"/><rect x="17" y="51" width="13" height="5" fill="#2c2528"/><rect x="3" y="20" width="24" height="22" fill="#dc8637"/><rect x="9" y="21" width="12" height="20" fill="#354856"/><rect x="-3" y="22" width="7" height="20" fill="#d68a43"/><rect x="27" y="22" width="7" height="20" fill="#d68a43"/><rect x="8" y="4" width="16" height="19" fill="#f0b88b"/><rect x="5" y="2" width="6" height="20" fill="#b7532d"/><rect x="21" y="2" width="6" height="20" fill="#b7532d"/><rect x="8" y="-2" width="16" height="8" fill="#d86e32"/><rect x="7" y="3" width="18" height="5" fill="#344554"/><rect x="11" y="12" width="3" height="3" fill="#29333c"/><rect x="19" y="12" width="3" height="3" fill="#29333c"/><text x="15" y="-11" textAnchor="middle" fontSize="13" fontWeight="bold" fill="white" stroke="#243039" strokeWidth="3" paintOrder="stroke">ELLIE</text></g>
+ </>:<>
+ <g shapeRendering="crispEdges">
+ <defs><pattern id="factoryConcrete" width="48" height="48" patternUnits="userSpaceOnUse"><rect width="48" height="48" fill="#77736d"/><path d="M0 0H48V48" fill="none" stroke="#625e59" strokeWidth="2"/><path d="M3 3H45M3 3V45" stroke="#88837a" strokeWidth="1"/><path d="M12 18h3m19 16h4m-17 8h2" stroke="#6e6963" strokeWidth="2"/></pattern><pattern id="officeFloor" width="32" height="16" patternUnits="userSpaceOnUse"><rect width="32" height="16" fill="#a18a69"/><path d="M0 0H32M16 0V16" stroke="#79654e" strokeWidth="1"/></pattern></defs>
+ <rect x="110" y="90" width="804" height="580" fill="#343139"/>
+ <rect x="130" y="110" width="764" height="540" fill="url(#factoryConcrete)"/>
+ <rect x="130" y="110" width="160" height="290" fill="url(#officeFloor)"/>
+ <path d="M120 660V100H904V660H560M460 660H120M300 110V400" fill="none" stroke="#38343b" strokeWidth="20"/>
+ <path d="M120 650V96H904V650M300 110V400" fill="none" stroke="#a49b8e" strokeWidth="5"/>
+ <rect x="130" y="125" width="125" height="95" fill="#483b32" stroke="#302c2a" strokeWidth="4"/><rect x="135" y="130" width="115" height="62" fill="#94734e"/><rect x="158" y="139" width="40" height="26" fill="#28343b"/><rect x="162" y="143" width="32" height="18" fill="#769b9e"/>
+ <text x="210" y="250" textAnchor="middle" fill="#fff1d0" fontSize="14" fontWeight="bold">OFFICE</text>
+ <path d="M330 320H875M330 500H875" stroke="#c5a24f" strokeWidth="3" strokeDasharray="14 8" opacity=".75"/>
+ <path d="M510 640V510" stroke="#c5a24f" strokeWidth="3" strokeDasharray="12 10"/>
+ </g>
+ {machineBays.map((bay,i)=><g key={i} transform={`translate(${bay.x} ${bay.y})`}>
+ <rect width="110" height="104" rx="3" fill={installedMachines.includes(i)?'#253b3c':'#25323c'} fillOpacity={installedMachines.includes(i)?.65:.25} stroke={installedMachines.includes(i)?'#dfb75a':'#cba35d'} strokeWidth="3" strokeDasharray={installedMachines.includes(i)?'none':'8 5'}/>
+ {installedMachines.includes(i)?<image href={STARTER_ART[i]} x="3" y="2" width="104" height="100" preserveAspectRatio="xMidYMid meet" style={{imageRendering:'pixelated'}}/>:<g><rect x="22" y="40" width="66" height="38" fill="#37464d" stroke="#c9a75c" strokeWidth="2" strokeDasharray="5 4"/><text x="55" y="60" textAnchor="middle" fontSize="10" fill="#f8e8bf">EMPTY BAY</text></g>}
+
+ <text x="55" y="120" textAnchor="middle" fontSize="12" fill="#fff2d5">{STARTER_NAMES[i]} · {installedMachines.includes(i)?'BASIC':'E TO INSTALL'}</text>
+ </g>)}
+ <rect x="468" y="647" width="84" height="17" fill="#403b36" stroke="#f1c15e" strokeWidth="3"/><text x="510" y="632" textAnchor="middle" fontSize="13" fontWeight="bold" fill="#fff1a1">EXIT</text>
+ </>}
+</>;});
 export default function RebuildApp(){
  const [owner,setOwner]=useState<CharacterAppearance|null>(()=>readCharacter());
  const [scene,setScene]=useState<Scene>('yard');
  const [installedMachines,setInstalledMachines]=useState<number[]>([]);
- const machineBays=[{x:405,y:170},{x:575,y:170},{x:745,y:170}];
  const purchaseMachine=(index:number)=>{if(installedMachines.includes(index))return;setInstalledMachines(current=>[...current,index]);setObjective('Your machine is installed! Explore the factory or buy another machine.');setDialogue(null);};
  const [player,setPlayer]=useState<Player>({position:{x:430,y:550},facing:'down'});
  const nearMachineBay=scene==='factory'?machineBays.findIndex(b=>withinReach(player.position,{x:b.x+55,y:b.y+95},85)):-1;
@@ -26,6 +55,9 @@ export default function RebuildApp(){
  const [metEllie,setMetEllie]=useState(false);
  const [transitioning,setTransitioning]=useState(false);
  const [walkFrame,setWalkFrame]=useState(0);
+ const playerRef=useRef(player);playerRef.current=player;
+ const walkingRef=useRef(false);
+ const transitionRef=useRef(transitioning);transitionRef.current=transitioning;
  const [walking,setWalking]=useState(false);
  const walkDistance=useRef(0);
  const keys=useRef(new Set<string>());
@@ -52,6 +84,7 @@ export default function RebuildApp(){
  };
  const interactRef=useRef(interact);interactRef.current=interact;
  useEffect(()=>{
+  if(!owner)return;
   const down=(e:KeyboardEvent)=>{if(/INPUT|TEXTAREA|SELECT/.test((e.target as HTMLElement)?.tagName||''))return;
    const k=e.key.toLowerCase();if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(k)){keys.current.add(k);e.preventDefault();}
    if(k==='e'&&!e.repeat){interactRef.current();e.preventDefault();}};
@@ -64,12 +97,20 @@ export default function RebuildApp(){
    const x=Number(k.has('d')||k.has('arrowright'))-Number(k.has('a')||k.has('arrowleft'));
    const y=Number(k.has('s')||k.has('arrowdown'))-Number(k.has('w')||k.has('arrowup'));
    const input=x||y?{x,y}:joystick.current;
-   if(!dialogueRef.current&&(input.x||input.y))setPlayer(p=>{const next=movePlayer(p,input,dt,sceneRef.current==='yard'?STARTER_WORLD:FACTORY_INTERIOR);const moved=Math.hypot(next.position.x-p.position.x,next.position.y-p.position.y);if(moved>0.01){walkDistance.current+=moved;if(walkDistance.current>=16){walkDistance.current%=16;setWalkFrame(f=>(f+1)%4);}setWalking(true);}else{setWalking(false);walkDistance.current=0;}return next;});
-   else {setWalking(false);walkDistance.current=0;}
+   let moving=false;
+   if(!dialogueRef.current&&!transitionRef.current&&(input.x||input.y)){
+    const p=playerRef.current,next=movePlayer(p,input,dt,sceneRef.current==='yard'?STARTER_WORLD:FACTORY_INTERIOR);
+    const moved=Math.hypot(next.position.x-p.position.x,next.position.y-p.position.y);
+    moving=moved>0.01;
+    if(moving||next.facing!==p.facing){playerRef.current=next;setPlayer(next);}
+    if(moving){walkDistance.current+=moved;if(walkDistance.current>=16){walkDistance.current%=16;setWalkFrame(f=>(f+1)%4);}}
+   }
+   if(!moving)walkDistance.current=0;
+   if(walkingRef.current!==moving){walkingRef.current=moving;setWalking(moving);}
    frame=requestAnimationFrame(tick);};
   frame=requestAnimationFrame(tick);
   return()=>{cancelAnimationFrame(frame);window.removeEventListener('keydown',down);window.removeEventListener('keyup',up);window.removeEventListener('blur',blur);};
- },[]);
+ },[owner]);
  const stickMove=(x:number,y:number)=>{const rect=stickRef.current?.getBoundingClientRect();if(!rect)return;const dx=x-rect.left-rect.width/2,dy=y-rect.top-rect.height/2;const d=Math.hypot(dx,dy),scale=d>40?40/d:1;const p={x:dx*scale,y:dy*scale};setThumb(p);joystick.current={x:p.x/40,y:p.y/40};};
  const stickStop=()=>{pointer.current=null;setThumb({x:0,y:0});joystick.current={x:0,y:0};};
  if(!owner)return <main style={{padding:24,background:'#172530',minHeight:'100vh',color:'#fff'}}><CharacterCreator onDone={setOwner}/></main>;
@@ -79,33 +120,7 @@ export default function RebuildApp(){
  <div style={{maxWidth:950,margin:'auto',position:'relative',border:'4px solid #a97e46',overflow:'hidden'}}>
  <svg viewBox="0 0 768 470" style={{display:'block',width:'100%',background:'#739456',imageRendering:'pixelated'}} shapeRendering="crispEdges" aria-label="Walkable factory world">
  <g transform={`translate(${-camera.x} ${-camera.y})`}>
- <rect width={world.width} height={world.height} fill={scene==='yard'?'#729551':'#797c84'}/>
- {scene==='yard'?<>
- <image href={WORLD_ART.grounds} x="0" y="0" width={world.width} height={world.height} preserveAspectRatio="none"/>
- <text x="861" y="360" textAnchor="middle" fontSize="13" fontWeight="bold" fill="#fff1a1" stroke="#263037" strokeWidth="3" paintOrder="stroke">MINE · NOT BUILT</text>
- <text x="390" y="405" textAnchor="middle" fontSize="13" fill="#fff1a1" stroke="#243039" strokeWidth="3" paintOrder="stroke">ENTRANCE</text>
- <g transform={`translate(${ELLIE.x-15} ${ELLIE.y-58})`} shapeRendering="crispEdges"><ellipse cx="15" cy="56" rx="16" ry="5" fill="#1e2d2b" opacity=".35"/><rect x="5" y="37" width="9" height="17" fill="#29394a"/><rect x="17" y="37" width="9" height="17" fill="#29394a"/><rect x="3" y="51" width="13" height="5" fill="#2c2528"/><rect x="17" y="51" width="13" height="5" fill="#2c2528"/><rect x="3" y="20" width="24" height="22" fill="#dc8637"/><rect x="9" y="21" width="12" height="20" fill="#354856"/><rect x="-3" y="22" width="7" height="20" fill="#d68a43"/><rect x="27" y="22" width="7" height="20" fill="#d68a43"/><rect x="8" y="4" width="16" height="19" fill="#f0b88b"/><rect x="5" y="2" width="6" height="20" fill="#b7532d"/><rect x="21" y="2" width="6" height="20" fill="#b7532d"/><rect x="8" y="-2" width="16" height="8" fill="#d86e32"/><rect x="7" y="3" width="18" height="5" fill="#344554"/><rect x="11" y="12" width="3" height="3" fill="#29333c"/><rect x="19" y="12" width="3" height="3" fill="#29333c"/><text x="15" y="-11" textAnchor="middle" fontSize="13" fontWeight="bold" fill="white" stroke="#243039" strokeWidth="3" paintOrder="stroke">ELLIE</text></g>
- </>:<>
- <g shapeRendering="crispEdges">
- <defs><pattern id="factoryConcrete" width="48" height="48" patternUnits="userSpaceOnUse"><rect width="48" height="48" fill="#77736d"/><path d="M0 0H48V48" fill="none" stroke="#625e59" strokeWidth="2"/><path d="M3 3H45M3 3V45" stroke="#88837a" strokeWidth="1"/><path d="M12 18h3m19 16h4m-17 8h2" stroke="#6e6963" strokeWidth="2"/></pattern><pattern id="officeFloor" width="32" height="16" patternUnits="userSpaceOnUse"><rect width="32" height="16" fill="#a18a69"/><path d="M0 0H32M16 0V16" stroke="#79654e" strokeWidth="1"/></pattern></defs>
- <rect x="110" y="90" width="804" height="580" fill="#343139"/>
- <rect x="130" y="110" width="764" height="540" fill="url(#factoryConcrete)"/>
- <rect x="130" y="110" width="160" height="290" fill="url(#officeFloor)"/>
- <path d="M120 660V100H904V660H560M460 660H120M300 110V400" fill="none" stroke="#38343b" strokeWidth="20"/>
- <path d="M120 650V96H904V650M300 110V400" fill="none" stroke="#a49b8e" strokeWidth="5"/>
- <rect x="130" y="125" width="125" height="95" fill="#483b32" stroke="#302c2a" strokeWidth="4"/><rect x="135" y="130" width="115" height="62" fill="#94734e"/><rect x="158" y="139" width="40" height="26" fill="#28343b"/><rect x="162" y="143" width="32" height="18" fill="#769b9e"/>
- <text x="210" y="250" textAnchor="middle" fill="#fff1d0" fontSize="14" fontWeight="bold">OFFICE</text>
- <path d="M330 320H875M330 500H875" stroke="#c5a24f" strokeWidth="3" strokeDasharray="14 8" opacity=".75"/>
- <path d="M510 640V510" stroke="#c5a24f" strokeWidth="3" strokeDasharray="12 10"/>
- </g>
- {machineBays.map((bay,i)=><g key={i} transform={`translate(${bay.x} ${bay.y})`}>
- <rect width="110" height="104" rx="3" fill={installedMachines.includes(i)?'#253b3c':'#25323c'} fillOpacity={installedMachines.includes(i)?.65:.25} stroke={installedMachines.includes(i)?'#dfb75a':'#cba35d'} strokeWidth="3" strokeDasharray={installedMachines.includes(i)?'none':'8 5'}/>
- {installedMachines.includes(i)?<image href={STARTER_ART[i]} x="3" y="2" width="104" height="100" preserveAspectRatio="xMidYMid meet" style={{imageRendering:'pixelated'}}/>:<g><rect x="22" y="40" width="66" height="38" fill="#37464d" stroke="#c9a75c" strokeWidth="2" strokeDasharray="5 4"/><text x="55" y="60" textAnchor="middle" fontSize="10" fill="#f8e8bf">EMPTY BAY</text></g>}
-
- <text x="55" y="120" textAnchor="middle" fontSize="12" fill="#fff2d5">{STARTER_NAMES[i]} · {installedMachines.includes(i)?'BASIC':'E TO INSTALL'}</text>
- </g>)}
- <rect x="468" y="647" width="84" height="17" fill="#403b36" stroke="#f1c15e" strokeWidth="3"/><text x="510" y="632" textAnchor="middle" fontSize="13" fontWeight="bold" fill="#fff1a1">EXIT</text>
- </>}
+ <Scenery scene={scene} installedMachines={installedMachines}/>
  <g transform={`translate(${player.position.x-16} ${player.position.y-40})`}><WalkingSprite appearance={owner} direction={player.facing} frame={walkFrame} moving={walking}/></g>
  </g></svg>
  {transitioning&&<div aria-live="polite" style={{position:'absolute',inset:0,background:'#0a1119',opacity:.8,display:'grid',placeItems:'center',color:'#fff4d0',fontWeight:800}}>Entering {scene==='factory'?'factory':'yard'}…</div>}
