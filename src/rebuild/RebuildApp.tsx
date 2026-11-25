@@ -2,6 +2,9 @@ import {useEffect,useRef,useState} from 'react';
 import {CharacterCreator,CharacterArt,readCharacter,type CharacterAppearance} from '../CharacterSystem';
 import {ElliePortrait} from '../ElliePortrait';
 import {WORLD_ART} from './assets';
+import {BASIC_MACHINE_ART} from './basicMachineArt';
+const STARTER_ART=[BASIC_MACHINE_ART.smelter,BASIC_MACHINE_ART.press,BASIC_MACHINE_ART.assembler] as const;
+const STARTER_NAMES=['Smelter','Stamping press','Assembler'] as const;
 import {WalkingSprite} from './WalkingSprite';
 import {cameraFor,FACTORY_INTERIOR,movePlayer,STARTER_WORLD,withinReach,type Player,type Vector} from './engine';
 
@@ -86,9 +89,9 @@ export default function RebuildApp(){
  <image href={WORLD_ART.interior} x="110" y="90" width="804" height="580" preserveAspectRatio="xMidYMid meet"/>
  {machineBays.map((bay,i)=><g key={i} transform={`translate(${bay.x} ${bay.y})`}>
  <rect width="110" height="104" rx="3" fill={installedMachines.includes(i)?'#253b3c':'#25323c'} fillOpacity={installedMachines.includes(i)?.65:.25} stroke={installedMachines.includes(i)?'#dfb75a':'#cba35d'} strokeWidth="3" strokeDasharray={installedMachines.includes(i)?'none':'8 5'}/>
- {installedMachines.includes(i)?<g><rect x="22" y="36" width="66" height="43" fill="#64717a" stroke="#29313b" strokeWidth="4"/><rect x="31" y="24" width="48" height="18" fill="#ba9b5e" stroke="#29313b" strokeWidth="4"/><rect x="37" y="53" width="14" height="12" fill="#d6b35d"/><rect x="59" y="53" width="14" height="12" fill="#d6b35d"/><rect x="15" y="76" width="82" height="10" fill="#3c4248"/></g>:<g><rect x="22" y="40" width="66" height="38" fill="#37464d" stroke="#c9a75c" strokeWidth="2" strokeDasharray="5 4"/><text x="55" y="60" textAnchor="middle" fontSize="10" fill="#f8e8bf">EMPTY BAY</text></g>}
+ {installedMachines.includes(i)?<image href={STARTER_ART[i]} x="3" y="2" width="104" height="100" preserveAspectRatio="xMidYMid meet" style={{imageRendering:'pixelated'}}/>:<g><rect x="22" y="40" width="66" height="38" fill="#37464d" stroke="#c9a75c" strokeWidth="2" strokeDasharray="5 4"/><text x="55" y="60" textAnchor="middle" fontSize="10" fill="#f8e8bf">EMPTY BAY</text></g>}
 
- <text x="55" y="120" textAnchor="middle" fontSize="12" fill="#fff2d5">{installedMachines.includes(i)?'INSTALLED':'PREVIEW · E TO INSTALL'}</text>
+ <text x="55" y="120" textAnchor="middle" fontSize="12" fill="#fff2d5">{STARTER_NAMES[i]} · {installedMachines.includes(i)?'BASIC':'E TO INSTALL'}</text>
  </g>)}
  <rect x="468" y="647" width="84" height="17" fill="#403b36" stroke="#f1c15e" strokeWidth="3"/><text x="510" y="632" textAnchor="middle" fontSize="13" fontWeight="bold" fill="#fff1a1">EXIT</text>
  </>}
