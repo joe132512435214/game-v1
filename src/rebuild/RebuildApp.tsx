@@ -86,7 +86,18 @@ export default function RebuildApp(){
  <text x="390" y="405" textAnchor="middle" fontSize="13" fill="#fff1a1" stroke="#243039" strokeWidth="3" paintOrder="stroke">ENTRANCE</text>
  <g transform={`translate(${ELLIE.x-15} ${ELLIE.y-58})`} shapeRendering="crispEdges"><ellipse cx="15" cy="56" rx="16" ry="5" fill="#1e2d2b" opacity=".35"/><rect x="5" y="37" width="9" height="17" fill="#29394a"/><rect x="17" y="37" width="9" height="17" fill="#29394a"/><rect x="3" y="51" width="13" height="5" fill="#2c2528"/><rect x="17" y="51" width="13" height="5" fill="#2c2528"/><rect x="3" y="20" width="24" height="22" fill="#dc8637"/><rect x="9" y="21" width="12" height="20" fill="#354856"/><rect x="-3" y="22" width="7" height="20" fill="#d68a43"/><rect x="27" y="22" width="7" height="20" fill="#d68a43"/><rect x="8" y="4" width="16" height="19" fill="#f0b88b"/><rect x="5" y="2" width="6" height="20" fill="#b7532d"/><rect x="21" y="2" width="6" height="20" fill="#b7532d"/><rect x="8" y="-2" width="16" height="8" fill="#d86e32"/><rect x="7" y="3" width="18" height="5" fill="#344554"/><rect x="11" y="12" width="3" height="3" fill="#29333c"/><rect x="19" y="12" width="3" height="3" fill="#29333c"/><text x="15" y="-11" textAnchor="middle" fontSize="13" fontWeight="bold" fill="white" stroke="#243039" strokeWidth="3" paintOrder="stroke">ELLIE</text></g>
  </>:<>
- <image href={WORLD_ART.interior} x="110" y="90" width="804" height="580" preserveAspectRatio="xMidYMid meet"/>
+ <g shapeRendering="crispEdges">
+ <defs><pattern id="factoryConcrete" width="48" height="48" patternUnits="userSpaceOnUse"><rect width="48" height="48" fill="#77736d"/><path d="M0 0H48V48" fill="none" stroke="#625e59" strokeWidth="2"/><path d="M3 3H45M3 3V45" stroke="#88837a" strokeWidth="1"/><path d="M12 18h3m19 16h4m-17 8h2" stroke="#6e6963" strokeWidth="2"/></pattern><pattern id="officeFloor" width="32" height="16" patternUnits="userSpaceOnUse"><rect width="32" height="16" fill="#a18a69"/><path d="M0 0H32M16 0V16" stroke="#79654e" strokeWidth="1"/></pattern></defs>
+ <rect x="110" y="90" width="804" height="580" fill="#343139"/>
+ <rect x="130" y="110" width="764" height="540" fill="url(#factoryConcrete)"/>
+ <rect x="130" y="110" width="160" height="290" fill="url(#officeFloor)"/>
+ <path d="M120 660V100H904V660H560M460 660H120M300 110V400" fill="none" stroke="#38343b" strokeWidth="20"/>
+ <path d="M120 650V96H904V650M300 110V400" fill="none" stroke="#a49b8e" strokeWidth="5"/>
+ <rect x="130" y="125" width="125" height="95" fill="#483b32" stroke="#302c2a" strokeWidth="4"/><rect x="135" y="130" width="115" height="62" fill="#94734e"/><rect x="158" y="139" width="40" height="26" fill="#28343b"/><rect x="162" y="143" width="32" height="18" fill="#769b9e"/>
+ <text x="210" y="250" textAnchor="middle" fill="#fff1d0" fontSize="14" fontWeight="bold">OFFICE</text>
+ <path d="M330 320H875M330 500H875" stroke="#c5a24f" strokeWidth="3" strokeDasharray="14 8" opacity=".75"/>
+ <path d="M510 640V510" stroke="#c5a24f" strokeWidth="3" strokeDasharray="12 10"/>
+ </g>
  {machineBays.map((bay,i)=><g key={i} transform={`translate(${bay.x} ${bay.y})`}>
  <rect width="110" height="104" rx="3" fill={installedMachines.includes(i)?'#253b3c':'#25323c'} fillOpacity={installedMachines.includes(i)?.65:.25} stroke={installedMachines.includes(i)?'#dfb75a':'#cba35d'} strokeWidth="3" strokeDasharray={installedMachines.includes(i)?'none':'8 5'}/>
  {installedMachines.includes(i)?<image href={STARTER_ART[i]} x="3" y="2" width="104" height="100" preserveAspectRatio="xMidYMid meet" style={{imageRendering:'pixelated'}}/>:<g><rect x="22" y="40" width="66" height="38" fill="#37464d" stroke="#c9a75c" strokeWidth="2" strokeDasharray="5 4"/><text x="55" y="60" textAnchor="middle" fontSize="10" fill="#f8e8bf">EMPTY BAY</text></g>}
