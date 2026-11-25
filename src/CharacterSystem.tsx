@@ -27,7 +27,7 @@ export function saveCharacter(value:CharacterAppearance){
  catch(error){console.warn('Character could not be persisted; continuing without local storage.',error);return false;}
 }
 type Pose='front'|'side'|'reach';
-export function CharacterArt({appearance,pose='front',size=160,world=false}:{
+export function CharacterArt({appearance,pose='front',size=160}:{
  appearance:CharacterAppearance;pose?:Pose;size?:number;world?:boolean;
 }){
  const c=normaliseCharacter(appearance),skin=skinColours[c.skin],hair=hairColours[c.hairColour],shirt=tops[c.top];
