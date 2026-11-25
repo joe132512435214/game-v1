@@ -1,4 +1,6 @@
-import {memo,useEffect,useRef,useState} from 'react';
+import {renderToStaticMarkup} from 'react-dom/server';
+import PhaserWorld from './PhaserWorld';
+import {memo,useMemo,useEffect,useRef,useState} from 'react';
 import {CharacterCreator,CharacterArt,readCharacter,type CharacterAppearance} from '../CharacterSystem';
 import {ElliePortrait} from '../ElliePortrait';
 import {WORLD_ART} from './assets';
@@ -113,16 +115,15 @@ export default function RebuildApp(){
  },[owner]);
  const stickMove=(x:number,y:number)=>{const rect=stickRef.current?.getBoundingClientRect();if(!rect)return;const dx=x-rect.left-rect.width/2,dy=y-rect.top-rect.height/2;const d=Math.hypot(dx,dy),scale=d>40?40/d:1;const p={x:dx*scale,y:dy*scale};setThumb(p);joystick.current={x:p.x/40,y:p.y/40};};
  const stickStop=()=>{pointer.current=null;setThumb({x:0,y:0});joystick.current={x:0,y:0};};
+ const background=useMemo(()=>renderToStaticMarkup(<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="768" viewBox="0 0 1024 768"><Scenery scene={scene} installedMachines={installedMachines}/></svg>),[scene,installedMachines]);
+ const character=useMemo(()=>owner?renderToStaticMarkup(<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><WalkingSprite appearance={owner} direction={player.facing} frame={walkFrame} moving={walking}/></svg>):'',[owner,player.facing,walkFrame,walking]);
  if(!owner)return <main style={{padding:24,background:'#172530',minHeight:'100vh',color:'#fff'}}><CharacterCreator onDone={setOwner}/></main>;
  return <main style={{background:'#15232b',color:'#f7ebd1',minHeight:'100vh',padding:16,fontFamily:'system-ui,sans-serif'}}>
  <header style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,flexWrap:'wrap'}}><h1>ORE & ORDER <small style={{fontSize:12}}>2.0 · NEW PIXEL ART</small></h1><span>{owner.name} · {scene==='yard'?'Factory yard':'Factory interior'}</span></header>
  <p role="status">Objective: {objective}</p>
  <div style={{maxWidth:950,margin:'auto',position:'relative',border:'4px solid #a97e46',overflow:'hidden'}}>
- <svg viewBox="0 0 768 470" style={{display:'block',width:'100%',background:'#739456',imageRendering:'pixelated'}} shapeRendering="crispEdges" aria-label="Walkable factory world">
- <g transform={`translate(${-camera.x} ${-camera.y})`}>
- <Scenery scene={scene} installedMachines={installedMachines}/>
- <g transform={`translate(${player.position.x-16} ${player.position.y-40})`}><WalkingSprite appearance={owner} direction={player.facing} frame={walkFrame} moving={walking}/></g>
- </g></svg>
+ <PhaserWorld background={background} character={character} position={player.position} camera={camera}/>
+
  {transitioning&&<div aria-live="polite" style={{position:'absolute',inset:0,background:'#0a1119',opacity:.8,display:'grid',placeItems:'center',color:'#fff4d0',fontWeight:800}}>Entering {scene==='factory'?'factory':'yard'}…</div>}
  {dialogue&&<div role="dialog" style={{position:'absolute',bottom:8,left:8,right:8,background:'#17232ff2',padding:12,display:'flex',alignItems:'center',gap:12,border:'2px solid #d6ad60'}}><ElliePortrait size={64}/><p style={{flex:1}}>{dialogue}</p><button onClick={interact}>Continue</button></div>}
  </div>
